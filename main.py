@@ -37,11 +37,11 @@ def do_logic(config: Config) -> str | None:
                     # value.print()
 
                     # the last command in the index and also the last file in all the paths
-                    is_last_cmd = (i == len(values) - 1), (file_path == file_paths[-1])
+                    is_last_cmd = (i == len(values) - 1) and (file_path == file_paths[-1])
+                    print(is_last_cmd)
                     err = value.run_commands(config=config, is_last_cmd=is_last_cmd)
                     if err:
                         return f"Error({parentPathKey},{file_paths}): {err}"
-
         except KeyboardInterrupt:
             print("\nKeyboardInterrupt: Quitting...")
         except Exception as e:

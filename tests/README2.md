@@ -7,5 +7,11 @@ this is ignored
 ```
 
 ```bash
+echo xyzMyOutput
+```
+
+```bash
 echo abcMyOutput
 ```
+
+
