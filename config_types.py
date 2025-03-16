@@ -11,10 +11,9 @@ class Config:
     cleanup_cmds: List[str] = []
     only_run_bash: bool = True
     ignore_commands: List[str] = []
-    final_output_contains: str = '' # TODO: make a function so you can define any or something?
+    final_output_contains: str = ''
     supported_file_extensions = ["md", "mdx"]
     followed_languages = ["shell", "bash", "sh", "zsh","ksh"] # https://github.com/rouge-ruby/rouge/wiki/List-of-supported-languages-and-lexers
-    # TODO: set working directory?
 
     def __init__(self, paths: List[str], env_var: Dict[str, str], cleanup_cmds: List[str], pre_cmds: List[str] = [], final_output_contains: str = ''):
         self.paths = paths
@@ -27,19 +26,27 @@ class Config:
         for path in self.paths:
             yield path
 
-    def get_all_possible_paths(self) -> List[str]:
-        collected_files = []
+    def get_all_possible_paths(self) -> Dict[str, List[str]]:
+        collected_files = {} # parent path -> list of files
 
         for path in self.iterate_paths():
+            if path not in collected_files:
+                collected_files[path] = []
             if os.path.isdir(path):
                 for root, _, files in os.walk(path):
                     for file in files:
                         if any(file.endswith(ext) for ext in self.supported_file_extensions):
-                            collected_files.append(os.path.join(root, file))
+                            collected_files[path].append(os.path.join(root, file))
             else:
-                collected_files.append(path)
+                # collected_files.append(path)
+                collected_files[path].append(path)
 
-        return sorted(collected_files)
+        # sort all collected_files values
+        for key in collected_files:
+            collected_files[key].sort()
+
+        return collected_files
+
 
     def __run_cmd(self, cmd: str, hide_output: bool, cwd: str | None = None):
         subprocess.run(cmd, shell=True, cwd=cwd, stdout=subprocess.DEVNULL if hide_output else None, stderr=subprocess.DEVNULL if hide_output else None)

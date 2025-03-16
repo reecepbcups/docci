@@ -25,22 +25,22 @@ def do_logic(cfg: Config) -> str | None:
     for key, value in config.env_vars.items():
         os.environ[key] = value
 
-    all_paths = config.get_all_possible_paths()
-    for file_path in all_paths:
+    for _, file_paths in config.get_all_possible_paths().items():
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+            for file_path in file_paths:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
 
-            values = parse_markdown_code_blocks(content)
-            for i, value in enumerate(values):
-                if value.ignored: continue
+                values = parse_markdown_code_blocks(content)
+                for i, value in enumerate(values):
+                    if value.ignored: continue
 
-                # value.print()
+                    # value.print()
 
-                # the last command in the index and also the last file in all the paths
-                is_success = value.run_commands(is_last_cmd=(i == len(values) - 1) and (file_path == all_paths[-1]))
-                if not is_success:
-                    return f"Error running commands for value: {value}"
+                    # the last command in the index and also the last file in all the paths
+                    is_success = value.run_commands(is_last_cmd=(i == len(values) - 1) and (file_path == file_path[-1]))
+                    if not is_success:
+                        return f"Error running commands for value: {value}"
 
         except KeyboardInterrupt:
             print("\nKeyboardInterrupt: Quitting...")
