@@ -17,7 +17,7 @@ make install
 # make sure to update 1) the version in the URL 2) the config path to run against
 - name: Readme Runner
     run: |
-    sudo wget -O /usr/local/bin/docs-ci https://github.com/Reecepbcups/docs-ci/releases/download/v0.1.2/docs-ci
+    sudo wget -O /usr/local/bin/docs-ci https://github.com/Reecepbcups/docs-ci/releases/download/v0.2.0/docs-ci
     sudo chmod +x /usr/local/bin/docs-ci
     docs-ci .github/workflows/config.json
 ````
