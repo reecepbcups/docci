@@ -50,7 +50,11 @@ def do_logic(config: Config) -> str | None:
 
 def main():
     if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <config_path>")
+        cmd = sys.argv[0]
+        if re.match(r"/tmp/staticx-.*?/readme-runner", cmd):
+            cmd = "readme-runner"
+
+        print(f"Usage: {cmd} <config_path>")
         sys.exit(1)
 
     config_path = sys.argv[1]

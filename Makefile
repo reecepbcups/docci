@@ -2,7 +2,8 @@
 install:
 # pip install pyinstaller --break-system-packages
 	@echo ⏳ Installing readme-runner...
-	@pyinstaller --name readme-runner --workpath __pycache__/build --specpath __pycache__/build/ --onefile *.py
+	@pyinstaller -F --name readme-runner --workpath __pycache__/build --specpath __pycache__/build/ --onefile *.py
+	@staticx dist/readme-runner dist/readme-runner --strip
 	@chmod +x dist/readme-runner
 	@if [ -z "$(IS_ACTION)" ]; then \
 		sudo cp dist/readme-runner /usr/local/bin/readme-runner; \
