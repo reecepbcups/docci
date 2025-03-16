@@ -86,7 +86,6 @@ class DocsValue:
     background: bool = False # if the command should run in the background i.e. it is blocking
     post_delay: int = 0 # delay in seconds after the command is run
     cmd_delay: int = 0 # delay in seconds before each command is run
-    envs: Dict[str, str] = field(default_factory=dict)
     # docs-ci-wait-for-endpoint=http://127.0.0.1:8000|30 tag would be nice (after 30 seconds, fail)
 
     def run_commands(
@@ -100,13 +99,17 @@ class DocsValue:
         '''
 
         env = os.environ.copy()
-        env.update(self.envs)
 
         success = True
 
         for command in self.commands:
             if command in config.ignore_commands:
                 continue
+
+            # parse out env vars from commands. an example format is:
+            # --> export SERVICE_MANAGER_ADDR=`make get-eigen-service-manager-from-deploy
+            # this should be done here as it is more JIT, can't do earlier else other commands are not ready
+            env.update(parse_env(command))
 
             # Determine if this specific command should run in background
             cmd_background = self.background
@@ -270,15 +273,7 @@ def parse_markdown_code_blocks(file_path: str) -> List[DocsValue]:
         # split by the \n to get a list of commands
         commands = content.split('\n')
 
-
-        # parse out env vars from commands. an example format is:
-        # export SERVICE_MANAGER_ADDR=`make get-eigen-service-manager-from-deploy
-        env_vars: Dict[str, str] = {}
-        for command in commands:
-            env_vars.update(parse_env(command))
-
         # Now set the attributes on your value object
-        value.envs = env_vars
         value.commands = commands
         results.append(value)
 

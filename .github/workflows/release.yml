@@ -25,7 +25,9 @@ jobs:
           pip install pyinstaller --break-system-packages
 
       - name: Build package
-        run: chmod +x build.sh && sh ./build.sh
+        env:
+          IS_ACTION: true # else we move to /usr/bin/local/
+        run: chmod +x compile-bin.sh && sh ./compile-bin.sh
 
       - name: Release
         uses: softprops/action-gh-release@v2
