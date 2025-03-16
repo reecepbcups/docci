@@ -115,7 +115,11 @@ class DocsValue:
             if config.debug:
                 print(f"Running command: {command}" + (" (& added for background)" if cmd_background else ""))
 
-            self.handle_delay('cmd')
+            if self.cmd_delay > 0:
+                print(f"Sleeping for {self.cmd_delay} seconds before running command (cmd-delay)...")
+                for i in range(self.cmd_delay, 0, -1):
+                    print(f"Sleep: {i} seconds remaining...")
+                    time.sleep(1)
 
             process = process = subprocess.Popen(
                 command,
@@ -157,7 +161,11 @@ class DocsValue:
                         success = f"Error running command: {command}"
                         break
 
-        self.handle_delay('post')
+        if self.post_delay > 0:
+            print(f"Sleeping for {self.post_delay} seconds after running commands...")
+            for i in range(self.post_delay, 0, -1):
+                print(f"Sleep: {i} seconds remaining...")
+                time.sleep(1)
 
         return success
 
@@ -228,7 +236,10 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
         language = language_parts[0] if language_parts else ''
         tags = language_parts[1:] if len(language_parts) > 1 else []
 
-        ignored = (Tags.IGNORE() in tags) or (config is not None and language not in config.followed_languages)
+        ignored = Tags.IGNORE() in tags
+        if config is not None:
+            ignored = ignored or language not in config.followed_languages
+
         background = Tags.BACKGROUND() in tags
         post_delay = int([tag.split('=')[1] for tag in tags if Tags.POST_DELAY() in tag][0]) if any('docs-ci-post-delay' in tag for tag in tags) else 0
         cmd_delay = int([tag.split('=')[1] for tag in tags if Tags.CMD_DELAY() in tag][0]) if any('docs-ci-cmd-delay' in tag for tag in tags) else 0
