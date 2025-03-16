@@ -15,8 +15,6 @@ from models import Tags
 # Store PIDs of background processes for later cleanup
 background_processes = []
 
-config: Config
-
 # do_logic returns an error if it fails
 def do_logic(cfg: Config) -> str | None:
     global config  # set the config to cfg as global
@@ -26,7 +24,7 @@ def do_logic(cfg: Config) -> str | None:
     for key, value in config.env_vars.items():
         os.environ[key] = value
 
-    all_paths = get_all_possible_paths()
+    all_paths = config.get_all_possible_paths()
     for file_path in all_paths:
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -64,21 +62,6 @@ def main():
     if err:
         print(err)
         sys.exit(1)
-
-def get_all_possible_paths() -> List[str]:
-    collected_files = []  # Create a separate list for collecting files
-
-    for path in config.iterate_paths():
-        if os.path.isdir(path):
-            for root, _, files in os.walk(path):
-                for file in files:
-                    if any(file.endswith(ext) for ext in config.supported_file_extensions):
-                        collected_files.append(os.path.join(root, file))  # Use the separate list
-        else:
-            collected_files.append(path)
-
-    return sorted(collected_files)
-
 
 @dataclass
 class DocsValue:
