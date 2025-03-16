@@ -25,6 +25,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyinstaller --break-system-packages
 
+      # - run: sudo mkdir -p /usr/local/bin
+
       - name: Build package
         run: make install
 
@@ -33,7 +35,7 @@ jobs:
         if: github.event_name == 'pull_request'
         with:
           name: docs-ci
-          path: /usr/bin/local/docs-ci
+          path: /usr/local/bin/docs-ci
 
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -42,7 +44,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: |
-            /usr/bin/local/docs-ci
+            /usr/local/bin/docs-ci
   test-e2e:
     runs-on: ubuntu-latest
     steps:
@@ -52,13 +54,14 @@ jobs:
           echo "This job is only for pull_request & push"
           exit 0
 
-      - run: echo "/usr/bin/local" >> $GITHUB_PATH
+      # - run: sudo mkdir -p /usr/local/bin
+      - run: echo "/usr/local/bin" >> $GITHUB_PATH
 
       - name: Download docs-ci Bin
         uses: actions/download-artifact@v4.1.9
         with:
           name: docs-ci
-          path: /usr/bin/local
+          path: /usr/local/bin
 
       - name: Run 1-node
         run: docs-ci ./examples/1-node/config.json
