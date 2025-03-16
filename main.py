@@ -109,9 +109,7 @@ class DocsValue:
             # parse out env vars from commands. an example format is:
             # --> export SERVICE_MANAGER_ADDR=`make get-eigen-service-manager-from-deploy
             # this should be done here as it is more JIT, can't do earlier else other commands are not ready
-            env_vars: Dict[str, str] = {}
-            env_vars.update(parse_env(command))
-            env.update(self.envs)
+            env.update(parse_env(command))
 
             # Determine if this specific command should run in background
             cmd_background = self.background
