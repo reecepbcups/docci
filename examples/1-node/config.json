@@ -7,6 +7,6 @@
     "working_dir": "examples/1-node",
     "debugging": false,
     "cleanup_cmds": [
-      "kill -9 $(lsof -t -i:3001)"
+      "kill -9 $(lsof -t -i:3000)"
     ]
   }
