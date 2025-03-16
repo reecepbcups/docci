@@ -16,34 +16,36 @@ from models import Tags
 # Store PIDs of background processes for later cleanup
 background_processes = []
 
-# do_logic returns an error if it fails
-def do_logic(cfg: Config) -> str | None:
-    global config  # set the config to cfg as global
-    config = cfg
+# config: Config
 
+# do_logic returns an error if it fails
+def do_logic(config: Config) -> str | None:
     config.run_pre_cmds(hide_output=True)
     for key, value in config.env_vars.items():
         os.environ[key] = value
 
-    for _, file_paths in config.get_all_possible_paths().items():
+    for parentPathKey, file_paths in config.get_all_possible_paths().items():
         try:
             for file_path in file_paths:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
 
-                values = parse_markdown_code_blocks(content)
+                values = parse_markdown_code_blocks(config, content)
                 for i, value in enumerate(values):
                     if value.ignored: continue
 
                     # value.print()
 
                     # the last command in the index and also the last file in all the paths
-                    is_success = value.run_commands(is_last_cmd=(i == len(values) - 1) and (file_path == file_path[-1]))
+                    is_last_cmd = (i == len(values) - 1), (file_path == file_paths[-1])
+                    is_success = value.run_commands(config=config, is_last_cmd=is_last_cmd)
                     if not is_success:
                         return f"Error running commands for value: {value}"
 
         except KeyboardInterrupt:
             print("\nKeyboardInterrupt: Quitting...")
+        except Exception as e:
+            return f"Error({parentPathKey},{file_paths}): {e}"
         finally:
             cleanup_background_processes()
             config.run_cleanup_cmds(hide_output=True)
@@ -78,6 +80,7 @@ class DocsValue:
 
     def run_commands(
         self,
+        config: Config,
         background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"],
         is_last_cmd: bool = False,
         cwd: str | None = None,
@@ -150,6 +153,7 @@ class DocsValue:
                         sys.stderr.flush()
                         output += stderr.decode('utf-8', errors='replace')
 
+                    print(f"Command output: {output}, expected {config.final_output_contains}")
                     if config.final_output_contains not in output:
                         print(f"Error: final_output_contains not found in output: {config.final_output_contains}")
                         success = False
@@ -197,7 +201,7 @@ def cleanup_background_processes():
 
 
 
-def parse_markdown_code_blocks(content: str) -> List[DocsValue]:
+def parse_markdown_code_blocks(config: Config | None, content: str) -> List[DocsValue]:
     """
     Parse a markdown file and extract all code blocks with their language and content.
 
@@ -230,7 +234,11 @@ def parse_markdown_code_blocks(content: str) -> List[DocsValue]:
         tags = language_parts[1:] if len(language_parts) > 1 else []
 
         # ignored = 'docs-ci-ignore' in tags or language not in config.followed_languages
-        ignored = Tags.IGNORE() in tags or language not in config.followed_languages
+        # ignored = Tags.IGNORE() in tags or language not in config.followed_languages
+        ignored = Tags.IGNORE() in tags
+        if config is not None:
+            ignored = ignored or language not in config.followed_languages
+
         background = Tags.BACKGROUND() in tags
         post_delay = int([tag.split('=')[1] for tag in tags if Tags.POST_DELAY() in tag][0]) if any('docs-ci-post-delay' in tag for tag in tags) else 0
         cmd_delay = int([tag.split('=')[1] for tag in tags if Tags.CMD_DELAY() in tag][0]) if any('docs-ci-cmd-delay' in tag for tag in tags) else 0

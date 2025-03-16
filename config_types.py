@@ -30,16 +30,18 @@ class Config:
         collected_files = {} # parent path -> list of files
 
         for path in self.iterate_paths():
-            if path not in collected_files:
-                collected_files[path] = []
+            parent_path = path  # Use the original path as the key
+            if parent_path not in collected_files:
+                collected_files[parent_path] = []
+
             if os.path.isdir(path):
                 for root, _, files in os.walk(path):
                     for file in files:
                         if any(file.endswith(ext) for ext in self.supported_file_extensions):
-                            collected_files[path].append(os.path.join(root, file))
+                            collected_files[parent_path].append(os.path.join(root, file))
             else:
-                # collected_files.append(path)
-                collected_files[path].append(path)
+                # For non-directory paths, just add the file directly
+                collected_files[parent_path].append(path)
 
         # sort all collected_files values
         for key in collected_files:
