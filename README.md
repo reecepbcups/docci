@@ -16,8 +16,9 @@ make install
 
 ### 🤖 Github Actions Integration
 ````yaml
-# make sure to update 1) the version in the URL 2) the config path to run against
-- name: Readme Runner
+# update the version in the URL
+# update the config path argument
+- name: Docci Readme Runner
     run: |
     sudo wget -O /usr/local/bin/docci https://github.com/Reecepbcups/docci/releases/download/v0.3.0/docci
     sudo chmod +x /usr/local/bin/docci
@@ -26,11 +27,11 @@ make install
 
 ### 🎮 Usage
 
-````bash
+```bash docci-ignore
 docci <config_path | config_json>
 # e.g. docci .github/workflows/config.json
 # e.g. docci '{"paths": ["docs/README.md"],"working_dir": "docs/","cleanup_cmds": ["kill -9 $(lsof -t -i:3000)"]}'
-````
+```
 
 ### 🎨 Available tags
   * 🚫 `docci-ignore`: Skip executing this code block

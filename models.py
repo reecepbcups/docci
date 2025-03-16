@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Optional, Tuple
 
 
 class Tags(Enum):
@@ -34,9 +34,21 @@ class Tags(Enum):
     @staticmethod
     def is_valid(tag: str) -> bool:
         for member in Tags:
+            if '=' in tag:
+                tag = tag.split('=')[0]
             if member.value == tag:
                 return True
         return False
+
+    # validate an array of tags
+    @staticmethod
+    def validate(tags: list[str]) -> Tuple[bool, str | None]:
+        for tag in tags:
+            if not tag.startswith(Tags.TAGS_PREFIX()): continue
+            if not Tags.is_valid(tag):
+                print(tags, tag)
+                return False, tag
+        return True, None
 
 @dataclass
 class Endpoint:

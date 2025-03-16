@@ -13,10 +13,13 @@ install:
 .PHONY: install
 
 ## tests: Run the tests.
-tests:
+tests: tests-integration
 	@python -m unittest tests/tests.py
-	@python -m unittest tests/integration.py
 .PHONY: tests
+
+## tests-integration: Run the readme tests.
+tests-integration:
+	@python -m unittest tests/integration.py
 
 ## run-integrations: Run the documentation examples within this repo
 run-integrations:
