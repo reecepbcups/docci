@@ -4,21 +4,21 @@ Modifying underlying documents with inserting, replacing, or resetting files.
 
 ## Steps
 
-```bash docs-ci-ignore
+```bash docci-ignore
 cd ./examples/2-source-code-modification
 ```
 
 Create a new file called `example.json` and input the following contents.
 - If the file does not exist, it will be created.
-- If the file exists, it will be overwritten due to `docs-ci-reset-file`
+- If the file exists, it will be overwritten due to `docci-reset-file`
 
-```json title=example.json docs-ci-reset-file
+```json title=example.json docci-reset-file
 {
     "some_key": "My Value"
 }
 ```
 
-```python title=example.py docs-ci-reset-file
+```python title=example.py docci-reset-file
 import json
 
 def main():
@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
 Run the example, the `some_key` value is printed & output is verified.
 
-```bash docs-ci-output-contains="My Value"
+```bash docci-output-contains="My Value"
 python3 example.py
 ```
 
@@ -44,7 +44,7 @@ python3 example.py
 
 ### Create a new website
 
-```html title=example.html docs-ci-reset-file
+```html title=example.html docci-reset-file
 <html>
     <head>
         <title>My Titlee</title>
@@ -54,7 +54,7 @@ python3 example.py
 
 ### Fix the typo at line 3
 
-```html title=example.html docs-ci-line-replace=3
+```html title=example.html docci-line-replace=3
         <title>My Title</title>
 ```
 
@@ -62,7 +62,7 @@ python3 example.py
 
 Add main content after the head tag
 
-```html title=example.html docs-ci-line-insert=4
+```html title=example.html docci-line-insert=4
     <body>
         <h1>My Header</h1>
         <p>1 paragraph</p>
@@ -74,7 +74,7 @@ Add main content after the head tag
 
 Fix the paragraphs to spell it instead over multiple lines
 
-```html title=example.html docs-ci-line-replace=7-9
+```html title=example.html docci-line-replace=7-9
         <p>First paragraph</p>
         <p>Second paragraph</p>
 ```
@@ -84,13 +84,13 @@ Fix the paragraphs to spell it instead over multiple lines
 
 If you try to replace a line too far out of bounds, it will just append
 
-```html title=example.html docs-ci-line-replace=44
+```html title=example.html docci-line-replace=44
 <!-- example comment at the end of the file -->
 ```
 
 Negative insert's will wrap around the length, allowing you to append from the end
 
-```html title=example.html docs-ci-line-insert=-1
+```html title=example.html docci-line-insert=-1
 <!-- Even further comment using -1 as insert -->
 ```
 

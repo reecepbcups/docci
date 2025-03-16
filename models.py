@@ -1,25 +1,25 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Optional, Tuple
 
 
 class Tags(Enum):
-    TAGS_PREFIX = 'docs-ci-'
+    TAGS_PREFIX = 'docci-'
 
-    IGNORE = 'docs-ci-ignore'
-    BACKGROUND = 'docs-ci-background'
-    POST_DELAY = 'docs-ci-delay-after'
-    CMD_DELAY = 'docs-ci-delay-per-cmd'
-    HTTP_POLLING = 'docs-ci-wait-for-endpoint'
-    IGNORE_IF_INSTALLED = 'docs-ci-if-not-installed'
-    OUTPUT_CONTAINS = 'docs-ci-output-contains'
-    ASSERT_FAILURE = 'docs-ci-assert-failure'
+    IGNORE = 'docci-ignore'
+    BACKGROUND = 'docci-background'
+    POST_DELAY = 'docci-delay-after'
+    CMD_DELAY = 'docci-delay-per-cmd'
+    HTTP_POLLING = 'docci-wait-for-endpoint'
+    IGNORE_IF_INSTALLED = 'docci-if-not-installed'
+    OUTPUT_CONTAINS = 'docci-output-contains'
+    ASSERT_FAILURE = 'docci-assert-failure'
 
     # file related
-    TITLE = 'title' # maybe we also alias with a docs-ci-title or -filename or something?
-    INSERT_AT_LINE = 'docs-ci-line-insert'
-    REPLACE_AT_LINE= 'docs-ci-line-replace' # docs-ci-line-replace=2-4 or docs-ci-line-replace=2 works
-    RESET_FILE = 'docs-ci-reset-file'
+    TITLE = 'title' # maybe we also alias with a docci-title or -filename or something?
+    INSERT_AT_LINE = 'docci-line-insert'
+    REPLACE_AT_LINE= 'docci-line-replace' # docci-line-replace=2-4 or docci-line-replace=2 works
+    RESET_FILE = 'docci-reset-file'
 
     def __str__(self):
         return self.value
@@ -34,9 +34,21 @@ class Tags(Enum):
     @staticmethod
     def is_valid(tag: str) -> bool:
         for member in Tags:
+            if '=' in tag:
+                tag = tag.split('=')[0]
             if member.value == tag:
                 return True
         return False
+
+    # validate an array of tags
+    @staticmethod
+    def validate(tags: list[str]) -> Tuple[bool, str | None]:
+        for tag in tags:
+            if not tag.startswith(Tags.TAGS_PREFIX()): continue
+            if not Tags.is_valid(tag):
+                print(tags, tag)
+                return False, tag
+        return True, None
 
 @dataclass
 class Endpoint:

@@ -1,36 +1,39 @@
-# Either python3 main.py or docs-ci
+# Either python3 main.py or docci
 EXEC_BINARY?=python3 main.py
 
 ## install: Install the binary.
 install:
-# pip install pyinstaller staticx --break-system-packages
-	@echo ⏳ Installing docs-ci...
-	@pyinstaller --name docs-ci --workpath __pycache__/build --specpath __pycache__/build/ --onefile *.py
-	@sudo cp dist/docs-ci /usr/local/bin/docs-ci;
+# pip install pyinstaller --break-system-packages
+	@echo ⏳ Installing docci...
+	@pyinstaller --name docci --workpath __pycache__/build --specpath __pycache__/build/ --onefile *.py
+	@sudo cp dist/docci /usr/local/bin/docci;
 # this must come after the sudo cp else you could hit /proc/self/exec: Permission denied issues
-	sudo chmod a+xr /usr/local/bin/docs-ci;
-	@echo ✅ docs-ci installed
+	sudo chmod a+xr /usr/local/bin/docci;
+	@echo ✅ docci installed
 .PHONY: install
 
-## tests: Run the tests.
-tests:
+## test: Run all unit & integration test.
+test: test-unit-integration
 	@python -m unittest tests/tests.py
-	@python -m unittest tests/integration.py
-.PHONY: tests
+.PHONY: test
 
-## run-integrations: Run the documentation examples within this repo
-run-integrations:
+## test-unit-integration: Run the readme tests.
+test-unit-integration:
+	@python -m unittest tests/integration.py
+
+## test-examples: Run the documentation examples within this repo
+test-examples:
 	@echo "Running integrations as $(EXEC_BINARY)"
 	@sleep 1
 	$(EXEC_BINARY) tests/config1.json
 	$(EXEC_BINARY) examples/1-node/config.json
 	$(EXEC_BINARY) examples/2-source-code-modification/config.json
-.PHONY: run-integrations
+.PHONY: test-examples
 
 .PHONY: help
 help: Makefile
 	@echo
-	@echo " Choose a command run in "docs-ci", or just run 'make' for install"
+	@echo " Choose a command run in "docci", or just run 'make' for install"
 	@echo
 	@sed -n 's/^##//p' $< | column -t -s ':' |  sed -e 's/^/ /'
 	@echo

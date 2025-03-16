@@ -19,7 +19,7 @@ class Config:
     working_dir: str | None = None
     debugging = False
 
-    def __init__(self, paths: List[str], env_var: Dict[str, str], cleanup_cmds: List[str], pre_cmds: List[str] = []):
+    def __init__(self, paths: List[str], env_var: Dict[str, str] = {}, cleanup_cmds: List[str] = [], pre_cmds: List[str] = []):
         self.paths = paths
         self.env_vars = env_var
         self.cleanup_cmds = cleanup_cmds
