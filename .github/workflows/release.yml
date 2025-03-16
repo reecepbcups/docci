@@ -35,6 +35,7 @@ jobs:
         if: github.event_name == 'pull_request'
         with:
           name: docs-ci
+          retention-days: 1
           path: /usr/local/bin/docs-ci
 
       - name: Release
@@ -64,6 +65,8 @@ jobs:
           name: docs-ci
           path: /usr/local/bin
       - run: chmod a+rx /usr/local/bin/docs-ci
+
+      - run: cat ./examples/1-node/config.json
 
       - name: Run 1-node
         run: docs-ci ./examples/1-node/config.json
