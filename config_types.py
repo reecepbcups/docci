@@ -27,6 +27,20 @@ class Config:
         for path in self.paths:
             yield path
 
+    def get_all_possible_paths(self) -> List[str]:
+        collected_files = []
+
+        for path in self.iterate_paths():
+            if os.path.isdir(path):
+                for root, _, files in os.walk(path):
+                    for file in files:
+                        if any(file.endswith(ext) for ext in self.supported_file_extensions):
+                            collected_files.append(os.path.join(root, file))
+            else:
+                collected_files.append(path)
+
+        return sorted(collected_files)
+
     def __run_cmd(self, cmd: str, hide_output: bool, cwd: str | None = None):
         subprocess.run(cmd, shell=True, cwd=cwd, stdout=subprocess.DEVNULL if hide_output else None, stderr=subprocess.DEVNULL if hide_output else None)
 
@@ -55,6 +69,5 @@ class Config:
     def load_from_file(absolute_path: str) -> "Config":
         with open(absolute_path) as f:
             return Config.from_json(json.load(f))
-
 
 

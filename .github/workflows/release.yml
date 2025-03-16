@@ -27,7 +27,7 @@ jobs:
       - name: Build package
         env:
           IS_ACTION: true # else we move to /usr/bin/local/
-        run: chmod +x compile-bin.sh && sh ./compile-bin.sh
+        run: chmod +x build.sh && sh ./build.sh
 
       - name: Release
         uses: softprops/action-gh-release@v2
