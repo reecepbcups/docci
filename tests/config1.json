@@ -1,0 +1,7 @@
+{
+    "paths": ["tests/README1.md"],
+    "env_vars": {},
+    "pre_cmds": [],
+    "cleanup_cmds": [],
+    "final_output_contains": "abcMyOutput"
+  }
