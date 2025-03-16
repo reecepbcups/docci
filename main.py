@@ -6,10 +6,11 @@ import signal
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List
 
 from config_types import Config
+from models import Tags
 
 # Store PIDs of background processes for later cleanup
 background_processes = []
@@ -28,7 +29,10 @@ def do_logic(cfg: Config) -> str | None:
     all_paths = get_all_possible_paths()
     for file_path in all_paths:
         try:
-            values = parse_markdown_code_blocks(file_path)
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            values = parse_markdown_code_blocks(content)
             for i, value in enumerate(values):
                 if value.ignored: continue
 
@@ -206,12 +210,15 @@ def cleanup_background_processes():
     # Clear the list
     background_processes.clear()
 
-def parse_markdown_code_blocks(file_path: str) -> List[DocsValue]:
+
+
+
+def parse_markdown_code_blocks(content: str) -> List[DocsValue]:
     """
     Parse a markdown file and extract all code blocks with their language and content.
 
     Args:
-        file_path: Path to the markdown file to parse
+        content: A files contents as a string
 
     Returns:
         A list of dictionaries, each containing:
@@ -219,8 +226,6 @@ def parse_markdown_code_blocks(file_path: str) -> List[DocsValue]:
         - 'content': The content of the code block
         - 'should_run': Boolean indicating if this block should be executed (True for bash blocks without docs-ci-ignore)
     """
-    with open(file_path, 'r', encoding='utf-8') as f:
-        content = f.read()
 
     # Regex pattern to match code blocks: ```language ... ```
     # Capturing groups:
@@ -240,10 +245,11 @@ def parse_markdown_code_blocks(file_path: str) -> List[DocsValue]:
         language = language_parts[0] if language_parts else ''
         tags = language_parts[1:] if len(language_parts) > 1 else []
 
-        ignored = 'docs-ci-ignore' in tags or language not in config.followed_languages
-        background = 'docs-ci-background' in tags
-        post_delay = int([tag.split('=')[1] for tag in tags if 'docs-ci-post-delay' in tag][0]) if any('docs-ci-post-delay' in tag for tag in tags) else 0
-        cmd_delay = int([tag.split('=')[1] for tag in tags if 'docs-ci-cmd-delay' in tag][0]) if any('docs-ci-cmd-delay' in tag for tag in tags) else 0
+        # ignored = 'docs-ci-ignore' in tags or language not in config.followed_languages
+        ignored = Tags.IGNORE() in tags or language not in config.followed_languages
+        background = Tags.BACKGROUND() in tags
+        post_delay = int([tag.split('=')[1] for tag in tags if Tags.POST_DELAY() in tag][0]) if any('docs-ci-post-delay' in tag for tag in tags) else 0
+        cmd_delay = int([tag.split('=')[1] for tag in tags if Tags.CMD_DELAY() in tag][0]) if any('docs-ci-cmd-delay' in tag for tag in tags) else 0
 
         content = str(block_content).strip()
 
@@ -279,30 +285,45 @@ def parse_markdown_code_blocks(file_path: str) -> List[DocsValue]:
 
     return results
 
-def execute_backticks(value: str) -> str:
+def execute_command(command: str) -> str:
+    """Execute a shell command and return its output."""
+    try:
+        return subprocess.check_output(command, shell=True, text=True).strip()
+    except subprocess.CalledProcessError as e:
+        print(f"Warning: Failed to execute command: {command}")
+        print(f"Error: {e}")
+        return command  # Return original command if execution fails
+
+def execute_substitution_commands(value: str) -> str:
     """
-    Execute commands inside backticks and return the value with output substituted.
+    Execute commands inside backticks or $() and return the value with output substituted.
 
     Args:
-        value: String that may contain backtick commands
+        value: String that may contain backtick or $() commands
 
     Returns:
-        String with backtick commands replaced by their output
+        String with commands replaced by their output
     """
-    backtick_match = re.search(r'`(.*?)`', value)
-    if not backtick_match:
-        return value
+    result = value
 
-    cmd_to_execute = backtick_match.group(1)
-    try:
-        executed_value = subprocess.check_output(
-            cmd_to_execute, shell=True, text=True
-        ).strip()
-        return value.replace(f"`{cmd_to_execute}`", executed_value)
-    except subprocess.CalledProcessError as e:
-        print(f"Warning: Failed to execute command in backticks: {cmd_to_execute}")
-        print(f"Error: {e}")
-        return value  # Return original value if execution fails
+    # Process all commands
+    patterns = [
+        (r'`(.*?)`', lambda match: execute_command(match.group(1))),
+        (r'\$\((.*?)\)', lambda match: execute_command(match.group(1)))
+    ]
+
+    for pattern, handler in patterns:
+        # Keep replacing until no more matches
+        while True:
+            match = re.search(pattern, result)
+            if not match:
+                break
+
+            full_match = match.group(0)
+            replacement = handler(match)
+            result = result.replace(full_match, replacement)
+
+    return result
 
 def parse_env(command: str) -> Dict[str, str]:
     """
@@ -322,7 +343,7 @@ def parse_env(command: str) -> Dict[str, str]:
     export_match = re.match(r'^export\s+([A-Za-z_][A-Za-z0-9_]*)=(.*)$', command.strip())
     if export_match:
         key = export_match.group(1)
-        value = execute_backticks(export_match.group(2))
+        value = execute_substitution_commands(export_match.group(2))
         return {key: value}
 
     # Check for inline environment variables (KEY=VALUE command args)
@@ -335,7 +356,7 @@ def parse_env(command: str) -> Dict[str, str]:
         for pair in env_part.split():
             if '=' in pair:
                 key, value = pair.split('=', 1)
-                env_vars[key] = execute_backticks(value)
+                env_vars[key] = execute_substitution_commands(value)
 
         return env_vars
 
@@ -343,7 +364,7 @@ def parse_env(command: str) -> Dict[str, str]:
     standalone_match = re.match(r'^([A-Za-z_][A-Za-z0-9_]*)=(.*)$', command.strip())
     if standalone_match:
         key = standalone_match.group(1)
-        value = execute_backticks(standalone_match.group(2))
+        value = execute_substitution_commands(standalone_match.group(2))
         return {key: value}
 
     # If we get here, there were no environment variables we could parse
@@ -351,7 +372,4 @@ def parse_env(command: str) -> Dict[str, str]:
 
 
 if __name__ == "__main__":
-    # print(parse_env('export SERVICE_MANAGER_ADDR=`make get-eigen-service-manager-from-deploy`'))
-    # print(parse_env('export SERVICE_MANAGER_ADDR=123'))
-    # print(parse_env('SERVICE_CONFIG_FILE=service_config.json make deploy-service'))
     main()
