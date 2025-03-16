@@ -3,6 +3,8 @@ import os
 import subprocess
 from typing import Dict, List
 
+ # https://github.com/rouge-ruby/rouge/wiki/List-of-supported-languages-and-lexers
+ShellLanguages = ["shell", "bash", "sh", "zsh", "ksh"] # if it is not in here then it is likely a source ode
 
 class Config:
     paths: List[str] = [] # this will be loaded with the prefix of the absolute path of the repo
@@ -13,7 +15,7 @@ class Config:
     ignore_commands: List[str] = []
     final_output_contains: str = ''
     supported_file_extensions = ["md", "mdx"]
-    followed_languages = ["shell", "bash", "sh", "zsh","ksh"] # https://github.com/rouge-ruby/rouge/wiki/List-of-supported-languages-and-lexers
+    followed_languages = ShellLanguages
     working_dir: str | None = None
     debugging = False
 
@@ -83,6 +85,11 @@ class Config:
     @staticmethod
     def load_from_file(absolute_path: str) -> "Config":
         with open(absolute_path) as f:
-            return Config.from_json(json.load(f))
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                print(f"Invalid JSON in file: {absolute_path}, make sure you reference the JSON config file & not the README")
+                exit(1)
+            return Config.from_json(data)
 
 
