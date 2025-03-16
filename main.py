@@ -59,7 +59,6 @@ def main():
             cmd = "docs-ci"
 
         print(f"Usage: {cmd} <config_path|config_json_blob>")
-        print(f"Got: {sys.argv}")
         sys.exit(1)
 
     cfg_input = sys.argv[1]
