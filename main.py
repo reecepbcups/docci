@@ -38,9 +38,9 @@ def do_logic(config: Config) -> str | None:
 
                     # the last command in the index and also the last file in all the paths
                     is_last_cmd = (i == len(values) - 1), (file_path == file_paths[-1])
-                    is_success = value.run_commands(config=config, is_last_cmd=is_last_cmd)
-                    if not is_success:
-                        return f"Error running commands for value: {value}"
+                    err = value.run_commands(config=config, is_last_cmd=is_last_cmd)
+                    if err:
+                        return f"Error({parentPathKey},{file_paths}): {err}"
 
         except KeyboardInterrupt:
             print("\nKeyboardInterrupt: Quitting...")
@@ -84,14 +84,16 @@ class DocsValue:
         background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"],
         is_last_cmd: bool = False,
         cwd: str | None = None,
-    ) -> bool: # success / failure returned
+    ) -> str | None:
         '''
         Runs the commands. host env vars are pulled into the processes
+
+        returns: error message if any
         '''
 
         env = os.environ.copy()
 
-        success = True
+        success = None
 
         for command in self.commands:
             if command in config.ignore_commands:
@@ -114,7 +116,8 @@ class DocsValue:
             if cmd_background and not command.strip().endswith('&'):
                 command = f"{command} &"
 
-            print(f"Running command: {command}" + (" (& added for background)" if cmd_background else ""))
+            if config.debug:
+                print(f"Running command: {command}" + (" (& added for background)" if cmd_background else ""))
 
             if self.cmd_delay > 0:
                 print(f"Sleeping for {self.cmd_delay} seconds before running command (cmd-delay)...")
@@ -153,17 +156,14 @@ class DocsValue:
                         sys.stderr.flush()
                         output += stderr.decode('utf-8', errors='replace')
 
-                    print(f"Command output: {output}, expected {config.final_output_contains}")
                     if config.final_output_contains not in output:
-                        print(f"Error: final_output_contains not found in output: {config.final_output_contains}")
-                        success = False
+                        success = f"Error: final_output_contains not found in output: {config.final_output_contains}"
                         break
                 else:
                     # For regular processes, wait and check return code
                     process.wait()
                     if process.returncode != 0:
-                        print(f"Error running command: {command}")
-                        success = False
+                        success = f"Error running command: {command}"
                         break
 
         if self.post_delay > 0:

@@ -14,6 +14,7 @@ class Config:
     final_output_contains: str = ''
     supported_file_extensions = ["md", "mdx"]
     followed_languages = ["shell", "bash", "sh", "zsh","ksh"] # https://github.com/rouge-ruby/rouge/wiki/List-of-supported-languages-and-lexers
+    debug = False
 
     def __init__(self, paths: List[str], env_var: Dict[str, str], cleanup_cmds: List[str], pre_cmds: List[str] = [], final_output_contains: str = ''):
         self.paths = paths
