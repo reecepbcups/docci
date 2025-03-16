@@ -9,6 +9,5 @@
     ],
     "env_vars": {},
     "pre_cmds": [],
-    "debugging": false,
-    "final_output_contains": "My Value"
+    "debugging": true
   }

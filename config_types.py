@@ -13,18 +13,16 @@ class Config:
     cleanup_cmds: List[str] = []
     only_run_bash: bool = True
     ignore_commands: List[str] = []
-    final_output_contains: str = ''
     supported_file_extensions = ["md", "mdx"]
     followed_languages = ShellLanguages
     working_dir: str | None = None
     debugging = False
 
-    def __init__(self, paths: List[str], env_var: Dict[str, str], cleanup_cmds: List[str], pre_cmds: List[str] = [], final_output_contains: str = ''):
+    def __init__(self, paths: List[str], env_var: Dict[str, str], cleanup_cmds: List[str], pre_cmds: List[str] = []):
         self.paths = paths
         self.env_vars = env_var
         self.cleanup_cmds = cleanup_cmds
         self.pre_cmds = pre_cmds
-        self.final_output_contains = final_output_contains
 
     def iterate_paths(self):
         for path in self.paths:
@@ -67,7 +65,7 @@ class Config:
 
     @classmethod
     def from_json(cls, json: Dict) -> "Config":
-        c = Config(json['paths'], json.get('env_vars', {}), json.get('cleanup_cmds', []), json.get('pre_cmds', []), json.get('final_output_contains', ''))
+        c = Config(json['paths'], json.get('env_vars', {}), json.get('cleanup_cmds', []), json.get('pre_cmds', []))
         c.working_dir = json.get('working_dir', None)
         c.debugging = json.get('debugging', False)
         return c
@@ -79,7 +77,6 @@ class Config:
             'cleanup_cmds': self.cleanup_cmds,
             'pre_cmds': self.pre_cmds,
             'working_dir': self.working_dir,
-            'final_output_contains': self.final_output_contains
         }
 
     @staticmethod

@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
 Run the example, the some_key value is printed. Since this is the last command the output is checked
 
-```bash
+```bash docs-ci-output-contains="My Value"
 python3 example.py
 ```
 

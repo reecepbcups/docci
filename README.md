@@ -40,7 +40,6 @@ docs-ci <config_path>
   "debugging": false,
   "pre_cmds": ["npm install"],
   "cleanup_cmds": ["docker-compose down"],
-  "final_output_contains": "Tests passed"
 }
 ````
 
@@ -49,7 +48,7 @@ docs-ci <config_path>
 Control how your documentation code blocks are executed:
 
 ````bash
-```bash docs-ci-background docs-ci-delay-after=5
+```bash docs-ci-background docs-ci-delay-after=5 docs-ci-output-contains="Tests passed"
 # This runs in background and waits 5 seconds after completion
 npm start
 ```
@@ -62,6 +61,7 @@ npm start
   * ⏲️ `docs-ci-delay-after=N`: Wait N seconds after running commands
   * ⌛ `docs-ci-delay-per-cmd=N`: Wait N seconds before each command
   * 🌐 `docs-ci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
+  * 📜 `docs-ci-output-contains="string"`: Ensure the output contains a string at the end of the block
 
 ---
 
@@ -122,4 +122,3 @@ cat my-file.txt
 - 🎬 `pre_cmds`: Commands to run before processing markdown
 - 🧹 `cleanup_cmds`: Commands to run after processing
 - 📂 `working_dir`: Working directory for command execution
-- ✅ `final_output_contains`: Required string in final output

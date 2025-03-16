@@ -80,6 +80,7 @@ class DocsValue:
     cmd_delay: int = 0 # delay in seconds before each command is run
     wait_for_endpoint: Endpoint | None = None
     binary: str | None = None
+    output_contains: str | None = None
     # the `title` tag sets the title of a file. it will create if it does not exist.
     # when the file does, it will insert the content at the line number. if the file is empty, it will always insert at the start (idx 0)
     file_name: str | None = None
@@ -139,7 +140,7 @@ class DocsValue:
 
         env = os.environ.copy()
 
-        success = None
+        response = None # success
 
         if self.binary:
             if shutil.which(self.binary):
@@ -223,14 +224,17 @@ class DocsValue:
                         sys.stderr.flush()
                         output += stderr.decode('utf-8', errors='replace')
 
-                    if config.final_output_contains not in output:
-                        success = f"Error: final_output_contains not found in output: {config.final_output_contains}"
-                        break
+                    if self.output_contains:
+                        if self.output_contains not in output:
+                            response = f"Error: `{self.output_contains}` is not found in output, output: {output}"
+                            break
+                        else:
+                            print(f"Output contains: {self.output_contains}")
                 else:
                     # For regular processes, wait and check return code
                     process.wait()
                     if process.returncode != 0:
-                        success = f"Error running command: {command}"
+                        response = f"Error running command: {command}"
                         break
 
         if self.post_delay > 0:
@@ -239,7 +243,7 @@ class DocsValue:
                 print(f"Sleep: {i} seconds remaining...")
                 time.sleep(1)
 
-        return success
+        return response
 
     def handle_delay(self, delay_type: Literal["post", "cmd"]) -> None:
         delay = self.post_delay if delay_type == "post" else self.cmd_delay
@@ -275,13 +279,81 @@ def cleanup_background_processes():
 
 
 def extract_tag_value(tags, tag_type, default=None, converter=None):
-    """Extract value from a tag of format 'tag_type=value'"""
-    matching_tags = [tag.split('=')[1] for tag in tags if tag_type in tag]
+    """
+    Extract value from a tag of format 'tag_type=value' or 'tag_type="value with spaces"'
+    """
+    matching_tags = []
+
+    for tag in tags:
+        if tag_type in tag:
+            # Find the position of the equals sign
+            equals_pos = tag.find('=')
+            if equals_pos != -1:
+                # Get everything after the equals sign
+                value = tag[equals_pos + 1:]
+
+                # Check if the value starts with a quote
+                if value and (value[0] == '"' or value[0] == "'"):
+                    quote_char = value[0]
+                    # Look for the matching closing quote
+                    for i in range(1, len(value)):
+                        if value[i] == quote_char:
+                            # Extract the value WITHOUT quotes
+                            value = value[1:i]
+                            break
+                else:
+                    # No quotes, just use the value as is
+                    value = value
+
+                matching_tags.append(value)
+
     if not matching_tags:
         return default
 
     value = matching_tags[0]
     return converter(value) if converter else value
+
+def process_language_parts(language_parts):
+    """Process language parts to properly handle quoted values in tags"""
+    if len(language_parts) <= 1:
+        return []
+
+    raw_tags = language_parts[1:]
+    processed_tags = []
+
+    i = 0
+    while i < len(raw_tags):
+        current_tag = raw_tags[i]
+
+        # Check if this tag has an opening quote without a closing quote
+        if ('="' in current_tag or "='" in current_tag) and not (
+            (current_tag.endswith('"') and '="' in current_tag) or
+            (current_tag.endswith("'") and "='" in current_tag)
+        ):
+            # Determine which quote character is used
+            quote_char = '"' if '="' in current_tag else "'"
+
+            # Start building the complete tag
+            complete_tag = current_tag
+
+            # Keep adding parts until we find the closing quote
+            j = i + 1
+            while j < len(raw_tags) and quote_char not in raw_tags[j]:
+                complete_tag += " " + raw_tags[j]
+                j += 1
+
+            # Add the closing part if we found it
+            if j < len(raw_tags):
+                complete_tag += " " + raw_tags[j]
+                i = j  # Skip ahead
+
+            processed_tags.append(complete_tag)
+        else:
+            processed_tags.append(current_tag)
+
+        i += 1
+
+    return processed_tags
 
 def parse_markdown_code_blocks(config: Config | None, content: str) -> List[DocsValue]:
     """
@@ -313,7 +385,7 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
 
         # Get the primary language
         language = language_parts[0] if language_parts else ''
-        tags = language_parts[1:] if len(language_parts) > 1 else []
+        tags = process_language_parts(language_parts) if len(language_parts) > 0 else []
 
         ignored = Tags.IGNORE() in tags
         if config is not None:
@@ -332,8 +404,9 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             binary=extract_tag_value(tags, Tags.IGNORE_IF_INSTALLED(), default=None),
             wait_for_endpoint=handle_http_polling_input(extract_tag_value(tags, Tags.HTTP_POLLING(), default=None)),
             commands=[],
+            output_contains=extract_tag_value(tags, Tags.OUTPUT_CONTAINS(), default=None),
             # file specific
-            file_name=extract_tag_value(tags, Tags.FILE_NAME(), default=None),
+            file_name=extract_tag_value(tags, Tags.TITLE(), default=None),
             insert_at_line=extract_tag_value(tags, Tags.INSERT_AT_LINE(), default=None, converter=int),
         )
 
