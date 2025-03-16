@@ -10,8 +10,8 @@ import requests
 class Tags(Enum):
     IGNORE = 'docs-ci-ignore'
     BACKGROUND = 'docs-ci-background'
-    POST_DELAY = 'docs-ci-post-delay'
-    CMD_DELAY = 'docs-ci-cmd-delay'
+    POST_DELAY = 'docs-ci-delay-after'
+    CMD_DELAY = 'docs-ci-delay-per-cmd'
     HTTP_POLLING = 'docs-ci-wait-for-endpoint'
 
     def __str__(self):

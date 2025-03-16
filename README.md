@@ -47,7 +47,7 @@ docs-ci <config_path>
 Control how your documentation code blocks are executed:
 
 ````bash
-```bash docs-ci-background docs-ci-post-delay=5
+```bash docs-ci-background docs-ci-delay-after=5
 # This runs in background and waits 5 seconds after completion
 npm start
 ```
@@ -56,8 +56,8 @@ npm start
 ## 🎨 Available tags
   * 🚫 `docs-ci-ignore`: Skip executing this code block
   * 🔄 `docs-ci-background`: Run the command in the background
-  * ⏲️ `docs-ci-post-delay=N`: Wait N seconds after running commands
-  * ⌛ `docs-ci-cmd-delay=N`: Wait N seconds before each command
+  * ⏲️ `docs-ci-delay-after=N`: Wait N seconds after running commands
+  * ⌛ `docs-ci-delay-per-cmd=N`: Wait N seconds before each command
   * 🌐 `docs-ci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
 
 ---
@@ -85,7 +85,7 @@ brew install XYZ
 Run blocking commands in the background with delays: 🌐
 
 ````bash
-```bash docs-ci-background docs-ci-post-delay=5
+```bash docs-ci-background docs-ci-delay-after=5
 cp .env.example .env
 make my-long-running-process
 # waits 5 seconds here
@@ -95,9 +95,11 @@ make my-long-running-process
 Add delays between commands for stability: ⏱️
 
 ````bash
-```bash docs-ci-cmd-delay=1
+```bash docs-ci-delay-per-cmd=1
 go run save_large_file.go
+# waits 1 second
 cat my-file.txt
+# waits 1 second
 ```
 ````
 

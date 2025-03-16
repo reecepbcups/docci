@@ -70,7 +70,7 @@ class TestSomething(unittest.TestCase):
         # multiple tags
         dv: DocsValue = parse_markdown_code_blocks(config=None, content='''# header
                 here is some text\n\n
-                ```bash docs-ci-post-delay=5 docs-ci-cmd-delay=1
+                ```bash docs-ci-delay-after=5 docs-ci-delay-per-cmd=1
                     export MY_VARIABLE=`echo 123`
                     echo 12345
                 ```
