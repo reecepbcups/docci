@@ -1,3 +1,6 @@
+# Either python3 main.py or docs-ci
+EXEC_BINARY?=python3 main.py
+
 ## install: Install the binary.
 install:
 # pip install pyinstaller staticx --break-system-packages
@@ -14,6 +17,15 @@ tests:
 	@python -m unittest tests/tests.py
 	@python -m unittest tests/integration.py
 .PHONY: tests
+
+## run-integrations: Run the documentation examples within this repo
+run-integrations:
+	@echo "Running integrations as $(EXEC_BINARY)"
+	@sleep 1
+	$(EXEC_BINARY) tests/config1.json
+	$(EXEC_BINARY) examples/1-node/config.json
+	$(EXEC_BINARY) examples/2-source-code-modification/config.json
+.PHONY: run-integrations
 
 .PHONY: help
 help: Makefile

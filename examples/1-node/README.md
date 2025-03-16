@@ -30,6 +30,6 @@ npx tsc
 node dist/app.js
 ```
 
-```bash
+```bash docs-ci-output-contains="Hello World!"
 curl -X GET http://localhost:3000 --no-progress-meter
 ```

@@ -1,9 +1,10 @@
 {
   "paths": [
-    "tests/README1.md"
+    "tests/README1.md",
+    "tests/README2.md"
   ],
   "env_vars": {},
   "pre_cmds": [],
   "cleanup_cmds": [],
-  "final_output_contains": "abcMyOutput"
+  "debugging": false
 }

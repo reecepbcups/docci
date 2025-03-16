@@ -6,11 +6,15 @@ this is a duplicate of the ../README1.md file to simulate
 this is ignored
 ```
 
-```bash
+```bash docs-ci-output-contains="xyzMyOutput"
 echo xyzMyOutput
 ```
 
-```bash
+```bash docs-ci-output-contains="abcMyOutput"
+echo abcMyOutput
+```
+
+```bash docs-ci-assert-failure docs-ci-output-contains="NOT THE RIGHT OUTPUT"
 echo abcMyOutput
 ```
 

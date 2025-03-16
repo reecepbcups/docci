@@ -8,6 +8,5 @@
     "debugging": true,
     "cleanup_cmds": [
       "kill -9 $(lsof -t -i:3000)"
-    ],
-    "final_output_contains": "Hello World"
+    ]
   }

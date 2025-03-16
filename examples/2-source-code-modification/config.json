@@ -1,0 +1,10 @@
+{
+    "paths": [
+      "examples/2-source-code-modification/README.md"
+    ],
+    "working_dir": "examples/2-source-code-modification",
+    "cleanup_cmds": [],
+    "env_vars": {},
+    "pre_cmds": [],
+    "debugging": false
+  }

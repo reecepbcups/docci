@@ -3,26 +3,27 @@ import os
 import subprocess
 from typing import Dict, List
 
+ # https://github.com/rouge-ruby/rouge/wiki/List-of-supported-languages-and-lexers
+ScriptingLanguages = ["shell", "bash", "sh", "zsh", "ksh"] # if it is not in here then it is likely a source ode
 
 class Config:
+    config_version = "v0.0.1" # future proofing
     paths: List[str] = [] # this will be loaded with the prefix of the absolute path of the repo
     env_vars: Dict[str, str] = {}
     pre_cmds: List[str] = []
     cleanup_cmds: List[str] = []
     only_run_bash: bool = True
     ignore_commands: List[str] = []
-    final_output_contains: str = ''
     supported_file_extensions = ["md", "mdx"]
-    followed_languages = ["shell", "bash", "sh", "zsh","ksh"] # https://github.com/rouge-ruby/rouge/wiki/List-of-supported-languages-and-lexers
+    followed_languages = ScriptingLanguages
     working_dir: str | None = None
     debugging = False
 
-    def __init__(self, paths: List[str], env_var: Dict[str, str], cleanup_cmds: List[str], pre_cmds: List[str] = [], final_output_contains: str = ''):
+    def __init__(self, paths: List[str], env_var: Dict[str, str], cleanup_cmds: List[str], pre_cmds: List[str] = []):
         self.paths = paths
         self.env_vars = env_var
         self.cleanup_cmds = cleanup_cmds
         self.pre_cmds = pre_cmds
-        self.final_output_contains = final_output_contains
 
     def iterate_paths(self):
         for path in self.paths:
@@ -65,7 +66,7 @@ class Config:
 
     @classmethod
     def from_json(cls, json: Dict) -> "Config":
-        c = Config(json['paths'], json.get('env_vars', {}), json.get('cleanup_cmds', []), json.get('pre_cmds', []), json.get('final_output_contains', ''))
+        c = Config(json['paths'], json.get('env_vars', {}), json.get('cleanup_cmds', []), json.get('pre_cmds', []))
         c.working_dir = json.get('working_dir', None)
         c.debugging = json.get('debugging', False)
         return c
@@ -77,12 +78,16 @@ class Config:
             'cleanup_cmds': self.cleanup_cmds,
             'pre_cmds': self.pre_cmds,
             'working_dir': self.working_dir,
-            'final_output_contains': self.final_output_contains
         }
 
     @staticmethod
     def load_from_file(absolute_path: str) -> "Config":
         with open(absolute_path) as f:
-            return Config.from_json(json.load(f))
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                print(f"Invalid JSON in file: {absolute_path}, make sure you reference the JSON config file & not the README")
+                exit(1)
+            return Config.from_json(data)
 
 

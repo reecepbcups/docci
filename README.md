@@ -1,10 +1,12 @@
-# Readme Runner 🚀
+# Readme Runner 🚀 &middot; [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Reecepbcups/docs-ci/blob/main/LICENSE) [![Tests](https://github.com/Reecepbcups/docs-ci/actions/workflows/test.yml/badge.svg)](https://github.com/Reecepbcups/docs-ci/actions/workflows/test.yml) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://legacy.reactjs.org/docs/how-to-contribute.html#your-first-pull-request)
 
 Your documentation is now your test suite! 🎯
 
-A CI tool that brings your markdown docs to life by executing code blocks in sequence. Run servers in the background, handle environment variables, add delays, and verify outputs - all through simple markdown tags. Perfect for ensuring your docs stay accurate and your examples actually work!
+A CI tool that brings your markdown docs to life by executing code blocks in sequence. Run servers in the background, handle environment variables, add delays, and verify outputs - all through simple markdown tags. Perfect for ensuring your docs stay accurate and your examples actually work! 📚
 
 ## 🏃‍♂️ Quick Start
+
+Find sample workspaces [in the `examples/` directory](./examples/).
 
 ### 📦 Installation
 
@@ -17,7 +19,7 @@ make install
 # make sure to update 1) the version in the URL 2) the config path to run against
 - name: Readme Runner
     run: |
-    sudo wget -O /usr/local/bin/docs-ci https://github.com/Reecepbcups/docs-ci/releases/download/v0.2.0/docs-ci
+    sudo wget -O /usr/local/bin/docs-ci https://github.com/Reecepbcups/docs-ci/releases/download/v0.3.0/docs-ci
     sudo chmod +x /usr/local/bin/docs-ci
     docs-ci .github/workflows/config.json
 ````
@@ -25,8 +27,20 @@ make install
 ### 🎮 Usage
 
 ````bash
-docs-ci <config_path>
+docs-ci <config_path | config_json>
+# e.g. docs-ci .github/workflows/config.json
+# e.g. docs-ci '{"paths": ["docs/README.md"],"working_dir": "docs/","cleanup_cmds": ["kill -9 $(lsof -t -i:3000)"]}'
 ````
+
+### 🎨 Available tags
+  * 🚫 `docs-ci-ignore`: Skip executing this code block
+  * 🚫 `docs-ci-if-not-installed=BINARY`: Skip executing this code block if some binary is installed (e.g. node)
+  * 🔄 `docs-ci-background`: Run the command in the background
+  * ⏲️ `docs-ci-delay-after=N`: Wait N seconds after running commands
+  * ⌛ `docs-ci-delay-per-cmd=N`: Wait N seconds before each command
+  * 🌐 `docs-ci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
+  * 📜 `docs-ci-output-contains="string"`: Ensure the output contains a string at the end of the block
+  * 🚨 `docs-ci-assert-failure`: If it is expected to fail (like if the command is not supposed to run)
 
 ### 📝 Basic Example
 
@@ -40,50 +54,21 @@ docs-ci <config_path>
   "debugging": false,
   "pre_cmds": ["npm install"],
   "cleanup_cmds": ["docker-compose down"],
-  "final_output_contains": "Tests passed"
 }
 ````
 
-## 🏷️ Code Block Tags
-
-Control how your documentation code blocks are executed:
-
-````bash
-```bash docs-ci-background docs-ci-delay-after=5
-# This runs in background and waits 5 seconds after completion
-npm start
-```
-````
-
-## 🎨 Available tags
-  * 🚫 `docs-ci-ignore`: Skip executing this code block
-  * 🚫 `docs-ci-if-not-installed=BINARY`: Skip executing this code block if some binary is installed (e.g. node)
-  * 🔄 `docs-ci-background`: Run the command in the background
-  * ⏲️ `docs-ci-delay-after=N`: Wait N seconds after running commands
-  * ⌛ `docs-ci-delay-per-cmd=N`: Wait N seconds before each command
-  * 🌐 `docs-ci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
-
----
-
-## 🛠️ How It Works
-
-The tool processes markdown files and executes code blocks based on configuration settings. The core workflow is handled by several key components:
-
-1. 📋 **Configuration Loading** (`config_types.py`): Loads and validates the JSON configuration file
-2. 📝 **Markdown Processing** (`main.py`): Parses markdown files and processes code blocks
-3. ⚡ **Command Execution** (`execute.py`): Handles command execution and env vars
-4. 🎯 **Tag Processing** (`models.py`): Manages execution control tags
-
-
-### 💡 Code Block Tag Examples
+### 💡 Code Block Tag Examples (Operations)
 
 Skip commands you've already run elsewhere: 🚫
 
+<!-- The 4 backticks is just so it wraps in githubs UI, real test are written normally with the nested part (just 3 backticks) -->
 ````bash
 ```bash docs-ci-ignore
 brew install XYZ
 ```
 ````
+
+Skip needless installations: 🚫
 
 ````bash
 ```bash docs-ci-if-not-installed=node
@@ -91,6 +76,14 @@ brew install XYZ
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash
 export NVM_DIR="$HOME/.nvm"
 nvm install v21.7.3
+```
+````
+
+Ensure the output contains a specific string: 📜
+
+````bash
+```bash docs-ci-output-contains="xyzMyOutput"
+echo xyzMyOutput
 ```
 ````
 
@@ -115,6 +108,63 @@ cat my-file.txt
 ```
 ````
 
+Assert that a command fails: 🚨
+
+````bash
+```bash docs-ci-assert-failure docs-ci-output-contains="NOT THE RIGHT OUTPUT"
+echo abcMyOutput
+```
+````
+
+### 💡 Code Block Tag Examples (Files)
+
+Create a new file from content: 📝
+
+<!-- yes, the typo is meant to be here -->
+```html title=example.html docs-ci-reset-file
+<html>
+    <head>
+        <title>My Titlee</title>
+    </head>
+</html>
+```
+
+Replace the typo'ed line:
+
+```html title=example.html docs-ci-line-replace=3
+        <title>My Title</title>
+```
+
+Add new content
+
+```html title=example.html docs-ci-line-insert=4
+    <body>
+        <h1>My Header</h1>
+        <p>1 paragraph</p>
+        <p>2 paragraph</p>
+    </body>
+```
+
+Replace multiple lines
+
+```html title=example.html docs-ci-line-replace=7-9
+        <p>First paragraph</p>
+        <p>Second paragraph</p>
+```
+
+## 🛠️ How It Works
+
+The tool processes markdown files and executes code blocks based on configuration settings. The core workflow is handled by several key components:
+
+1. 📋 **Configuration Loading** (`config_types.py`): Loads and validates the JSON configuration file
+2. 📝 **Markdown Processing** (`main.py`): Parses markdown files and processes code blocks
+3. ⚡ **Command Execution** (`execute.py`): Handles command execution and env vars
+4. 🎯 **Tag Processing** (`models.py`): Manages execution control tags
+
+Control how your documentation code blocks are executed with no code, just code block tags. 🏷️
+
+
+
 ## ⚙️ JSON Configuration Options
 
 - 📂 `paths`: List of markdown files or directories to process
@@ -122,4 +172,8 @@ cat my-file.txt
 - 🎬 `pre_cmds`: Commands to run before processing markdown
 - 🧹 `cleanup_cmds`: Commands to run after processing
 - 📂 `working_dir`: Working directory for command execution
-- ✅ `final_output_contains`: Required string in final output
+
+## 🚧 Limitations
+
+- Not yet tested on MacOS or Windows WSL
+- Multi-line commands in docs are not supported yet
