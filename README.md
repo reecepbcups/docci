@@ -99,7 +99,7 @@ Run blocking commands in the background with delays: 🌐
 ````bash
 ```bash docci-background docci-delay-after=5
 cp .env.example .env
-make my-long-running-process
+EXAMPLE_PORT=3001 make my-long-running-process
 # waits 5 seconds here
 ```
 ````

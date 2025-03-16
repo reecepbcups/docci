@@ -26,10 +26,22 @@ npm i
 npx tsc
 ```
 
+## Run the blocking process in the background
+
 ```bash docci-background docci-delay-after=1
-node dist/app.js
+EXAMPLE_PORT=3001 node dist/app.js
 ```
 
+## Test the server output matches expected
+
 ```bash docci-output-contains="Hello World!"
-curl -X GET http://localhost:3000 --no-progress-meter
+curl -X GET http://localhost:3001 --no-progress-meter
+```
+
+## Kill the server after testing
+
+the config.json also handles this, but if you change the port then it would change.
+
+```bash
+kill -9 $(lsof -t -i:3001)
 ```

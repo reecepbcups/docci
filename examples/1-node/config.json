@@ -5,8 +5,8 @@
     "env_vars": {},
     "pre_cmds": [],
     "working_dir": "examples/1-node",
-    "debugging": true,
+    "debugging": false,
     "cleanup_cmds": [
-      "kill -9 $(lsof -t -i:3000)"
+      "kill -9 $(lsof -t -i:3001)"
     ]
   }
