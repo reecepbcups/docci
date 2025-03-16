@@ -42,6 +42,13 @@ docs-ci <config_path | config_json>
   * 📜 `docs-ci-output-contains="string"`: Ensure the output contains a string at the end of the block
   * 🚨 `docs-ci-assert-failure`: If it is expected to fail (like if the command is not supposed to run)
 
+### 📄 Available file operations
+  * `title`: The file name (matches docusaurus notation)
+  * `docs-ci-line-insert=N`: Insert content at line N
+  * `docs-ci-line-replace=N`: Replace content at line N
+  * `docs-ci-line-replace=N-M`: Replace content from line N to M
+  * `docs-ci-reset-file`: Reset the file to its original content
+
 ### 📝 Basic Example
 
 ````json
