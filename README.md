@@ -36,6 +36,7 @@ docs-ci <config_path>
   "env_vars": {
     "NODE_ENV": "test"
   },
+  "working_dir": "docs/",
   "pre_cmds": ["npm install"],
   "cleanup_cmds": ["docker-compose down"],
   "final_output_contains": "Tests passed"
@@ -55,10 +56,13 @@ npm start
 
 ## 🎨 Available tags
   * 🚫 `docs-ci-ignore`: Skip executing this code block
+  * 🚫 `docs-ci-ignore-if-installed=BINARY`: Skip executing this code block if some binary is installed (e.g. node)
   * 🔄 `docs-ci-background`: Run the command in the background
   * ⏲️ `docs-ci-delay-after=N`: Wait N seconds after running commands
   * ⌛ `docs-ci-delay-per-cmd=N`: Wait N seconds before each command
   * 🌐 `docs-ci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
+
+  <!-- add docs-ci-working-dir and docs-ci-ignore-if-installed -->
 
 ---
 
@@ -103,10 +107,11 @@ cat my-file.txt
 ```
 ````
 
-## ⚙️ Configuration Options
+## ⚙️ JSON Configuration Options
 
 - 📂 `paths`: List of markdown files or directories to process
 - 🔐 `env_vars`: Environment variables to set during execution
 - 🎬 `pre_cmds`: Commands to run before processing markdown
 - 🧹 `cleanup_cmds`: Commands to run after processing
+- 📂 `working_dir`: Working directory for command execution
 - ✅ `final_output_contains`: Required string in final output

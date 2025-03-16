@@ -1,10 +1,6 @@
-
-import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Generator, Optional, Tuple
-
-import requests
+from typing import Optional
 
 
 class Tags(Enum):
@@ -13,6 +9,7 @@ class Tags(Enum):
     POST_DELAY = 'docs-ci-delay-after'
     CMD_DELAY = 'docs-ci-delay-per-cmd'
     HTTP_POLLING = 'docs-ci-wait-for-endpoint'
+    IGNORE_IF_INSTALLED = 'docs-ci-ignore-if-installed'
 
     def __str__(self):
         return self.value

@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -84,6 +85,7 @@ class DocsValue:
     post_delay: int = 0 # delay in seconds after the command is run
     cmd_delay: int = 0 # delay in seconds before each command is run
     wait_for_endpoint: Endpoint | None = None
+    binary: str | None = None
 
     # returns a string or bool. if bool is true, success, if false, failed
     def endpoint_poll_if_applicable(self, poll_speed: float = 1.0) -> Generator[Tuple[bool, str], None, None]:
@@ -107,7 +109,6 @@ class DocsValue:
         config: Config,
         background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"],
         is_last_cmd: bool = False,
-        cwd: str | None = None,
     ) -> str | None:
         '''
         Runs the commands. host env vars are pulled into the processes
@@ -118,6 +119,11 @@ class DocsValue:
         env = os.environ.copy()
 
         success = None
+
+        if self.binary:
+            if shutil.which(self.binary):
+                print(f"Skipping command since {self.binary} is already installed.")
+                return None
 
         if self.wait_for_endpoint:
             lastRes = Tuple(False, "")
@@ -163,7 +169,7 @@ class DocsValue:
                 stderr=subprocess.PIPE if is_last_cmd else None,
                 shell=True,
                 env=env,
-                cwd=cwd,
+                cwd=config.working_dir,
                 text=False,
             )
 
@@ -225,7 +231,7 @@ def cleanup_background_processes():
     if not background_processes:
         return
 
-    print(f"Cleaning up {len(background_processes)} background processes...")
+    print(f"\nCleaning up {len(background_processes)} background processes...")
     for pid in background_processes:
         try:
             os.kill(pid, signal.SIGTERM)
@@ -287,6 +293,7 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
         post_delay = extract_tag_value(tags, Tags.POST_DELAY(), default=0, converter=int)
         cmd_delay = extract_tag_value(tags, Tags.CMD_DELAY(), default=0, converter=int)
         http_polling = extract_tag_value(tags, Tags.HTTP_POLLING(), default=None)
+        binary = extract_tag_value(tags, Tags.IGNORE_IF_INSTALLED(), default=None)
 
         content = str(block_content).strip()
 
@@ -298,6 +305,7 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             background=background,
             post_delay=post_delay,
             cmd_delay=cmd_delay,
+            binary=binary,
             wait_for_endpoint=handle_http_polling_input(http_polling),
             commands=[]
         )
