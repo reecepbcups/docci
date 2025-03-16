@@ -63,6 +63,7 @@ jobs:
         with:
           name: docs-ci
           path: /usr/local/bin
+      - run: chmod a+rx /usr/local/bin/docs-ci
 
       - name: Run 1-node
         run: docs-ci ./examples/1-node/config.json
