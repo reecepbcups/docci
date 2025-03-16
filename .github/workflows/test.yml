@@ -24,4 +24,4 @@ jobs:
         run: make tests
 
       - name: Run integration tests (python)
-        run: make run-integrations
+        run: make test-examples

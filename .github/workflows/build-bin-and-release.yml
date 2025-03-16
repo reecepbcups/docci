@@ -74,5 +74,5 @@ jobs:
 
       # python runner in another job
       - name: Run integrations as binary
-        run: EXEC_BINARY=/usr/local/bin/docci make run-integrations
+        run: EXEC_BINARY=/usr/local/bin/docci make test-examples
 

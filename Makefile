@@ -12,23 +12,23 @@ install:
 	@echo ✅ docci installed
 .PHONY: install
 
-## tests: Run the tests.
-tests: tests-integration
+## test: Run all unit & integration test.
+test: test-unit-integration
 	@python -m unittest tests/tests.py
-.PHONY: tests
+.PHONY: test
 
-## tests-integration: Run the readme tests.
-tests-integration:
+## test-unit-integration: Run the readme tests.
+test-unit-integration:
 	@python -m unittest tests/integration.py
 
-## run-integrations: Run the documentation examples within this repo
-run-integrations:
+## test-examples: Run the documentation examples within this repo
+test-examples:
 	@echo "Running integrations as $(EXEC_BINARY)"
 	@sleep 1
 	$(EXEC_BINARY) tests/config1.json
 	$(EXEC_BINARY) examples/1-node/config.json
 	$(EXEC_BINARY) examples/2-source-code-modification/config.json
-.PHONY: run-integrations
+.PHONY: test-examples
 
 .PHONY: help
 help: Makefile

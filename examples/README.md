@@ -1,7 +1,7 @@
 ## How to run
 
 ```bash
-make run-integrations
+make test-examples
 ```
 
 ## Examples
