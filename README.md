@@ -19,7 +19,7 @@ make install
 # make sure to update 1) the version in the URL 2) the config path to run against
 - name: Readme Runner
     run: |
-    sudo wget -O /usr/local/bin/docs-ci https://github.com/Reecepbcups/docs-ci/releases/download/v0.2.0/docs-ci
+    sudo wget -O /usr/local/bin/docs-ci https://github.com/Reecepbcups/docs-ci/releases/download/v0.3.0/docs-ci
     sudo chmod +x /usr/local/bin/docs-ci
     docs-ci .github/workflows/config.json
 ````
@@ -27,7 +27,9 @@ make install
 ### 🎮 Usage
 
 ````bash
-docs-ci <config_path>
+docs-ci <config_path | config_json>
+# e.g. docs-ci .github/workflows/config.json
+# e.g. docs-ci '{"paths": ["docs/README.md"],"working_dir": "docs/","cleanup_cmds": ["kill -9 $(lsof -t -i:3000)"]}'
 ````
 
 ### 🎨 Available tags
@@ -170,3 +172,8 @@ Control how your documentation code blocks are executed with no code, just code 
 - 🎬 `pre_cmds`: Commands to run before processing markdown
 - 🧹 `cleanup_cmds`: Commands to run after processing
 - 📂 `working_dir`: Working directory for command execution
+
+## 🚧 Limitations
+
+- Not yet tested on MacOS or Windows WSL
+- Multi-line commands in docs are not supported yet
