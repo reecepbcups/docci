@@ -7,11 +7,13 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
-from typing import Dict, List, Literal
+from typing import Dict, Generator, List, Literal, Optional, Tuple
+
+import requests
 
 from config_types import Config
 from execute import execute_substitution_commands
-from models import Tags
+from models import Endpoint, Tags, handle_http_polling_input
 
 # Store PIDs of background processes for later cleanup
 background_processes = []
@@ -76,7 +78,24 @@ class DocsValue:
     background: bool = False # if the command should run in the background i.e. it is blocking
     post_delay: int = 0 # delay in seconds after the command is run
     cmd_delay: int = 0 # delay in seconds before each command is run
-    # docs-ci-wait-for-endpoint=http://127.0.0.1:8000|30 tag would be nice (after 30 seconds, fail)
+    wait_for_endpoint: Endpoint | None = None
+
+    # returns a string or bool. if bool is true, success, if false, failed
+    def endpoint_poll_if_applicable(self, poll_speed: float = 1.0) -> Generator[Tuple[bool, str], None, None]:
+        start_time = time.time()
+        attempt = 1
+        url = self.wait_for_endpoint.url
+        while True:
+            try:
+                requests.get(url)
+                yield True, f"Success: endpoint is up: {url}"
+                break
+            except requests.exceptions.RequestException:
+                if time.time() - start_time > self.wait_for_endpoint.max_timeout: # half second buffer
+                    break
+                yield False, f"Error: endpoint not up yet: {url}, trying again. Try number: {attempt}"
+                time.sleep(poll_speed)
+            attempt += 1
 
     def run_commands(
         self,
@@ -94,6 +113,14 @@ class DocsValue:
         env = os.environ.copy()
 
         success = None
+
+        if self.wait_for_endpoint:
+            lastRes = Tuple(False, "")
+            for res in self.endpoint_poll_if_applicable(poll_speed=1):
+                lastRes = res
+            if lastRes[0]:
+                print(lastRes[1])
+                return f"Error: endpoint not up in timeout period: {self.wait_for_endpoint.url}"
 
         for command in self.commands:
             if command in config.ignore_commands:
@@ -206,7 +233,14 @@ def cleanup_background_processes():
     background_processes.clear()
 
 
+def extract_tag_value(tags, tag_type, default=None, converter=None):
+    """Extract value from a tag of format 'tag_type=value'"""
+    matching_tags = [tag.split('=')[1] for tag in tags if tag_type in tag]
+    if not matching_tags:
+        return default
 
+    value = matching_tags[0]
+    return converter(value) if converter else value
 
 def parse_markdown_code_blocks(config: Config | None, content: str) -> List[DocsValue]:
     """
@@ -245,8 +279,9 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             ignored = ignored or language not in config.followed_languages
 
         background = Tags.BACKGROUND() in tags
-        post_delay = int([tag.split('=')[1] for tag in tags if Tags.POST_DELAY() in tag][0]) if any('docs-ci-post-delay' in tag for tag in tags) else 0
-        cmd_delay = int([tag.split('=')[1] for tag in tags if Tags.CMD_DELAY() in tag][0]) if any('docs-ci-cmd-delay' in tag for tag in tags) else 0
+        post_delay = extract_tag_value(tags, Tags.POST_DELAY(), default=0, converter=int)
+        cmd_delay = extract_tag_value(tags, Tags.CMD_DELAY(), default=0, converter=int)
+        http_polling = extract_tag_value(tags, Tags.HTTP_POLLING(), default=None)
 
         content = str(block_content).strip()
 
@@ -258,6 +293,7 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             background=background,
             post_delay=post_delay,
             cmd_delay=cmd_delay,
+            wait_for_endpoint=handle_http_polling_input(http_polling),
             commands=[]
         )
 

@@ -58,7 +58,7 @@ npm start
   * 🔄 `docs-ci-background`: Run the command in the background
   * ⏲️ `docs-ci-post-delay=N`: Wait N seconds after running commands
   * ⌛ `docs-ci-cmd-delay=N`: Wait N seconds before each command
-  * 🔜 **TODO:** `docs-ci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
+  * 🌐 `docs-ci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
 
 ---
 
