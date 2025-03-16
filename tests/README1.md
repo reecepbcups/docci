@@ -4,6 +4,6 @@
 this is ignored
 ```
 
-```bash
+```bash docs-ci-output-contains="abcMyOutput"
 echo abcMyOutput
 ```

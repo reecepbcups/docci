@@ -36,9 +36,7 @@ def do_logic(config: Config) -> str | None:
                 # if config.debugging: print(f"Values: {values}")
 
                 for i, value in enumerate(values):
-                    # the last command in the index and also the last file in all the paths
-                    is_last_cmd = (i == len(values) - 1) and (file_path == file_paths[-1])
-                    err = value.run_commands(config=config, is_last_cmd=is_last_cmd)
+                    err = value.run_commands(config=config)
                     if err:
                         return f"Error({parentPathKey},{file_paths}): {err}"
         except KeyboardInterrupt:
@@ -130,7 +128,6 @@ class DocsValue:
         self,
         config: Config,
         background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"],
-        is_last_cmd: bool = False,
     ) -> str | None:
         '''
         Runs the commands. host env vars are pulled into the processes
@@ -196,8 +193,8 @@ class DocsValue:
 
             process = process = subprocess.Popen(
                 command,
-                stdout=subprocess.PIPE if is_last_cmd else None,
-                stderr=subprocess.PIPE if is_last_cmd else None,
+                stdout=subprocess.PIPE if self.output_contains else None,
+                stderr=subprocess.PIPE if self.output_contains else None,
                 shell=True,
                 env=env,
                 cwd=config.working_dir,
@@ -208,7 +205,7 @@ class DocsValue:
                 if process.pid:
                     background_processes.append(process.pid)
             else:
-                if is_last_cmd:
+                if self.output_contains:
                     stdout, stderr = process.communicate()
                     output = ""
 
@@ -224,12 +221,12 @@ class DocsValue:
                         sys.stderr.flush()
                         output += stderr.decode('utf-8', errors='replace')
 
-                    if self.output_contains:
-                        if self.output_contains not in output:
-                            response = f"Error: `{self.output_contains}` is not found in output, output: {output}"
-                            break
-                        else:
-                            print(f"Output contains: {self.output_contains}")
+
+                    if self.output_contains not in output:
+                        response = f"Error: `{self.output_contains}` is not found in output, output: {output}"
+                        break
+                    else:
+                        print(f"Output contains: {self.output_contains}")
                 else:
                     # For regular processes, wait and check return code
                     process.wait()

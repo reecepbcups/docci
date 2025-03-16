@@ -27,6 +27,10 @@ class TestSomething(unittest.TestCase):
         dv = parse_markdown_code_blocks(config=None, content='```bash docs-ci-output-contains="My Multi Word Value"\npython3 example.py```')[0]
         self.assertEqual(dv.output_contains, "My Multi Word Value")
 
+        dv = parse_markdown_code_blocks(config=None, content='```bash docs-ci-output-contains="My Multi Word Value" docs-ci-delay-after=123\npython3 example.py```')[0]
+        self.assertEqual(dv.output_contains, "My Multi Word Value")
+        self.assertEqual(dv.post_delay, 123)
+
 
     def test_extract_tag_value(self):
         # this is after process_language_parts, we just input good values here for verification
