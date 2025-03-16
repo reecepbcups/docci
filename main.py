@@ -2,6 +2,7 @@
 
 import json
 import os
+import platform
 import re
 import shutil
 import signal
@@ -15,7 +16,7 @@ import requests
 
 from config_types import Config, ScriptingLanguages
 from execute import execute_substitution_commands
-from models import Endpoint, Tags, handle_http_polling_input
+from models import Endpoint, MachineOS, Tags, handle_http_polling_input
 
 # Store PIDs of background processes for later cleanup
 background_processes = []
@@ -83,15 +84,16 @@ class DocsValue:
     background: bool = False # if the command should run in the background i.e. it is blocking
     post_delay: int = 0 # delay in seconds after the command is run
     cmd_delay: int = 0 # delay in seconds before each command is run
-    wait_for_endpoint: Endpoint | None = None
-    binary: str | None = None
-    output_contains: str | None = None
+    wait_for_endpoint: Optional[Endpoint] = None
+    binary: Optional[str] = None
+    output_contains: Optional[str] = None
     expect_failure: bool = False
+    machine_os: str = None
     # the `title` tag sets the title of a file. it will create if it does not exist.
     # when the file does, it will insert the content at the line number. if the file is empty, it will always insert at the start (idx 0)
-    file_name: str | None = None # may also be referenced as `title` in enum
-    insert_at_line: int | None = None
-    replace_lines: Tuple[int, int | None] | None = None # start and optional end
+    file_name: Optional[str] = None # may also be referenced as `title` in enum
+    insert_at_line: Optional[int] = None
+    replace_lines: Optional[Tuple[int, Optional[int]]] = None # start and optional end
     file_reset: bool = False
 
     # returns a string or bool. if bool is true, success, if false, failed
@@ -191,6 +193,12 @@ class DocsValue:
                 c = self.content.replace('\n', '\\n').replace('    ', '\\t')
                 print(f"Ignoring commands for {self.language}... ({c})")
             return None
+
+        if self.machine_os and self.machine_os != platform.system().lower():
+            # if config.debugging:
+            print(f"Skipping command since it is not for the current OS: {self.machine_os}")
+            return None
+
 
         for command in self.commands:
             if command in config.ignore_commands:
@@ -453,6 +461,7 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             commands=[],
             output_contains=extract_tag_value(tags, Tags.OUTPUT_CONTAINS(), default=None),
             expect_failure=(Tags.ASSERT_FAILURE() in tags),
+            machine_os=(extract_tag_value(tags, Tags.MACHINE_OS(), default=None) or None),
             # file specific
             file_name=extract_tag_value(tags, Tags.TITLE(), default=None),
             insert_at_line=extract_tag_value(tags, Tags.INSERT_AT_LINE(), default=None, converter=int),
