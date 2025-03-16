@@ -46,9 +46,11 @@ readme-runner <config_path>
 
 Control how your documentation code blocks are executed:
 
-````bash docs-ci-background docs-ci-post-delay=5
+````bash
+```bash docs-ci-background docs-ci-post-delay=5
 # This runs in background and waits 5 seconds after completion
 npm start
+```
 ````
 
 ## Available tags
