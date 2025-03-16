@@ -1,18 +1,18 @@
-# Docs CI / Readme Runner
+# Readme Runner 🚀
 
-Your documentation is now your test suite!
+Your documentation is now your test suite! 🎯
 
 A CI tool that brings your markdown docs to life by executing code blocks in sequence. Run servers in the background, handle environment variables, add delays, and verify outputs - all through simple markdown tags. Perfect for ensuring your docs stay accurate and your examples actually work!
 
-## Quick Start
+## 🏃‍♂️ Quick Start
 
-### Installation
+### 📦 Installation
 
 ````bash
 make install
 ````
 
-### Github Actions Integration
+### 🤖 Github Actions Integration
 ````yaml
 # make sure to update 1) the version in the URL 2) the config path to run against
 - name: Readme Runner
@@ -22,13 +22,13 @@ make install
     readme-runner .github/workflows/config.json
 ````
 
-### Usage
+### 🎮 Usage
 
 ````bash
 readme-runner <config_path>
 ````
 
-### Basic Example
+### 📝 Basic Example
 
 ````json
 {
@@ -42,7 +42,7 @@ readme-runner <config_path>
 }
 ````
 
-## Code Block Tags
+## 🏷️ Code Block Tags
 
 Control how your documentation code blocks are executed:
 
@@ -53,40 +53,36 @@ npm start
 ```
 ````
 
-## Available tags
- * `docs-ci-ignore`: Skip executing this code block
- * `docs-ci-background`: Run the command in the background
- * `docs-ci-post-delay=N`: Wait N seconds after running commands
- * `docs-ci-cmd-delay=N`: Wait N seconds before each command
- * **TODO:** `docs-ci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
-
+## 🎨 Available tags
+  * 🚫 `docs-ci-ignore`: Skip executing this code block
+  * 🔄 `docs-ci-background`: Run the command in the background
+  * ⏲️ `docs-ci-post-delay=N`: Wait N seconds after running commands
+  * ⌛ `docs-ci-cmd-delay=N`: Wait N seconds before each command
+  * 🔜 **TODO:** `docs-ci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
 
 ---
 
-## How It Works
+## 🛠️ How It Works
 
 The tool processes markdown files and executes code blocks based on configuration settings. The core workflow is handled by several key components:
 
-1. **Configuration Loading** (`config_types.py`): Loads and validates the JSON configuration file that specifies paths, environment variables, and commands to run.
-
-2. **Markdown Processing** (`main.py`): Parses markdown files to find executable code blocks and processes them based on their tags.
-
-3. **Command Execution** (`execute.py`): Handles command execution and environment variable substitution.
-
-4. **Tag Processing** (`models.py`): Manages special execution tags that control how code blocks are run.
+1. 📋 **Configuration Loading** (`config_types.py`): Loads and validates the JSON configuration file
+2. 📝 **Markdown Processing** (`main.py`): Parses markdown files and processes code blocks
+3. ⚡ **Command Execution** (`execute.py`): Handles command execution and env vars
+4. 🎯 **Tag Processing** (`models.py`): Manages execution control tags
 
 
-#### Code Block Tag Examples
+### 💡 Code Block Tag Examples
 
-Use the ignore tag to skip commands. Useful when you already installed / ran commands in your CI setup.
-
+Skip commands you've already run elsewhere: 🚫
 
 ````bash
 ```bash docs-ci-ignore
 brew install XYZ
 ```
 ````
-When your command is blocking (like a server you run your CI against), just add the background tag. It also adds a delay after the command starts. Some other setup may take place that we are waiting for but have no way to access yet (unless you want to parse logs output).
+
+Run blocking commands in the background with delays: 🌐
 
 ````bash
 ```bash docs-ci-background docs-ci-post-delay=5
@@ -96,7 +92,7 @@ make my-long-running-process
 ```
 ````
 
-Delay all commands by 1 second to give your system time to perform each action without being too fast.
+Add delays between commands for stability: ⏱️
 
 ````bash
 ```bash docs-ci-cmd-delay=1
@@ -105,11 +101,10 @@ cat my-file.txt
 ```
 ````
 
+## ⚙️ Configuration Options
 
-## Configuration Options
-
-- `paths`: List of markdown files or directories to process, in order
-- `env_vars`: Environment variables to set during all execution
-- `pre_cmds`: Commands to run before processing markdown files
-- `cleanup_cmds`: Commands to run after processing
-- `final_output_contains`: String that must be present in the final output
+- 📂 `paths`: List of markdown files or directories to process
+- 🔐 `env_vars`: Environment variables to set during execution
+- 🎬 `pre_cmds`: Commands to run before processing markdown
+- 🧹 `cleanup_cmds`: Commands to run after processing
+- ✅ `final_output_contains`: Required string in final output
