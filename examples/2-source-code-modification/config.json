@@ -3,11 +3,8 @@
       "examples/2-source-code-modification/README.md"
     ],
     "working_dir": "examples/2-source-code-modification",
-    "cleanup_cmds": [
-      "rm examples/2-source-code-modification/example.py",
-      "rm examples/2-source-code-modification/example.json"
-    ],
+    "cleanup_cmds": [],
     "env_vars": {},
     "pre_cmds": [],
-    "debugging": true
+    "debugging": false
   }

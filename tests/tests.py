@@ -45,14 +45,10 @@ class TestSomething(unittest.TestCase):
         err = do_logic(Config.load_from_file(os.path.join(curr_dir, "config1.json")))
         self.assertEqual(err, None, err)
 
-    # def test_config_bad_output_check(self):
-    #     err = do_logic(Config.from_json({"paths":["tests/README1.md"],"env_vars": {},"pre_cmds": [],"cleanup_cmds": [],"final_output_contains": "incorrectValueNotFoundHere"}))
-    #     self.assertNotEqual(err, None, err)
-
-    # def test_multiple_paths_same_output(self):
-    #     # if you use multiple paths here, you HAVE to have the same outputs to actually verify. Good for duplicate documentation places that should match up exactly
-    #     err = do_logic(Config.from_json({"paths":["tests/README1.md", "tests/README2.md"],"env_vars": {},"pre_cmds": [],"cleanup_cmds": [],"final_output_contains": "abcMyOutput"}))
-    #     self.assertEqual(err, None, err)
+    def test_multiple_paths_same_output(self):
+        # if you use multiple paths here, you HAVE to have the same outputs to actually verify. Good for duplicate documentation places that should match up exactly
+        err = do_logic(Config.from_json({"paths":["tests/README1.md", "tests/README2.md"],"env_vars": {},"pre_cmds": [],"cleanup_cmds": []}))
+        self.assertEqual(err, None, err)
 
     def test_execute_substitution_commands(self):
         # nothing to exec, leave as is

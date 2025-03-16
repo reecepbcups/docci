@@ -13,7 +13,7 @@ from typing import Dict, Generator, List, Literal, Optional, Tuple
 
 import requests
 
-from config_types import Config
+from config_types import Config, ScriptingLanguages
 from execute import execute_substitution_commands
 from models import Endpoint, Tags, handle_http_polling_input
 
@@ -56,6 +56,13 @@ def main():
 
     cfg_input = sys.argv[1]
 
+    if os.path.isdir(cfg_input):
+        # TODO: search through all json files in dir & find ones content whose matches the expected layout
+        cfg_input = os.path.join(cfg_input, 'config.json')
+        if not os.path.exists(cfg_input):
+            print(f"Error: config.json not found in directory: {sys.argv[1]}")
+            sys.exit(1)
+
     if os.path.isfile(cfg_input):
         config: Config = Config.load_from_file(cfg_input)
     else:
@@ -84,6 +91,8 @@ class DocsValue:
     # when the file does, it will insert the content at the line number. if the file is empty, it will always insert at the start (idx 0)
     file_name: str | None = None # may also be referenced as `title` in enum
     insert_at_line: int | None = None
+    replace_lines: Tuple[int, int | None] | None = None # start and optional end
+    file_reset: bool = False
 
     # returns a string or bool. if bool is true, success, if false, failed
     def endpoint_poll_if_applicable(self, poll_speed: float = 1.0) -> Generator[Tuple[bool, str], None, None]:
@@ -103,25 +112,46 @@ class DocsValue:
             attempt += 1
 
     # handle_file_content returns True if we handled a file, False if we did not
+    # NOTE: we handle this as a human reads it, lines start at ONE (1), not zero
     def handle_file_content(self, config: Config) -> bool:
         if not self.file_name:
             return False
 
         file_path = os.path.join(config.working_dir, self.file_name) if config.working_dir else self.file_name
 
-        if not os.path.exists(file_path):
+        if not os.path.exists(file_path) or self.file_reset:
+            if config.debugging:
+                print(f"Refreshing file: {file_path}", "since file reset is on" if self.file_reset else "")
             with open(file_path, 'w') as f:
-             f.write(self.content)
-        else:
-            # read and insert at the given line
-            with open(file_path, 'r') as f:
-                lines = f.readlines()
+                f.write(self.content)
 
-            if self.insert_at_line:
-                lines.insert(self.insert_at_line, self.content)
+        # read and insert at the given line
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
 
-            with open(file_path, 'w') as f:
-                f.write(''.join(lines))
+        if self.insert_at_line:
+            # if insert at line is negative, then it is relative to the end of the file
+            insert_line = self.insert_at_line if self.insert_at_line > 0 else len(lines) + self.insert_at_line + 1
+            lines.insert(insert_line, self.content)
+
+        if self.replace_lines:
+            start, end = self.replace_lines
+            # line based, not index :)
+            start = start - 1 if start > 0 else 0
+            end = end - 1 if end and end > 0 else None
+            if end:
+                if end > len(lines):
+                    end = len(lines) - 1
+
+                lines[start:end] = self.content
+            else:
+                if start > len(lines):
+                    lines.append(self.content)
+                else:
+                    lines[start] = self.content
+
+        with open(file_path, 'w') as f:
+            f.write(''.join(lines))
 
         return True
 
@@ -328,6 +358,13 @@ def process_language_parts(language_parts):
     raw_tags = language_parts[1:]
     processed_tags = []
 
+    for tag in raw_tags:
+        if Tags.TAGS_PREFIX() not in tag: continue
+        if '=' in tag: tag = tag.split('=')[0]
+
+        if not Tags.is_valid(tag):
+            raise ValueError(f"Invalid tag found in your documentation: {tag}. Check the release notes for renamed tags")
+
     i = 0
     while i < len(raw_tags):
         current_tag = raw_tags[i]
@@ -398,7 +435,10 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
         if config is not None:
             ignored = ignored or language not in config.followed_languages
 
-        content = str(block_content).strip()
+        # we can not strip content if it's language based, only for scripts
+        content = str(block_content)
+        if language in ScriptingLanguages:
+            content = content.strip()
 
         value = DocsValue(
             language=language,
@@ -416,6 +456,8 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             # file specific
             file_name=extract_tag_value(tags, Tags.TITLE(), default=None),
             insert_at_line=extract_tag_value(tags, Tags.INSERT_AT_LINE(), default=None, converter=int),
+            replace_lines=extract_tag_value(tags, Tags.REPLACE_AT_LINE(), default=None, converter=replace_at_line_converter),
+            file_reset=(Tags.RESET_FILE() in tags),
         )
 
         # using regex, remove any sections of code that start with a comment '#' and end with a new line '\n', this info is not needed.
@@ -439,7 +481,13 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
 
     return results
 
-
+# input could be just a number ex: 3
+# or a range of numbers; 2-4
+def replace_at_line_converter(value: str) -> Tuple[int, int | None]:
+    if '-' in value:
+        start, end = value.split('-')
+        return int(start), int(end)
+    return int(value), None
 
 def parse_env(command: str) -> Dict[str, str]:
     """

@@ -4,9 +4,10 @@ import subprocess
 from typing import Dict, List
 
  # https://github.com/rouge-ruby/rouge/wiki/List-of-supported-languages-and-lexers
-ShellLanguages = ["shell", "bash", "sh", "zsh", "ksh"] # if it is not in here then it is likely a source ode
+ScriptingLanguages = ["shell", "bash", "sh", "zsh", "ksh"] # if it is not in here then it is likely a source ode
 
 class Config:
+    config_version = "v0.0.1" # future proofing
     paths: List[str] = [] # this will be loaded with the prefix of the absolute path of the repo
     env_vars: Dict[str, str] = {}
     pre_cmds: List[str] = []
@@ -14,7 +15,7 @@ class Config:
     only_run_bash: bool = True
     ignore_commands: List[str] = []
     supported_file_extensions = ["md", "mdx"]
-    followed_languages = ShellLanguages
+    followed_languages = ScriptingLanguages
     working_dir: str | None = None
     debugging = False
 
