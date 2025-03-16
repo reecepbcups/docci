@@ -17,7 +17,7 @@ make install
 # make sure to update 1) the version in the URL 2) the config path to run against
 - name: Readme Runner
     run: |
-    sudo wget -O /usr/local/bin/readme-runner https://github.com/Reecepbcups/docs-ci/releases/download/v0.0.2/readme-runner
+    sudo wget -O /usr/local/bin/readme-runner https://github.com/Reecepbcups/docs-ci/releases/download/v0.1.0/readme-runner
     sudo chmod +x /usr/local/bin/readme-runner
     readme-runner .github/workflows/config.json
 ````
