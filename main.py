@@ -54,11 +54,7 @@ def do_logic(config: Config) -> str | None:
 
 def main():
     if len(sys.argv) != 2:
-        cmd = sys.argv[0]
-        if cmd.startswith('/tmp/staticx'):
-            cmd = "docs-ci"
-
-        print(f"Usage: {cmd} <config_path|config_json_blob>")
+        print(f"Usage: {sys.argv[0]} <config_path|config_json_blob>")
         sys.exit(1)
 
     cfg_input = sys.argv[1]

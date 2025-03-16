@@ -63,8 +63,6 @@ npm start
   * ⌛ `docs-ci-delay-per-cmd=N`: Wait N seconds before each command
   * 🌐 `docs-ci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
 
-  <!-- add docs-ci-working-dir and docs-ci-if-not-installed -->
-
 ---
 
 ## 🛠️ How It Works
@@ -90,7 +88,6 @@ brew install XYZ
 ````bash
 ```bash docs-ci-if-not-installed=node
 # this only runs if `node` is not found in the system
-# if it does not, it will run
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash
 export NVM_DIR="$HOME/.nvm"
 nvm install v21.7.3
@@ -107,11 +104,11 @@ make my-long-running-process
 ```
 ````
 
-Add delays between commands for stability: ⏱️
+Add delays between commands for stability after the endpoint from a previous command is up: ⏱️
 
 ````bash
-```bash docs-ci-delay-per-cmd=1
-go run save_large_file.go
+```bash docs-ci-delay-per-cmd=1 docs-ci-wait-for-endpoint=http://localhost:8080|30
+go run save_large_file_from_endpoint.go http://localhost:8080/my-endpoint
 # waits 1 second
 cat my-file.txt
 # waits 1 second
