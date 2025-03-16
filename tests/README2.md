@@ -14,4 +14,8 @@ echo xyzMyOutput
 echo abcMyOutput
 ```
 
+```bash docs-ci-assert-failure docs-ci-output-contains="NOT THE RIGHT OUTPUT"
+echo abcMyOutput
+```
+
 

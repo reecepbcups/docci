@@ -11,6 +11,7 @@ class Tags(Enum):
     HTTP_POLLING = 'docs-ci-wait-for-endpoint'
     IGNORE_IF_INSTALLED = 'docs-ci-if-not-installed'
     OUTPUT_CONTAINS = 'docs-ci-output-contains'
+    ASSERT_FAILURE = 'docs-ci-assert-failure'
 
     # file related
     TITLE = 'title' # maybe we also alias with a docs-ci-title or -filename or something?

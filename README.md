@@ -62,23 +62,13 @@ npm start
   * ⌛ `docs-ci-delay-per-cmd=N`: Wait N seconds before each command
   * 🌐 `docs-ci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
   * 📜 `docs-ci-output-contains="string"`: Ensure the output contains a string at the end of the block
-
----
-
-## 🛠️ How It Works
-
-The tool processes markdown files and executes code blocks based on configuration settings. The core workflow is handled by several key components:
-
-1. 📋 **Configuration Loading** (`config_types.py`): Loads and validates the JSON configuration file
-2. 📝 **Markdown Processing** (`main.py`): Parses markdown files and processes code blocks
-3. ⚡ **Command Execution** (`execute.py`): Handles command execution and env vars
-4. 🎯 **Tag Processing** (`models.py`): Manages execution control tags
-
+  * 🚨 `docs-ci-assert-failure`: If it is expected to fail (like if the command is not supposed to run)
 
 ### 💡 Code Block Tag Examples
 
 Skip commands you've already run elsewhere: 🚫
 
+<!-- The 4 backticks is just so it wraps in githubs UI, real test are written normally with the nested part (just 3 backticks) -->
 ````bash
 ```bash docs-ci-ignore
 brew install XYZ
@@ -114,6 +104,31 @@ cat my-file.txt
 # waits 1 second
 ```
 ````
+
+Ensure the output contains a specific string: 📜
+
+````bash
+```bash docs-ci-output-contains="xyzMyOutput"
+echo xyzMyOutput
+```
+````
+
+Assert that a command fails: 🚨
+
+````bash
+```bash docs-ci-assert-failure docs-ci-output-contains="NOT THE RIGHT OUTPUT"
+echo abcMyOutput
+```
+````
+
+## 🛠️ How It Works
+
+The tool processes markdown files and executes code blocks based on configuration settings. The core workflow is handled by several key components:
+
+1. 📋 **Configuration Loading** (`config_types.py`): Loads and validates the JSON configuration file
+2. 📝 **Markdown Processing** (`main.py`): Parses markdown files and processes code blocks
+3. ⚡ **Command Execution** (`execute.py`): Handles command execution and env vars
+4. 🎯 **Tag Processing** (`models.py`): Manages execution control tags
 
 ## ⚙️ JSON Configuration Options
 

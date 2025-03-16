@@ -79,9 +79,10 @@ class DocsValue:
     wait_for_endpoint: Endpoint | None = None
     binary: str | None = None
     output_contains: str | None = None
+    expect_failure: bool = False
     # the `title` tag sets the title of a file. it will create if it does not exist.
     # when the file does, it will insert the content at the line number. if the file is empty, it will always insert at the start (idx 0)
-    file_name: str | None = None
+    file_name: str | None = None # may also be referenced as `title` in enum
     insert_at_line: int | None = None
 
     # returns a string or bool. if bool is true, success, if false, failed
@@ -221,12 +222,12 @@ class DocsValue:
                         sys.stderr.flush()
                         output += stderr.decode('utf-8', errors='replace')
 
-
                     if self.output_contains not in output:
                         response = f"Error: `{self.output_contains}` is not found in output, output: {output}"
                         break
                     else:
-                        print(f"Output contains: {self.output_contains}")
+                        if config.debugging:
+                            print(f"Output contains: {self.output_contains}")
                 else:
                     # For regular processes, wait and check return code
                     process.wait()
@@ -240,7 +241,16 @@ class DocsValue:
                 print(f"Sleep: {i} seconds remaining...")
                 time.sleep(1)
 
+        if self.expect_failure:
+            # if response is not None, then the cmd failed so the error was expected
+            if response:
+                return None
+            else:
+                return "Error: expected failure but command succeeded"
+
         return response
+
+
 
     def handle_delay(self, delay_type: Literal["post", "cmd"]) -> None:
         delay = self.post_delay if delay_type == "post" else self.cmd_delay
@@ -402,6 +412,7 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             wait_for_endpoint=handle_http_polling_input(extract_tag_value(tags, Tags.HTTP_POLLING(), default=None)),
             commands=[],
             output_contains=extract_tag_value(tags, Tags.OUTPUT_CONTAINS(), default=None),
+            expect_failure=(Tags.ASSERT_FAILURE() in tags),
             # file specific
             file_name=extract_tag_value(tags, Tags.TITLE(), default=None),
             insert_at_line=extract_tag_value(tags, Tags.INSERT_AT_LINE(), default=None, converter=int),
