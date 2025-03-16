@@ -4,7 +4,7 @@ install:
 	@echo ⏳ Installing docs-ci...
 	@pyinstaller -F --name docs-ci --workpath __pycache__/build --specpath __pycache__/build/ --onefile *.py
 	@staticx dist/docs-ci dist/docs-ci --strip
-	@chmod +x dist/docs-ci
+	@sudo chmod +x dist/docs-ci
 	@if [ -z "$(IS_ACTION)" ]; then \
 		sudo cp dist/docs-ci /usr/local/bin/docs-ci; \
 		exit 0; \

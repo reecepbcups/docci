@@ -56,12 +56,15 @@ def main():
         if cmd.startswith('/tmp/staticx'):
             cmd = "docs-ci"
 
-        print(f"Usage: {cmd} <config_path>")
+        print(f"Usage: {cmd} <config_path|config_json_blob>")
         sys.exit(1)
 
-    config_path = sys.argv[1]
+    cfg_input = sys.argv[1]
 
-    config: Config = Config.load_from_file(config_path)
+    if os.path.isfile(cfg_input):
+        config: Config = Config.load_from_file(cfg_input)
+    else:
+        config: Config = Config.from_json(cfg_input)
 
     err = do_logic(config)
     if err:
