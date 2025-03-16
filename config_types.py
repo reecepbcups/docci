@@ -15,7 +15,7 @@ class Config:
     supported_file_extensions = ["md", "mdx"]
     followed_languages = ["shell", "bash", "sh", "zsh","ksh"] # https://github.com/rouge-ruby/rouge/wiki/List-of-supported-languages-and-lexers
     working_dir: str | None = None
-    debug = False
+    debugging = False
 
     def __init__(self, paths: List[str], env_var: Dict[str, str], cleanup_cmds: List[str], pre_cmds: List[str] = [], final_output_contains: str = ''):
         self.paths = paths
@@ -67,6 +67,7 @@ class Config:
     def from_json(cls, json: Dict) -> "Config":
         c = Config(json['paths'], json.get('env_vars', {}), json.get('cleanup_cmds', []), json.get('pre_cmds', []), json.get('final_output_contains', ''))
         c.working_dir = json.get('working_dir', None)
+        c.debugging = json.get('debugging', False)
         return c
 
     def to_json(self):

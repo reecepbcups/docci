@@ -9,7 +9,7 @@ class Tags(Enum):
     POST_DELAY = 'docs-ci-delay-after'
     CMD_DELAY = 'docs-ci-delay-per-cmd'
     HTTP_POLLING = 'docs-ci-wait-for-endpoint'
-    IGNORE_IF_INSTALLED = 'docs-ci-ignore-if-installed'
+    IGNORE_IF_INSTALLED = 'docs-ci-if-not-installed'
 
     def __str__(self):
         return self.value

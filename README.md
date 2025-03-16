@@ -37,6 +37,7 @@ docs-ci <config_path>
     "NODE_ENV": "test"
   },
   "working_dir": "docs/",
+  "debugging": false,
   "pre_cmds": ["npm install"],
   "cleanup_cmds": ["docker-compose down"],
   "final_output_contains": "Tests passed"
@@ -56,13 +57,13 @@ npm start
 
 ## 🎨 Available tags
   * 🚫 `docs-ci-ignore`: Skip executing this code block
-  * 🚫 `docs-ci-ignore-if-installed=BINARY`: Skip executing this code block if some binary is installed (e.g. node)
+  * 🚫 `docs-ci-if-not-installed=BINARY`: Skip executing this code block if some binary is installed (e.g. node)
   * 🔄 `docs-ci-background`: Run the command in the background
   * ⏲️ `docs-ci-delay-after=N`: Wait N seconds after running commands
   * ⌛ `docs-ci-delay-per-cmd=N`: Wait N seconds before each command
   * 🌐 `docs-ci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
 
-  <!-- add docs-ci-working-dir and docs-ci-ignore-if-installed -->
+  <!-- add docs-ci-working-dir and docs-ci-if-not-installed -->
 
 ---
 
@@ -83,6 +84,16 @@ Skip commands you've already run elsewhere: 🚫
 ````bash
 ```bash docs-ci-ignore
 brew install XYZ
+```
+````
+
+````bash
+```bash docs-ci-if-not-installed=node
+# this only runs if `node` is not found in the system
+# if it does not, it will run
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash
+export NVM_DIR="$HOME/.nvm"
+nvm install v21.7.3
 ```
 ````
 

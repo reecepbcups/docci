@@ -154,7 +154,7 @@ class DocsValue:
             if cmd_background and not command.strip().endswith('&'):
                 command = f"{command} &"
 
-            if config.debug:
+            if config.debugging:
                 print(f"Running command: {command}" + (" (& added for background)" if cmd_background else ""))
 
             if self.cmd_delay > 0:

@@ -1,10 +1,11 @@
 {
     "paths": [
-      "tests/example1/README.md"
+      "examples/1-node/README.md"
     ],
     "env_vars": {},
     "pre_cmds": [],
-    "working_dir": "tests/example1",
+    "working_dir": "examples/1-node",
+    "debugging": true,
     "cleanup_cmds": [
       "kill -9 $(lsof -t -i:3000)"
     ],
