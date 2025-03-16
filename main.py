@@ -1,5 +1,6 @@
 #!/usr/bin/env -S python3 -B
 
+import json
 import os
 import re
 import signal
@@ -57,6 +58,7 @@ def main():
             cmd = "docs-ci"
 
         print(f"Usage: {cmd} <config_path|config_json_blob>")
+        print(f"Got: {sys.argv}")
         sys.exit(1)
 
     cfg_input = sys.argv[1]
@@ -64,7 +66,7 @@ def main():
     if os.path.isfile(cfg_input):
         config: Config = Config.load_from_file(cfg_input)
     else:
-        config: Config = Config.from_json(cfg_input)
+        config: Config = Config.from_json(json.loads(cfg_input))
 
     err = do_logic(config)
     if err:

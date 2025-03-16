@@ -2,13 +2,13 @@
 install:
 # pip install pyinstaller staticx --break-system-packages
 	@echo ⏳ Installing docs-ci...
-	@pyinstaller -F --name docs-ci --workpath __pycache__/build --specpath __pycache__/build/ --onefile *.py
+	@pyinstaller --name docs-ci --workpath __pycache__/build --specpath __pycache__/build/ --onefile *.py
 	@staticx dist/docs-ci dist/docs-ci --strip
-	@sudo chmod +x dist/docs-ci
 	@if [ -z "$(IS_ACTION)" ]; then \
 		sudo cp dist/docs-ci /usr/local/bin/docs-ci; \
-		exit 0; \
 	fi
+# this must come after the sudo cp else you could hit /proc/self/exec: Permission denied issues
+	sudo chmod a+xr /usr/local/bin/docs-ci;
 	@echo ✅ docs-ci installed
 .PHONY: install
 
