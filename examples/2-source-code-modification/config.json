@@ -1,0 +1,14 @@
+{
+    "paths": [
+      "examples/2-source-code-modification/README.md"
+    ],
+    "working_dir": "examples/2-source-code-modification",
+    "cleanup_cmds": [
+      "rm examples/2-source-code-modification/example.py",
+      "rm examples/2-source-code-modification/example.json"
+    ],
+    "env_vars": {},
+    "pre_cmds": [],
+    "debugging": false,
+    "final_output_contains": "My Value"
+  }

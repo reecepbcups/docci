@@ -33,10 +33,9 @@ def do_logic(config: Config) -> str | None:
                     content = f.read()
 
                 values = parse_markdown_code_blocks(config, content)
-                for i, value in enumerate(values):
-                    if value.ignored:
-                        continue
+                # if config.debugging: print(f"Values: {values}")
 
+                for i, value in enumerate(values):
                     # the last command in the index and also the last file in all the paths
                     is_last_cmd = (i == len(values) - 1) and (file_path == file_paths[-1])
                     err = value.run_commands(config=config, is_last_cmd=is_last_cmd)
@@ -81,6 +80,10 @@ class DocsValue:
     cmd_delay: int = 0 # delay in seconds before each command is run
     wait_for_endpoint: Endpoint | None = None
     binary: str | None = None
+    # the `title` tag sets the title of a file. it will create if it does not exist.
+    # when the file does, it will insert the content at the line number. if the file is empty, it will always insert at the start (idx 0)
+    file_name: str | None = None
+    insert_at_line: int | None = None
 
     # returns a string or bool. if bool is true, success, if false, failed
     def endpoint_poll_if_applicable(self, poll_speed: float = 1.0) -> Generator[Tuple[bool, str], None, None]:
@@ -98,6 +101,29 @@ class DocsValue:
                 yield False, f"Error: endpoint not up yet: {url}, trying again. Try number: {attempt}"
                 time.sleep(poll_speed)
             attempt += 1
+
+    # handle_file_content returns True if we handled a file, False if we did not
+    def handle_file_content(self, config: Config) -> bool:
+        if not self.file_name:
+            return False
+
+        file_path = os.path.join(config.working_dir, self.file_name) if config.working_dir else self.file_name
+
+        if not os.path.exists(file_path):
+            with open(file_path, 'w') as f:
+             f.write(self.content)
+        else:
+            # read and insert at the given line
+            with open(file_path, 'r') as f:
+                lines = f.readlines()
+
+            if self.insert_at_line:
+                lines.insert(self.insert_at_line, self.content)
+
+            with open(file_path, 'w') as f:
+                f.write(''.join(lines))
+
+        return True
 
     def run_commands(
         self,
@@ -128,13 +154,22 @@ class DocsValue:
                 print(lastRes[1])
                 return f"Error: endpoint not up in timeout period: {self.wait_for_endpoint.url}"
 
+        if self.handle_file_content(config):
+            return None
+
+        if self.ignored:
+            if config.debugging:
+                c = self.content.replace('\n', '\\n').replace('    ', '\\t')
+                print(f"Ignoring commands for {self.language}... ({c})")
+            return None
+
         for command in self.commands:
             if command in config.ignore_commands:
                 continue
 
             # parse out env vars from commands. an example format is:
             # --> export SERVICE_MANAGER_ADDR=`make get-eigen-service-manager-from-deploy
-            # this should be done here as it is more JIT, can't do earlier else other commands are not ready
+            # this should be done here as it is more JIT, can't do earlier else other are not ready
             env.update(parse_env(command))
 
             # Determine if this specific command should run in background
@@ -199,7 +234,7 @@ class DocsValue:
                         break
 
         if self.post_delay > 0:
-            print(f"Sleeping for {self.post_delay} seconds after running commands...")
+            print(f"Sleeping for {self.post_delay} seconds after running ...")
             for i in range(self.post_delay, 0, -1):
                 print(f"Sleep: {i} seconds remaining...")
                 time.sleep(1)
@@ -210,7 +245,7 @@ class DocsValue:
         delay = self.post_delay if delay_type == "post" else self.cmd_delay
 
         if delay > 0:
-            print(f"Sleeping for {delay} seconds after running commands ({delay_type}_delay)...")
+            print(f"Sleeping for {delay} seconds after running  ({delay_type}_delay)...")
             for i in range(delay, 0, -1):
                 print(f"Sleep: {i} seconds remaining...")
                 time.sleep(1)
@@ -284,12 +319,6 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
         if config is not None:
             ignored = ignored or language not in config.followed_languages
 
-        background = Tags.BACKGROUND() in tags
-        post_delay = extract_tag_value(tags, Tags.POST_DELAY(), default=0, converter=int)
-        cmd_delay = extract_tag_value(tags, Tags.CMD_DELAY(), default=0, converter=int)
-        http_polling = extract_tag_value(tags, Tags.HTTP_POLLING(), default=None)
-        binary = extract_tag_value(tags, Tags.IGNORE_IF_INSTALLED(), default=None)
-
         content = str(block_content).strip()
 
         value = DocsValue(
@@ -297,12 +326,15 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             tags=tags,
             content=content,
             ignored=ignored,
-            background=background,
-            post_delay=post_delay,
-            cmd_delay=cmd_delay,
-            binary=binary,
-            wait_for_endpoint=handle_http_polling_input(http_polling),
-            commands=[]
+            background=(Tags.BACKGROUND() in tags),
+            post_delay=extract_tag_value(tags, Tags.POST_DELAY(), default=0, converter=int),
+            cmd_delay=extract_tag_value(tags, Tags.CMD_DELAY(), default=0, converter=int),
+            binary=extract_tag_value(tags, Tags.IGNORE_IF_INSTALLED(), default=None),
+            wait_for_endpoint=handle_http_polling_input(extract_tag_value(tags, Tags.HTTP_POLLING(), default=None)),
+            commands=[],
+            # file specific
+            file_name=extract_tag_value(tags, Tags.FILE_NAME(), default=None),
+            insert_at_line=extract_tag_value(tags, Tags.INSERT_AT_LINE(), default=None, converter=int),
         )
 
         # using regex, remove any sections of code that start with a comment '#' and end with a new line '\n', this info is not needed.
