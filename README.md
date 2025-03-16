@@ -17,15 +17,15 @@ make install
 # make sure to update 1) the version in the URL 2) the config path to run against
 - name: Readme Runner
     run: |
-    sudo wget -O /usr/local/bin/readme-runner https://github.com/Reecepbcups/docs-ci/releases/download/v0.1.1/readme-runner
-    sudo chmod +x /usr/local/bin/readme-runner
-    readme-runner .github/workflows/config.json
+    sudo wget -O /usr/local/bin/docs-ci https://github.com/Reecepbcups/docs-ci/releases/download/v0.1.2/docs-ci
+    sudo chmod +x /usr/local/bin/docs-ci
+    docs-ci .github/workflows/config.json
 ````
 
 ### 🎮 Usage
 
 ````bash
-readme-runner <config_path>
+docs-ci <config_path>
 ````
 
 ### 📝 Basic Example
