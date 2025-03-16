@@ -6,7 +6,7 @@ A CI tool that brings your markdown docs to life by executing code blocks in seq
 
 ## 🏃‍♂️ Quick Start
 
-Find sample workspaces [in the `examples/` directory](./examples/).
+Find sample workspaces in the [`examples/` directory](./examples/).
 
 ### 📦 Installation
 
