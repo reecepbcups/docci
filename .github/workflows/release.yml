@@ -56,6 +56,9 @@ jobs:
           echo "This job is only for pull_request & push"
           exit 0
 
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       # - run: sudo mkdir -p /usr/local/bin
       - run: echo "/usr/local/bin" >> $GITHUB_PATH
 
@@ -65,8 +68,6 @@ jobs:
           name: docs-ci
           path: /usr/local/bin
       - run: chmod a+rx /usr/local/bin/docs-ci
-
-      - run: cat ./examples/1-node/config.json
 
       - name: Run 1-node
         run: docs-ci ./examples/1-node/config.json
