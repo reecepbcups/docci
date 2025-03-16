@@ -8,29 +8,29 @@ A CI tool that brings your markdown docs to life by executing code blocks in seq
 
 ### Installation
 
-```bash
+````bash
 make install
-```
+````
 
 ### Github Actions Integration
-```yaml
+````yaml
 # make sure to update 1) the version in the URL 2) the config path to run against
 - name: Readme Runner
     run: |
     sudo wget -O /usr/local/bin/readme-runner https://github.com/Reecepbcups/docs-ci/releases/download/v0.0.2/readme-runner
     sudo chmod +x /usr/local/bin/readme-runner
     readme-runner .github/workflows/config.json
-```
+````
 
 ### Usage
 
-```bash
+````bash
 readme-runner <config_path>
-```
+````
 
 ### Basic Example
 
-```json
+````json
 {
   "paths": ["docs/README.md"],
   "env_vars": {
@@ -40,16 +40,16 @@ readme-runner <config_path>
   "cleanup_cmds": ["docker-compose down"],
   "final_output_contains": "Tests passed"
 }
-```
+````
 
 ## Code Block Tags
 
 Control how your documentation code blocks are executed:
 
-```bash docs-ci-background docs-ci-post-delay=5
+````bash docs-ci-background docs-ci-post-delay=5
 # This runs in background and waits 5 seconds after completion
 npm start
-```
+````
 
 ## Available tags
  * `docs-ci-ignore`: Skip executing this code block
@@ -79,29 +79,29 @@ The tool processes markdown files and executes code blocks based on configuratio
 Use the ignore tag to skip commands. Useful when you already installed / ran commands in your CI setup.
 
 
-```bash
-\`\`\`bash docs-ci-ignore
+````bash
+```bash docs-ci-ignore
 brew install XYZ
-\`\`\`
 ```
+````
 When your command is blocking (like a server you run your CI against), just add the background tag. It also adds a delay after the command starts. Some other setup may take place that we are waiting for but have no way to access yet (unless you want to parse logs output).
 
-```bash
-\`\`\`bash docs-ci-background docs-ci-post-delay=5
+````bash
+```bash docs-ci-background docs-ci-post-delay=5
 cp .env.example .env
 make my-long-running-process
 # waits 5 seconds here
-\`\`\`
 ```
+````
 
 Delay all commands by 1 second to give your system time to perform each action without being too fast.
 
-```bash
-\`\`\`bash docs-ci-cmd-delay=1
+````bash
+```bash docs-ci-cmd-delay=1
 go run save_large_file.go
 cat my-file.txt
-\`\`\`
 ```
+````
 
 
 ## Configuration Options
