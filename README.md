@@ -1,4 +1,4 @@
-# Readme Runner 🚀 &middot; [![GitHub license](https://img.shields.io/badge/license-apache-blue.svg)](https://github.com/Reecepbcups/docs-ci/blob/main/LICENSE) [![Tests](https://github.com/Reecepbcups/docs-ci/actions/workflows/test.yml/badge.svg)](https://github.com/Reecepbcups/docs-ci/actions/workflows/test.yml) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://legacy.reactjs.org/docs/how-to-contribute.html#your-first-pull-request)
+# Docci Readme Runner 🚀 &middot; [![GitHub license](https://img.shields.io/badge/license-apache-blue.svg)](https://github.com/Reecepbcups/docci/blob/main/LICENSE) [![Tests](https://github.com/Reecepbcups/docci/actions/workflows/test.yml/badge.svg)](https://github.com/Reecepbcups/docci/actions/workflows/test.yml) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://legacy.reactjs.org/docs/how-to-contribute.html#your-first-pull-request)
 
 Your documentation is now your test suite! 🎯
 
@@ -19,35 +19,35 @@ make install
 # make sure to update 1) the version in the URL 2) the config path to run against
 - name: Readme Runner
     run: |
-    sudo wget -O /usr/local/bin/docs-ci https://github.com/Reecepbcups/docs-ci/releases/download/v0.3.0/docs-ci
-    sudo chmod +x /usr/local/bin/docs-ci
-    docs-ci .github/workflows/config.json
+    sudo wget -O /usr/local/bin/docci https://github.com/Reecepbcups/docci/releases/download/v0.3.0/docci
+    sudo chmod +x /usr/local/bin/docci
+    docci .github/workflows/config.json
 ````
 
 ### 🎮 Usage
 
 ````bash
-docs-ci <config_path | config_json>
-# e.g. docs-ci .github/workflows/config.json
-# e.g. docs-ci '{"paths": ["docs/README.md"],"working_dir": "docs/","cleanup_cmds": ["kill -9 $(lsof -t -i:3000)"]}'
+docci <config_path | config_json>
+# e.g. docci .github/workflows/config.json
+# e.g. docci '{"paths": ["docs/README.md"],"working_dir": "docs/","cleanup_cmds": ["kill -9 $(lsof -t -i:3000)"]}'
 ````
 
 ### 🎨 Available tags
-  * 🚫 `docs-ci-ignore`: Skip executing this code block
-  * 🚫 `docs-ci-if-not-installed=BINARY`: Skip executing this code block if some binary is installed (e.g. node)
-  * 🔄 `docs-ci-background`: Run the command in the background
-  * ⏲️ `docs-ci-delay-after=N`: Wait N seconds after running commands
-  * ⌛ `docs-ci-delay-per-cmd=N`: Wait N seconds before each command
-  * 🌐 `docs-ci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
-  * 📜 `docs-ci-output-contains="string"`: Ensure the output contains a string at the end of the block
-  * 🚨 `docs-ci-assert-failure`: If it is expected to fail (like if the command is not supposed to run)
+  * 🚫 `docci-ignore`: Skip executing this code block
+  * 🚫 `docci-if-not-installed=BINARY`: Skip executing this code block if some binary is installed (e.g. node)
+  * 🔄 `docci-background`: Run the command in the background
+  * ⏲️ `docci-delay-after=N`: Wait N seconds after running commands
+  * ⌛ `docci-delay-per-cmd=N`: Wait N seconds before each command
+  * 🌐 `docci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
+  * 📜 `docci-output-contains="string"`: Ensure the output contains a string at the end of the block
+  * 🚨 `docci-assert-failure`: If it is expected to fail (like if the command is not supposed to run)
 
 ### 📄 Available file operations
   * `title`: The file name (matches docusaurus notation)
-  * `docs-ci-line-insert=N`: Insert content at line N
-  * `docs-ci-line-replace=N`: Replace content at line N
-  * `docs-ci-line-replace=N-M`: Replace content from line N to M
-  * `docs-ci-reset-file`: Reset the file to its original content
+  * `docci-line-insert=N`: Insert content at line N
+  * `docci-line-replace=N`: Replace content at line N
+  * `docci-line-replace=N-M`: Replace content from line N to M
+  * `docci-reset-file`: Reset the file to its original content
 
 ### 📝 Basic Example
 
@@ -70,7 +70,7 @@ Skip commands you've already run elsewhere: 🚫
 
 <!-- The 4 backticks is just so it wraps in githubs UI, real test are written normally with the nested part (just 3 backticks) -->
 ````bash
-```bash docs-ci-ignore
+```bash docci-ignore
 brew install XYZ
 ```
 ````
@@ -78,7 +78,7 @@ brew install XYZ
 Skip needless installations: 🚫
 
 ````bash
-```bash docs-ci-if-not-installed=node
+```bash docci-if-not-installed=node
 # this only runs if `node` is not found in the system
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash
 export NVM_DIR="$HOME/.nvm"
@@ -89,7 +89,7 @@ nvm install v21.7.3
 Ensure the output contains a specific string: 📜
 
 ````bash
-```bash docs-ci-output-contains="xyzMyOutput"
+```bash docci-output-contains="xyzMyOutput"
 echo xyzMyOutput
 ```
 ````
@@ -97,7 +97,7 @@ echo xyzMyOutput
 Run blocking commands in the background with delays: 🌐
 
 ````bash
-```bash docs-ci-background docs-ci-delay-after=5
+```bash docci-background docci-delay-after=5
 cp .env.example .env
 make my-long-running-process
 # waits 5 seconds here
@@ -107,7 +107,7 @@ make my-long-running-process
 Add delays between commands for stability after the endpoint from a previous command is up: ⏱️
 
 ````bash
-```bash docs-ci-delay-per-cmd=1 docs-ci-wait-for-endpoint=http://localhost:8080|30
+```bash docci-delay-per-cmd=1 docci-wait-for-endpoint=http://localhost:8080|30
 go run save_large_file_from_endpoint.go http://localhost:8080/my-endpoint
 # waits 1 second
 cat my-file.txt
@@ -118,7 +118,7 @@ cat my-file.txt
 Assert that a command fails: 🚨
 
 ````bash
-```bash docs-ci-assert-failure docs-ci-output-contains="NOT THE RIGHT OUTPUT"
+```bash docci-assert-failure docci-output-contains="NOT THE RIGHT OUTPUT"
 echo abcMyOutput
 ```
 ````
@@ -128,7 +128,7 @@ echo abcMyOutput
 Create a new file from content: 📝
 
 <!-- yes, the typo is meant to be here -->
-```html title=example.html docs-ci-reset-file
+```html title=example.html docci-reset-file
 <html>
     <head>
         <title>My Titlee</title>
@@ -138,13 +138,13 @@ Create a new file from content: 📝
 
 Replace the typo'ed line:
 
-```html title=example.html docs-ci-line-replace=3
+```html title=example.html docci-line-replace=3
         <title>My Title</title>
 ```
 
 Add new content
 
-```html title=example.html docs-ci-line-insert=4
+```html title=example.html docci-line-insert=4
     <body>
         <h1>My Header</h1>
         <p>1 paragraph</p>
@@ -154,7 +154,7 @@ Add new content
 
 Replace multiple lines
 
-```html title=example.html docs-ci-line-replace=7-9
+```html title=example.html docci-line-replace=7-9
         <p>First paragraph</p>
         <p>Second paragraph</p>
 ```

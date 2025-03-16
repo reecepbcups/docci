@@ -24,19 +24,19 @@ curr_dir = os.path.dirname(os.path.abspath(__file__))
 
 class TestSomething(unittest.TestCase):
     def test_process_language_parts(self):
-        dv = parse_markdown_code_blocks(config=None, content='```bash docs-ci-output-contains="My Multi Word Value"\npython3 example.py```')[0]
+        dv = parse_markdown_code_blocks(config=None, content='```bash docci-output-contains="My Multi Word Value"\npython3 example.py```')[0]
         self.assertEqual(dv.output_contains, "My Multi Word Value")
 
-        dv = parse_markdown_code_blocks(config=None, content='```bash docs-ci-output-contains="My Multi Word Value" docs-ci-delay-after=123\npython3 example.py```')[0]
+        dv = parse_markdown_code_blocks(config=None, content='```bash docci-output-contains="My Multi Word Value" docci-delay-after=123\npython3 example.py```')[0]
         self.assertEqual(dv.output_contains, "My Multi Word Value")
         self.assertEqual(dv.post_delay, 123)
 
 
     def test_extract_tag_value(self):
         # this is after process_language_parts, we just input good values here for verification
-        resp = extract_tag_value(tags=['docs-ci-output-contains="My Value"'], tag_type=Tags.OUTPUT_CONTAINS(), default=None)
+        resp = extract_tag_value(tags=['docci-output-contains="My Value"'], tag_type=Tags.OUTPUT_CONTAINS(), default=None)
         self.assertEqual(resp, "My Value")
-        resp = extract_tag_value(tags=['docs-ci-delay-after=123'], tag_type=Tags.POST_DELAY(), default=None, converter=int)
+        resp = extract_tag_value(tags=['docci-delay-after=123'], tag_type=Tags.POST_DELAY(), default=None, converter=int)
         self.assertEqual(resp, 123)
         resp = extract_tag_value(tags=['title=proto/example/example.proto'], tag_type=Tags.TITLE(), default=None)
         self.assertEqual(resp, "proto/example/example.proto")
@@ -78,14 +78,14 @@ class TestSomething(unittest.TestCase):
         self.assertEqual(dv.cmd_delay, 0)
 
         # ignore block
-        dv: DocsValue = parse_markdown_code_blocks(config=None, content='# header\nhere is some text\n\n```bash docs-ci-ignore\nexport MY_VARIABLE=`echo 123`\n```')[0]
+        dv: DocsValue = parse_markdown_code_blocks(config=None, content='# header\nhere is some text\n\n```bash docci-ignore\nexport MY_VARIABLE=`echo 123`\n```')[0]
         self.assertEqual(dv.ignored, True)
         self.assertEqual(dv.tags, [Tags.IGNORE()])
 
         # multiple tags
         dv: DocsValue = parse_markdown_code_blocks(config=None, content='''# header
                 here is some text\n\n
-                ```bash docs-ci-delay-after=5 docs-ci-delay-per-cmd=1
+                ```bash docci-delay-after=5 docci-delay-per-cmd=1
                     export MY_VARIABLE=`echo 123`
                     echo 12345
                 ```
@@ -98,7 +98,7 @@ class TestSomething(unittest.TestCase):
     def test_http_polling_failure_then_success_when_up(self):
         port = MyServer.get_free_port()
 
-        dv: DocsValue = parse_markdown_code_blocks(config=None, content=f'```bash docs-ci-wait-for-endpoint=http://localhost:{port}|30\nexport MY_VARIABLE=`echo 123`\n```')[0]
+        dv: DocsValue = parse_markdown_code_blocks(config=None, content=f'```bash docci-wait-for-endpoint=http://localhost:{port}|30\nexport MY_VARIABLE=`echo 123`\n```')[0]
         self.assertEqual(dv.wait_for_endpoint, Endpoint(url=f'http://localhost:{port}', max_timeout=30))
         self.assertEqual(dv.tags, [f"{Tags.HTTP_POLLING()}=http://localhost:{port}|30"])
 
@@ -127,7 +127,7 @@ class TestSomething(unittest.TestCase):
         port = MyServer.get_free_port()
 
         max_timeout = 2
-        dv: DocsValue = parse_markdown_code_blocks(config=None, content=f'```bash docs-ci-wait-for-endpoint=http://localhost:{port}|{max_timeout}\nexport MY_VARIABLE=`echo 123`\n```')[0]
+        dv: DocsValue = parse_markdown_code_blocks(config=None, content=f'```bash docci-wait-for-endpoint=http://localhost:{port}|{max_timeout}\nexport MY_VARIABLE=`echo 123`\n```')[0]
         self.assertEqual(dv.wait_for_endpoint, Endpoint(url=f'http://localhost:{port}', max_timeout=max_timeout))
 
         startTime = time.time()

@@ -76,7 +76,7 @@ def main():
 @dataclass
 class DocsValue:
     language: str # bash, python, rust, etc
-    tags: List[str] # (e.g., 'docs-ci-ignore') in the ```bash tag1, tag2```
+    tags: List[str] # (e.g., 'docci-ignore') in the ```bash tag1, tag2```
     content: str # unmodified content
     ignored: bool
     commands: List[str]
@@ -410,12 +410,12 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
         A list of dictionaries, each containing:
         - 'language': The language of the code block
         - 'content': The content of the code block
-        - 'should_run': Boolean indicating if this block should be executed (True for bash blocks without docs-ci-ignore)
+        - 'should_run': Boolean indicating if this block should be executed (True for bash blocks without docci-ignore)
     """
 
     # Regex pattern to match code blocks: ```language ... ```
     # Capturing groups:
-    # 1. Language and any additional markers (e.g., 'bash docs-ci-ignore')
+    # 1. Language and any additional markers (e.g., 'bash docci-ignore')
     # 2. Content of the code block
     pattern = r'```(.*?)\n(.*?)```'
 
