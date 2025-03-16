@@ -9,31 +9,32 @@ permissions:
   contents: write
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-        # staticx issue requires this -- https://github.com/JonathonReinhart/staticx/issues/188
-      - name: Setup Python
-        run: sudo add-apt-repository ppa:deadsnakes/ppa && sudo apt-get update && sudo apt-get install python3.12
-
-      # - name: Set up Python
-      #   uses: actions/setup-python@v5
-      #   with:
-      #     python-version: '3.x'
-
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller staticx --break-system-packages
+          pip install -r requirements.txt --break-system-packages
 
       - name: Build package
-        env:
-          IS_ACTION: true # else we move to /usr/bin/local/
         run: make install
+
+      - name: Upload docs-ci artifact
+        uses: actions/upload-artifact@v4.6.1
+        if: github.event_name == 'pull_request'
+        with:
+          name: docs-ci
+          retention-days: 1
+          path: /usr/local/bin/docs-ci
 
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -42,5 +43,30 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: |
-            dist/readme-runner
+            /usr/local/bin/docs-ci
+  test-e2e:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Check if PR
+        if: github.event_name != 'pull_request' && github.event_name != 'push'
+        run: |
+          echo "This job is only for pull_request & push"
+          exit 0
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # - run: sudo mkdir -p /usr/local/bin
+      - run: echo "/usr/local/bin" >> $GITHUB_PATH
+
+      - name: Download docs-ci Bin
+        uses: actions/download-artifact@v4.1.9
+        with:
+          name: docs-ci
+          path: /usr/local/bin
+      - run: chmod a+rx /usr/local/bin/docs-ci
+
+      - name: Run 1-node
+        run: docs-ci ./examples/1-node/config.json
 

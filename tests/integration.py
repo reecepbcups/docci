@@ -8,8 +8,7 @@ from config_types import Config
 from main import do_logic
 
 
-class TestIntegration(unittest.TestCase) :
-
+class TestIntegration(unittest.TestCase):
     def test_sometestcase(self) :
         # The test cases here should use appropriate
         # asserts to verify that the output of the

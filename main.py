@@ -1,17 +1,21 @@
 #!/usr/bin/env -S python3 -B
 
+import json
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
 import time
 from dataclasses import dataclass
-from typing import Dict, List, Literal
+from typing import Dict, Generator, List, Literal, Optional, Tuple
+
+import requests
 
 from config_types import Config
 from execute import execute_substitution_commands
-from models import Tags
+from models import Endpoint, Tags, handle_http_polling_input
 
 # Store PIDs of background processes for later cleanup
 background_processes = []
@@ -50,16 +54,15 @@ def do_logic(config: Config) -> str | None:
 
 def main():
     if len(sys.argv) != 2:
-        cmd = sys.argv[0]
-        if re.match(r"/tmp/staticx-.*?/readme-runner", cmd):
-            cmd = "readme-runner"
-
-        print(f"Usage: {cmd} <config_path>")
+        print(f"Usage: {sys.argv[0]} <config_path|config_json_blob>")
         sys.exit(1)
 
-    config_path = sys.argv[1]
+    cfg_input = sys.argv[1]
 
-    config: Config = Config.load_from_file(config_path)
+    if os.path.isfile(cfg_input):
+        config: Config = Config.load_from_file(cfg_input)
+    else:
+        config: Config = Config.from_json(json.loads(cfg_input))
 
     err = do_logic(config)
     if err:
@@ -76,14 +79,31 @@ class DocsValue:
     background: bool = False # if the command should run in the background i.e. it is blocking
     post_delay: int = 0 # delay in seconds after the command is run
     cmd_delay: int = 0 # delay in seconds before each command is run
-    # docs-ci-wait-for-endpoint=http://127.0.0.1:8000|30 tag would be nice (after 30 seconds, fail)
+    wait_for_endpoint: Endpoint | None = None
+    binary: str | None = None
+
+    # returns a string or bool. if bool is true, success, if false, failed
+    def endpoint_poll_if_applicable(self, poll_speed: float = 1.0) -> Generator[Tuple[bool, str], None, None]:
+        start_time = time.time()
+        attempt = 1
+        url = self.wait_for_endpoint.url
+        while True:
+            try:
+                requests.get(url)
+                yield True, f"Success: endpoint is up: {url}"
+                break
+            except requests.exceptions.RequestException:
+                if time.time() - start_time > self.wait_for_endpoint.max_timeout: # half second buffer
+                    break
+                yield False, f"Error: endpoint not up yet: {url}, trying again. Try number: {attempt}"
+                time.sleep(poll_speed)
+            attempt += 1
 
     def run_commands(
         self,
         config: Config,
         background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"],
         is_last_cmd: bool = False,
-        cwd: str | None = None,
     ) -> str | None:
         '''
         Runs the commands. host env vars are pulled into the processes
@@ -94,6 +114,19 @@ class DocsValue:
         env = os.environ.copy()
 
         success = None
+
+        if self.binary:
+            if shutil.which(self.binary):
+                print(f"Skipping command since {self.binary} is already installed.")
+                return None
+
+        if self.wait_for_endpoint:
+            lastRes = Tuple(False, "")
+            for res in self.endpoint_poll_if_applicable(poll_speed=1):
+                lastRes = res
+            if lastRes[0]:
+                print(lastRes[1])
+                return f"Error: endpoint not up in timeout period: {self.wait_for_endpoint.url}"
 
         for command in self.commands:
             if command in config.ignore_commands:
@@ -116,7 +149,7 @@ class DocsValue:
             if cmd_background and not command.strip().endswith('&'):
                 command = f"{command} &"
 
-            if config.debug:
+            if config.debugging:
                 print(f"Running command: {command}" + (" (& added for background)" if cmd_background else ""))
 
             if self.cmd_delay > 0:
@@ -131,7 +164,7 @@ class DocsValue:
                 stderr=subprocess.PIPE if is_last_cmd else None,
                 shell=True,
                 env=env,
-                cwd=cwd,
+                cwd=config.working_dir,
                 text=False,
             )
 
@@ -193,7 +226,7 @@ def cleanup_background_processes():
     if not background_processes:
         return
 
-    print(f"Cleaning up {len(background_processes)} background processes...")
+    print(f"\nCleaning up {len(background_processes)} background processes...")
     for pid in background_processes:
         try:
             os.kill(pid, signal.SIGTERM)
@@ -206,7 +239,14 @@ def cleanup_background_processes():
     background_processes.clear()
 
 
+def extract_tag_value(tags, tag_type, default=None, converter=None):
+    """Extract value from a tag of format 'tag_type=value'"""
+    matching_tags = [tag.split('=')[1] for tag in tags if tag_type in tag]
+    if not matching_tags:
+        return default
 
+    value = matching_tags[0]
+    return converter(value) if converter else value
 
 def parse_markdown_code_blocks(config: Config | None, content: str) -> List[DocsValue]:
     """
@@ -245,8 +285,10 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             ignored = ignored or language not in config.followed_languages
 
         background = Tags.BACKGROUND() in tags
-        post_delay = int([tag.split('=')[1] for tag in tags if Tags.POST_DELAY() in tag][0]) if any('docs-ci-post-delay' in tag for tag in tags) else 0
-        cmd_delay = int([tag.split('=')[1] for tag in tags if Tags.CMD_DELAY() in tag][0]) if any('docs-ci-cmd-delay' in tag for tag in tags) else 0
+        post_delay = extract_tag_value(tags, Tags.POST_DELAY(), default=0, converter=int)
+        cmd_delay = extract_tag_value(tags, Tags.CMD_DELAY(), default=0, converter=int)
+        http_polling = extract_tag_value(tags, Tags.HTTP_POLLING(), default=None)
+        binary = extract_tag_value(tags, Tags.IGNORE_IF_INSTALLED(), default=None)
 
         content = str(block_content).strip()
 
@@ -258,6 +300,8 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             background=background,
             post_delay=post_delay,
             cmd_delay=cmd_delay,
+            binary=binary,
+            wait_for_endpoint=handle_http_polling_input(http_polling),
             commands=[]
         )
 

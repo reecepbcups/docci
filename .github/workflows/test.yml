@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  unit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,21 +15,13 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12'
+
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt --break-system-packages
 
       - name: Run Python unit tests
         run: python3 -u -m unittest tests/tests.py
-
-      # - name: Integration test
-      #   id: integration
-      #   uses: ./
-      #   with:
-      #     input-one: something
-
-      # - name: Output the outputs of the integration test of the action
-      #   run: |
-      #     echo "output-one = ${{ steps.integration.outputs.output-one }}"
-      #     echo "output-two = ${{ steps.integration.outputs.output-two }}"
 
       - name: Verify integration test results
         run: python3 -u -m unittest tests/integration.py

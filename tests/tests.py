@@ -2,8 +2,9 @@
 
 
 import os
+import threading
+import time
 import unittest
-from typing import List
 
 from config_types import Config
 from main import (
@@ -14,8 +15,11 @@ from main import (
     parse_env,
     parse_markdown_code_blocks,
 )
+from models import Endpoint
+from tests.test_server import MyServer
 
 curr_dir = os.path.dirname(os.path.abspath(__file__))
+
 
 class TestSomething(unittest.TestCase):
     def test_config_run_1(self):
@@ -66,7 +70,7 @@ class TestSomething(unittest.TestCase):
         # multiple tags
         dv: DocsValue = parse_markdown_code_blocks(config=None, content='''# header
                 here is some text\n\n
-                ```bash docs-ci-post-delay=5 docs-ci-cmd-delay=1
+                ```bash docs-ci-delay-after=5 docs-ci-delay-per-cmd=1
                     export MY_VARIABLE=`echo 123`
                     echo 12345
                 ```
@@ -75,3 +79,44 @@ class TestSomething(unittest.TestCase):
         ''')[0]
         self.assertEqual(dv.ignored, False)
         self.assertEqual(dv.tags, [f"{Tags.POST_DELAY()}=5",f"{Tags.CMD_DELAY()}=1"])
+
+    def test_http_polling_failure_then_success_when_up(self):
+        port = MyServer.get_free_port()
+
+        dv: DocsValue = parse_markdown_code_blocks(config=None, content=f'```bash docs-ci-wait-for-endpoint=http://localhost:{port}|30\nexport MY_VARIABLE=`echo 123`\n```')[0]
+        self.assertEqual(dv.wait_for_endpoint, Endpoint(url=f'http://localhost:{port}', max_timeout=30))
+        self.assertEqual(dv.tags, [f"{Tags.HTTP_POLLING()}=http://localhost:{port}|30"])
+
+        # server is off, always returns False for now
+        returnValues = {}
+        for idx, res in enumerate(dv.endpoint_poll_if_applicable(poll_speed=0.1)):
+            if idx == 0:
+                # server is off
+                self.assertFalse(res[0])
+
+            # start the server since the first false came in & we know it is down
+            if idx == 1:
+                s = MyServer(port)
+                server_thread = threading.Thread(target=s.start_server)
+                server_thread.start()
+
+            returnValues[res[0]] = res[1]
+
+        # len of returnValues should be 2, since we have 2 yields (1 good & 1 bad)
+        self.assertEqual(len(returnValues), 2)
+
+        s.shutdown()
+        server_thread.join()
+
+    def test_http_polling_max_timeout(self):
+        port = MyServer.get_free_port()
+
+        max_timeout = 2
+        dv: DocsValue = parse_markdown_code_blocks(config=None, content=f'```bash docs-ci-wait-for-endpoint=http://localhost:{port}|{max_timeout}\nexport MY_VARIABLE=`echo 123`\n```')[0]
+        self.assertEqual(dv.wait_for_endpoint, Endpoint(url=f'http://localhost:{port}', max_timeout=max_timeout))
+
+        startTime = time.time()
+        for res in dv.endpoint_poll_if_applicable(poll_speed=0.1):
+            self.assertFalse(res[0])
+            # always less than max timeout (reason for little added buffer here)
+            self.assertTrue(time.time() - startTime < max_timeout+0.5, f"Time exceeded {max_timeout} seconds")
