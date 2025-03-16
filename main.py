@@ -7,7 +7,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 from config_types import Config
 from execute import execute_substitution_commands
@@ -17,33 +17,31 @@ from models import Tags
 background_processes = []
 
 # do_logic returns an error if it fails
-def do_logic(cfg: Config) -> str | None:
-    global config  # set the config to cfg as global
-    config = cfg
-
+def do_logic(config: Config) -> str | None:
     config.run_pre_cmds(hide_output=True)
     for key, value in config.env_vars.items():
         os.environ[key] = value
 
-    all_paths = config.get_all_possible_paths()
-    for file_path in all_paths:
+    for parentPathKey, file_paths in config.get_all_possible_paths().items():
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+            for file_path in file_paths:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
 
-            values = parse_markdown_code_blocks(content)
-            for i, value in enumerate(values):
-                if value.ignored: continue
+                values = parse_markdown_code_blocks(config, content)
+                for i, value in enumerate(values):
+                    if value.ignored:
+                        continue
 
-                # value.print()
-
-                # the last command in the index and also the last file in all the paths
-                is_success = value.run_commands(is_last_cmd=(i == len(values) - 1) and (file_path == all_paths[-1]))
-                if not is_success:
-                    return f"Error running commands for value: {value}"
-
+                    # the last command in the index and also the last file in all the paths
+                    is_last_cmd = (i == len(values) - 1) and (file_path == file_paths[-1])
+                    err = value.run_commands(config=config, is_last_cmd=is_last_cmd)
+                    if err:
+                        return f"Error({parentPathKey},{file_paths}): {err}"
         except KeyboardInterrupt:
             print("\nKeyboardInterrupt: Quitting...")
+        except Exception as e:
+            return f"Error({parentPathKey},{file_paths}): {e}"
         finally:
             cleanup_background_processes()
             config.run_cleanup_cmds(hide_output=True)
@@ -78,17 +76,20 @@ class DocsValue:
 
     def run_commands(
         self,
+        config: Config,
         background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"],
         is_last_cmd: bool = False,
         cwd: str | None = None,
-    ) -> bool: # success / failure returned
+    ) -> str | None:
         '''
         Runs the commands. host env vars are pulled into the processes
+
+        returns: error message if any
         '''
 
         env = os.environ.copy()
 
-        success = True
+        success = None
 
         for command in self.commands:
             if command in config.ignore_commands:
@@ -111,16 +112,12 @@ class DocsValue:
             if cmd_background and not command.strip().endswith('&'):
                 command = f"{command} &"
 
-            print(f"Running command: {command}" + (" (& added for background)" if cmd_background else ""))
+            if config.debug:
+                print(f"Running command: {command}" + (" (& added for background)" if cmd_background else ""))
 
-            if self.cmd_delay > 0:
-                print(f"Sleeping for {self.cmd_delay} seconds before running command (cmd-delay)...")
-                for i in range(self.cmd_delay, 0, -1):
-                    print(f"Sleep: {i} seconds remaining...")
-                    time.sleep(1)
+            self.handle_delay('cmd')
 
-            # Use the merged environment when running the command
-            process = process = subprocess.Popen( # no colors
+            process = process = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE if is_last_cmd else None,
                 stderr=subprocess.PIPE if is_last_cmd else None,
@@ -151,25 +148,27 @@ class DocsValue:
                         output += stderr.decode('utf-8', errors='replace')
 
                     if config.final_output_contains not in output:
-                        print(f"Error: final_output_contains not found in output: {config.final_output_contains}")
-                        success = False
+                        success = f"Error: final_output_contains not found in output: {config.final_output_contains}"
                         break
                 else:
                     # For regular processes, wait and check return code
                     process.wait()
                     if process.returncode != 0:
-                        print(f"Error running command: {command}")
-                        success = False
+                        success = f"Error running command: {command}"
                         break
 
-        if self.post_delay > 0:
-            print(f"Sleeping for {self.post_delay} seconds after running commands...")
-            for i in range(self.post_delay, 0, -1):
-                print(f"Sleep: {i} seconds remaining...")
-                time.sleep(1)
+        self.handle_delay('post')
 
         return success
 
+    def handle_delay(self, delay_type: Literal["post", "cmd"]) -> None:
+        delay = self.post_delay if delay_type == "post" else self.cmd_delay
+
+        if delay > 0:
+            print(f"Sleeping for {delay} seconds after running commands ({delay_type}_delay)...")
+            for i in range(delay, 0, -1):
+                print(f"Sleep: {i} seconds remaining...")
+                time.sleep(1)
 
     def __str__(self):
         return f"DocsValue(language={self.language}, tags={self.tags}, ignored={self.ignored}, commands={self.commands}, background={self.background}, post_delay={self.post_delay}), cmd_delay={self.cmd_delay})"
@@ -197,7 +196,7 @@ def cleanup_background_processes():
 
 
 
-def parse_markdown_code_blocks(content: str) -> List[DocsValue]:
+def parse_markdown_code_blocks(config: Config | None, content: str) -> List[DocsValue]:
     """
     Parse a markdown file and extract all code blocks with their language and content.
 
@@ -229,8 +228,7 @@ def parse_markdown_code_blocks(content: str) -> List[DocsValue]:
         language = language_parts[0] if language_parts else ''
         tags = language_parts[1:] if len(language_parts) > 1 else []
 
-        # ignored = 'docs-ci-ignore' in tags or language not in config.followed_languages
-        ignored = Tags.IGNORE() in tags or language not in config.followed_languages
+        ignored = (Tags.IGNORE() in tags) or (config is not None and language not in config.followed_languages)
         background = Tags.BACKGROUND() in tags
         post_delay = int([tag.split('=')[1] for tag in tags if Tags.POST_DELAY() in tag][0]) if any('docs-ci-post-delay' in tag for tag in tags) else 0
         cmd_delay = int([tag.split('=')[1] for tag in tags if Tags.CMD_DELAY() in tag][0]) if any('docs-ci-cmd-delay' in tag for tag in tags) else 0
