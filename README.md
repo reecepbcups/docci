@@ -33,38 +33,23 @@ docci <config_path | config_json>
 # e.g. docci '{"paths": ["docs/README.md"],"working_dir": "docs/","cleanup_cmds": ["kill -9 $(lsof -t -i:3000)"]}'
 ```
 
-### 🎨 Available tags
+### 🎨 Operation tags
   * 🛑 `docci-ignore`: Skip executing this code block
-  * 🚫 `docci-if-not-installed=BINARY`: Skip executing this code block if some binary is installed (e.g. node)
   * 🔄 `docci-background`: Run the command in the background
+  * 🚫 `docci-if-not-installed=BINARY`: Skip execution if some binary is installed (e.g. node)
   * ⏲️ `docci-delay-after=N`: Wait N seconds after running commands
   * ⌛ `docci-delay-per-cmd=N`: Wait N seconds before each command
-  * 🌐 `docci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
+  * 🌐 `docci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready
   * 📜 `docci-output-contains="string"`: Ensure the output contains a string at the end of the block
-  * 🚨 `docci-assert-failure`: If it is expected to fail (like if the command is not supposed to run)
-  * 🖥️ `docci-os=mac|linux`: Run the command only on the specified OS
+  * 🚨 `docci-assert-failure`: If it is expected to fail (non 0 exit code)
+  * 🖥️ `docci-os=mac|linux`: Run the command only on it's the specified OS
 
-### 📄 Available file operations
+### 📄 File Tags
   * `title`: The file name (matches docusaurus notation)
+  * `docci-reset-file`: Reset the file to its original content
   * `docci-line-insert=N`: Insert content at line N
   * `docci-line-replace=N`: Replace content at line N
   * `docci-line-replace=N-M`: Replace content from line N to M
-  * `docci-reset-file`: Reset the file to its original content
-
-### 📝 Basic Example
-
-````json
-{
-  "paths": ["docs/README.md"],
-  "env_vars": {
-    "NODE_ENV": "test"
-  },
-  "working_dir": "docs/",
-  "debugging": false,
-  "pre_cmds": ["npm install"],
-  "cleanup_cmds": ["docker-compose down"],
-}
-````
 
 ### 💡 Code Block Tag Examples (Operations)
 
@@ -167,11 +152,26 @@ Control how your documentation code blocks are executed with no code, just code 
 
 ## ⚙️ JSON Configuration Options
 
-- 📂 `paths`: List of markdown files or directories to process
+- 📂 `paths`: List of markdown files or directories to process (required)
 - 🔐 `env_vars`: Environment variables to set during execution
 - 🎬 `pre_cmds`: Commands to run before processing markdown
 - 🧹 `cleanup_cmds`: Commands to run after processing
 - 📂 `working_dir`: Working directory for command execution
+
+### 📝 Config Example
+
+````json
+{
+  "paths": ["docs/README.md"],
+  "env_vars": {
+    "NODE_ENV": "test"
+  },
+  "working_dir": "docs/",
+  "debugging": false,
+  "pre_cmds": ["npm install"],
+  "cleanup_cmds": ["docker-compose down"],
+}
+````
 
 ## 🚧 Limitations
 
