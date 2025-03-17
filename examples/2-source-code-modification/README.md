@@ -12,13 +12,13 @@ Create a new file called `example.json` and input the following contents.
 - If the file does not exist, it will be created.
 - If the file exists, it will be overwritten due to `docci-reset-file`
 
-```json title=example.json docci-reset-file
+```json docci-file=example.json docci-reset-file
 {
     "some_key": "My Value"
 }
 ```
 
-```python title=example.py docci-reset-file
+```python docci-file=example.py docci-reset-file
 import json
 
 def main():
@@ -44,7 +44,7 @@ python3 example.py
 
 ### Create a new website
 
-```html title=example.html docci-reset-file
+```html docci-file=example.html docci-reset-file
 <html>
     <head>
         <title>My Titlee</title>
@@ -54,7 +54,7 @@ python3 example.py
 
 ### Fix the typo at line 3
 
-```html title=example.html docci-line-replace=3
+```html docci-file=example.html docci-line-replace=3
         <title>My Title</title>
 ```
 
@@ -62,7 +62,7 @@ python3 example.py
 
 Add main content after the head tag
 
-```html title=example.html docci-line-insert=4
+```html docci-file=example.html docci-line-insert=4
     <body>
         <h1>My Header</h1>
         <p>1 paragraph</p>
@@ -74,7 +74,7 @@ Add main content after the head tag
 
 Fix the paragraphs to spell it instead over multiple lines
 
-```html title=example.html docci-line-replace=7-9
+```html docci-file=example.html docci-line-replace=7-9
         <p>First paragraph</p>
         <p>Second paragraph</p>
 ```
@@ -84,13 +84,13 @@ Fix the paragraphs to spell it instead over multiple lines
 
 If you try to replace a line too far out of bounds, it will just append
 
-```html title=example.html docci-line-replace=44
+```html docci-file=example.html docci-line-replace=44
 <!-- example comment at the end of the file -->
 ```
 
 Negative insert's will wrap around the length, allowing you to append from the end
 
-```html title=example.html docci-line-insert=-1
+```html docci-file=example.html docci-line-insert=-1
 <!-- Even further comment using -1 as insert -->
 ```
 

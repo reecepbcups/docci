@@ -38,7 +38,7 @@ class TestSomething(unittest.TestCase):
         self.assertEqual(resp, "My Value")
         resp = extract_tag_value(tags=['docci-delay-after=123'], tag_type=Tags.POST_DELAY(), default=None, converter=int)
         self.assertEqual(resp, 123)
-        resp = extract_tag_value(tags=['title=proto/example/example.proto'], tag_type=Tags.TITLE(), default=None)
+        resp = extract_tag_value(tags=['docci-file=proto/example/example.proto'], tag_type=Tags.FILE_NAME(), default=None)
         self.assertEqual(resp, "proto/example/example.proto")
 
     def test_config_run_1(self):

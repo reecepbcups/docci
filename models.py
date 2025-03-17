@@ -17,7 +17,7 @@ class Tags(Enum):
     MACHINE_OS = "docci-os"
 
     # file related
-    TITLE = 'title' # maybe we also alias with a docci-title or -filename or something?
+    FILE_NAME = 'docci-file'
     INSERT_AT_LINE = 'docci-line-insert'
     REPLACE_AT_LINE= 'docci-line-replace' # docci-line-replace=2-4 or docci-line-replace=2 works
     RESET_FILE = 'docci-reset-file'

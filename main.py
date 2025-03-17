@@ -89,9 +89,9 @@ class DocsValue:
     output_contains: Optional[str] = None
     expect_failure: bool = False
     machine_os: Optional[str] = None
-    # the `title` tag sets the title of a file. it will create if it does not exist.
+    # Files: it will create if it does not exist.
     # when the file does, it will insert the content at the line number. if the file is empty, it will always insert at the start (idx 0)
-    file_name: Optional[str] = None # may also be referenced as `title` in enum
+    file_name: Optional[str] = None
     insert_at_line: Optional[int] = None
     replace_lines: Optional[Tuple[int, Optional[int]]] = None # start and optional end
     file_reset: bool = False
@@ -464,7 +464,7 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             expect_failure=(Tags.ASSERT_FAILURE() in tags),
             machine_os=(extract_tag_value(tags, Tags.MACHINE_OS(), default=None, converter=alias_operating_systems) or None),
             # file specific
-            file_name=extract_tag_value(tags, Tags.TITLE(), default=None),
+            file_name=extract_tag_value(tags, Tags.FILE_NAME(), default=None),
             insert_at_line=extract_tag_value(tags, Tags.INSERT_AT_LINE(), default=None, converter=int),
             replace_lines=extract_tag_value(tags, Tags.REPLACE_AT_LINE(), default=None, converter=replace_at_line_converter),
             file_reset=(Tags.RESET_FILE() in tags),
