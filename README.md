@@ -1,4 +1,4 @@
-# Docci | Readme Runner 🚀 &middot; [![GitHub license](https://img.shields.io/badge/license-apache-blue.svg)](https://github.com/Reecepbcups/docci/blob/main/LICENSE) [![Tests](https://github.com/Reecepbcups/docci/actions/workflows/test.yml/badge.svg)](https://github.com/Reecepbcups/docci/actions/workflows/test.yml) [![MacOS Compatible](https://img.shields.io/badge/compatible%20-macOS-8A2BE2.svg)](https://github.com/Reecepbcups/docci) [![Linux Compatible](https://img.shields.io/badge/compatible-linux-8A2BE2.svg)](https://github.com/Reecepbcups/docci)
+# Docci | Readme Runner 🚀 &middot; [![GitHub license](https://img.shields.io/badge/license-apache-blue.svg)](https://github.com/Reecepbcups/docci/blob/main/LICENSE) [![Tests](https://github.com/Reecepbcups/docci/actions/workflows/test.yml/badge.svg)](https://github.com/Reecepbcups/docci/actions/workflows/test.yml) [![Compatible](https://img.shields.io/badge/compatible%20-macOS_&_linux-8A2BE2.svg)](https://github.com/Reecepbcups/docci)
 
 Your documentation is now your test suite! 🎯 *(pronounced "doc-ee", short for documentation CI)*
 
