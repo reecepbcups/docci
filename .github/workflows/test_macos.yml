@@ -49,8 +49,8 @@ jobs:
     #       files: |
     #         /usr/local/bin/docci
 
-  test-e2e:
-    runs-on: ubuntu-latest
+  test-e2e-macos:
+    runs-on: macos-latest
     needs: stash
     steps:
       - name: make sure this is not a release
