@@ -1,6 +1,6 @@
 {
     "paths": [
-      "examples/1-node/README1.md"
+      "examples/1-node/README.md"
     ],
     "env_vars": {},
     "pre_cmds": [],
