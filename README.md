@@ -45,7 +45,7 @@ docci <config_path | config_json>
   * 🖥️ `docci-os=mac|linux`: Run the command only on it's the specified OS
 
 ### 📄 File Tags
-  * `title`: The file name (matches docusaurus notation)
+  * `docci-file`: The file name to operate on
   * `docci-reset-file`: Reset the file to its original content
   * `docci-line-insert=N`: Insert content at line N
   * `docci-line-replace=N`: Replace content at line N
@@ -109,7 +109,7 @@ Create a new file from content: 📝
 
 <!-- yes, the typo is meant to be here -->
 ````html
-```html title=example.html docci-reset-file
+```html docci-file=example.html docci-reset-file
 <html>
     <head>
         <title>My Titlee</title>
@@ -121,7 +121,7 @@ Create a new file from content: 📝
 Replace the typo'ed line:
 
 ````html
-```html title=example.html docci-line-replace=3
+```html docci-file=example.html docci-line-replace=3
         <title>My Title</title>
 ```
 ````
@@ -129,7 +129,7 @@ Replace the typo'ed line:
 Add new content
 
 ````html
-```html title=example.html docci-line-insert=4
+```html docci-file=example.html docci-line-insert=4
     <body>
         <h1>My Header</h1>
         <p>1 paragraph</p>
@@ -141,7 +141,7 @@ Add new content
 Replace multiple lines
 
 ````html
-```html title=example.html docci-line-replace=7-9
+```html docci-file=example.html docci-line-replace=7-9
         <p>First paragraph</p>
         <p>Second paragraph</p>
 ```
