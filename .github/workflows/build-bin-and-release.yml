@@ -22,7 +22,10 @@ concurrency:
 
 jobs:
   build-n-stash:
-    runs-on: [ubuntu-latest, macos-latest] # macos on releases only
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: MacOS; Only for releases check
         if: ${{ runner.os}} == 'macos-latest' && github.event_name != 'release'
@@ -64,7 +67,10 @@ jobs:
             /usr/local/bin/docci
 
   test-e2e:
-    runs-on: [ubuntu-latest, macos-latest]
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     needs: build-n-stash
     if: github.event_name != 'release'
     steps:
