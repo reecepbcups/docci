@@ -42,7 +42,7 @@ docci <config_path | config_json>
   * 🌐 `docci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
   * 📜 `docci-output-contains="string"`: Ensure the output contains a string at the end of the block
   * 🚨 `docci-assert-failure`: If it is expected to fail (like if the command is not supposed to run)
-  * 🖥️ `docci-os=macos|mac|linux`: Run the command only on the specified OS
+  * 🖥️ `docci-os=mac|linux`: Run the command only on the specified OS
 
 ### 📄 Available file operations
   * `title`: The file name (matches docusaurus notation)
