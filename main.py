@@ -16,7 +16,7 @@ import requests
 
 from config_types import Config, ScriptingLanguages
 from execute import execute_substitution_commands
-from models import Endpoint, MachineOS, Tags, handle_http_polling_input
+from models import Endpoint, Tags, alias_operating_systems, handle_http_polling_input
 
 # Store PIDs of background processes for later cleanup
 background_processes = []
@@ -88,7 +88,7 @@ class DocsValue:
     binary: Optional[str] = None
     output_contains: Optional[str] = None
     expect_failure: bool = False
-    machine_os: str = None
+    machine_os: Optional[str] = None
     # the `title` tag sets the title of a file. it will create if it does not exist.
     # when the file does, it will insert the content at the line number. if the file is empty, it will always insert at the start (idx 0)
     file_name: Optional[str] = None # may also be referenced as `title` in enum
@@ -194,9 +194,10 @@ class DocsValue:
                 print(f"Ignoring commands for {self.language}... ({c})")
             return None
 
-        if self.machine_os and self.machine_os != platform.system().lower():
+        system = platform.system().lower() # linux (wsl included), darwin (mac), windows
+        if self.machine_os and self.machine_os != system:
             # if config.debugging:
-            print(f"Skipping command since it is not for the current OS: {self.machine_os}")
+            print(f"Skipping command since it is not for the current OS: {self.machine_os}, current: {system}")
             return None
 
 
@@ -461,7 +462,7 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             commands=[],
             output_contains=extract_tag_value(tags, Tags.OUTPUT_CONTAINS(), default=None),
             expect_failure=(Tags.ASSERT_FAILURE() in tags),
-            machine_os=(extract_tag_value(tags, Tags.MACHINE_OS(), default=None) or None),
+            machine_os=(extract_tag_value(tags, Tags.MACHINE_OS(), default=None, converter=alias_operating_systems) or None),
             # file specific
             file_name=extract_tag_value(tags, Tags.TITLE(), default=None),
             insert_at_line=extract_tag_value(tags, Tags.INSERT_AT_LINE(), default=None, converter=int),

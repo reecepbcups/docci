@@ -3,22 +3,6 @@ from enum import Enum
 from typing import Optional, Tuple
 
 
-# from uname --operating-system
-class MachineOS(Enum):
-    LINUX = 'linux'
-    WINDOWS = 'windows'
-    MACOS = 'macos'
-
-    def __str__(self):
-        return self.value
-
-    def __call__(self):
-        return self.value
-
-    @staticmethod
-    def from_str(os: str) -> 'MachineOS':
-        return MachineOS(os)
-
 class Tags(Enum):
     TAGS_PREFIX = 'docci-'
 
@@ -30,7 +14,7 @@ class Tags(Enum):
     IGNORE_IF_INSTALLED = 'docci-if-not-installed'
     OUTPUT_CONTAINS = 'docci-output-contains'
     ASSERT_FAILURE = 'docci-assert-failure'
-    MACHINE_OS = "docci-machine-os"
+    MACHINE_OS = "docci-os"
 
     # file related
     TITLE = 'title' # maybe we also alias with a docci-title or -filename or something?
@@ -87,3 +71,13 @@ def handle_http_polling_input(input: str | None) -> Optional[Endpoint]:
         endpoint = input
         timeout = 30
     return Endpoint(url=endpoint, max_timeout=int(timeout))
+
+def alias_operating_systems(os: str) -> str:
+    '''
+    Aliases the operating systems to a common name.
+    '''
+    if os.lower() in ['ubuntu', 'debian', 'wsl']:
+        return 'linux'
+    elif os.lower() in ['macos', 'mac']:
+        return 'darwin'
+    return os.lower()
