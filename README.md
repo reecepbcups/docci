@@ -175,5 +175,5 @@ Control how your documentation code blocks are executed with no code, just code 
 
 ## 🚧 Limitations
 
-- Not yet tested on MacOS or Windows WSL
+- Not yet tested on Windows WSL, but should work.
 - Multi-line commands in docs are not supported yet
