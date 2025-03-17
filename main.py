@@ -196,8 +196,8 @@ class DocsValue:
 
         system = platform.system().lower() # linux (wsl included), darwin (mac), windows
         if self.machine_os and self.machine_os != system:
-            # if config.debugging:
-            print(f"Skipping command since it is not for the current OS: {self.machine_os}, current: {system}")
+            if config.debugging:
+                print(f"Skipping command since it is not for the current OS: {self.machine_os}, current: {system}")
             return None
 
 
