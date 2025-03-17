@@ -13,7 +13,10 @@ install: check-pyinstaller
 
 check-pyinstaller:
 	@echo "Checking if pyinstaller is installed..."
-	@[ -x "$(command -v pyinstaller)" ] || (echo "Pyinstaller is not installed. Please run 'python3 -m pip install pyinstaller --break-system-packages' to install it." && exit 1)
+	@if ! command -v pyinstaller > /dev/null 2>&1; then \
+		echo "Pyinstaller is not installed. Please run 'python3 -m pip install pyinstaller --break-system-packages' to install it."; \
+		exit 1; \
+	fi
 .PHONY: check-pyinstaller
 
 ## test: Run all unit & integration test.
