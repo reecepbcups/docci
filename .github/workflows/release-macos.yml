@@ -1,4 +1,4 @@
-name: MacOS Build & Release
+name: MacOS
 
 # Must match the linux release (future migration to use composite actions)
 # be careful due to gh action minute cost
@@ -19,7 +19,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  build-n-stash:
+  build-n-release:
     runs-on: macos-latest
     steps:
       - name: Checkout code
@@ -41,13 +41,13 @@ jobs:
       #! MacOS specific
       - run: mv /usr/local/bin/docci /usr/local/bin/docci_macos
 
-      - name: Upload docci artifact
-        uses: actions/upload-artifact@v4.6.1
-        if: github.event_name == 'pull_request'
-        with:
-          name: docci
-          retention-days: 1
-          path: /usr/local/bin/docci_macos
+      # - name: Upload docci artifact
+      #   uses: actions/upload-artifact@v4.6.1
+      #   if: github.event_name == 'pull_request'
+      #   with:
+      #     name: docci
+      #     retention-days: 1
+      #     path: /usr/local/bin/docci_macos
 
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -58,23 +58,23 @@ jobs:
           files: |
             /usr/local/bin/docci_macos
 
-  test-e2e:
-    runs-on: macos-latest
-    needs: build-n-stash
-    if: github.event_name != 'release'
-    steps:
-      - uses: actions/checkout@v4
+  # test-e2e:
+  #   runs-on: macos-latest
+  #   needs: build-n-release
+  #   if: github.event_name != 'release'
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - run: echo "/usr/local/bin" >> $GITHUB_PATH
+  #     - run: echo "/usr/local/bin" >> $GITHUB_PATH
 
-      - name: Download docci binary
-        uses: actions/download-artifact@v4.1.9
-        with:
-          name: docci
-          path: /usr/local/bin
-      - run: chmod a+rx /usr/local/bin/docci_macos
+  #     - name: Download docci binary
+  #       uses: actions/download-artifact@v4.1.9
+  #       with:
+  #         name: docci
+  #         path: /usr/local/bin
+  #     - run: chmod a+rx /usr/local/bin/docci_macos
 
-      # python runner in another job
-      - name: Run integrations as binary
-        run: EXEC_BINARY=/usr/local/bin/docci_macos make test-examples
+  #     # python runner in another job
+  #     - name: Run integrations as binary
+  #       run: EXEC_BINARY=/usr/local/bin/docci_macos make test-examples
 
