@@ -20,7 +20,7 @@ make install
 # update the config path argument
 - name: Docci Readme Runner
     run: |
-    sudo wget -O /usr/local/bin/docci https://github.com/Reecepbcups/docci/releases/download/v0.4.0/docci
+    sudo wget -O /usr/local/bin/docci https://github.com/Reecepbcups/docci/releases/download/v0.4.1/docci
     sudo chmod +x /usr/local/bin/docci
     docci .github/workflows/config.json
 ````
