@@ -6,7 +6,7 @@ A CI tool that brings your markdown docs to life by executing code blocks in seq
 
 ## 🏃‍♂️ Quick Start
 
-Find sample workspaces [in the `examples/` directory](./examples/).
+Find sample workspaces in the [`examples/` directory](./examples/).
 
 ### 📦 Installation
 
@@ -34,7 +34,7 @@ docci <config_path | config_json>
 ```
 
 ### 🎨 Available tags
-  * 🚫 `docci-ignore`: Skip executing this code block
+  * 🛑 `docci-ignore`: Skip executing this code block
   * 🚫 `docci-if-not-installed=BINARY`: Skip executing this code block if some binary is installed (e.g. node)
   * 🔄 `docci-background`: Run the command in the background
   * ⏲️ `docci-delay-after=N`: Wait N seconds after running commands
@@ -42,6 +42,7 @@ docci <config_path | config_json>
   * 🌐 `docci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready.
   * 📜 `docci-output-contains="string"`: Ensure the output contains a string at the end of the block
   * 🚨 `docci-assert-failure`: If it is expected to fail (like if the command is not supposed to run)
+  * 🖥️ `docci-os=mac|linux`: Run the command only on the specified OS
 
 ### 📄 Available file operations
   * `title`: The file name (matches docusaurus notation)
@@ -67,20 +68,12 @@ docci <config_path | config_json>
 
 ### 💡 Code Block Tag Examples (Operations)
 
-Skip commands you've already run elsewhere: 🚫
+Skip needless installations if you are already set up: 🛑
 
 <!-- The 4 backticks is just so it wraps in githubs UI, real test are written normally with the nested part (just 3 backticks) -->
 ````bash
-```bash docci-ignore
-brew install XYZ
-```
-````
-
-Skip needless installations: 🚫
-
-````bash
-```bash docci-if-not-installed=node
-# this only runs if `node` is not found in the system
+```bash docci-os=linux docci-if-not-installed=node
+# this only runs if `node` is not found in the system & it's a linux system
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash
 export NVM_DIR="$HOME/.nvm"
 nvm install v21.7.3
@@ -90,6 +83,7 @@ nvm install v21.7.3
 Ensure the output contains a specific string: 📜
 
 ````bash
+# This checks stdout and stderr
 ```bash docci-output-contains="xyzMyOutput"
 echo xyzMyOutput
 ```
@@ -119,8 +113,8 @@ cat my-file.txt
 Assert that a command fails: 🚨
 
 ````bash
-```bash docci-assert-failure docci-output-contains="NOT THE RIGHT OUTPUT"
-echo abcMyOutput
+```bash docci-assert-failure
+notinstalledbin --version
 ```
 ````
 
@@ -170,8 +164,6 @@ The tool processes markdown files and executes code blocks based on configuratio
 4. 🎯 **Tag Processing** (`models.py`): Manages execution control tags
 
 Control how your documentation code blocks are executed with no code, just code block tags. 🏷️
-
-
 
 ## ⚙️ JSON Configuration Options
 

@@ -14,6 +14,7 @@ class Tags(Enum):
     IGNORE_IF_INSTALLED = 'docci-if-not-installed'
     OUTPUT_CONTAINS = 'docci-output-contains'
     ASSERT_FAILURE = 'docci-assert-failure'
+    MACHINE_OS = "docci-os"
 
     # file related
     TITLE = 'title' # maybe we also alias with a docci-title or -filename or something?
@@ -70,3 +71,13 @@ def handle_http_polling_input(input: str | None) -> Optional[Endpoint]:
         endpoint = input
         timeout = 30
     return Endpoint(url=endpoint, max_timeout=int(timeout))
+
+def alias_operating_systems(os: str) -> str:
+    '''
+    Aliases the operating systems to a common name.
+    '''
+    if os.lower() in ['ubuntu', 'debian', 'wsl']:
+        return 'linux'
+    elif os.lower() in ['macos', 'mac']:
+        return 'darwin'
+    return os.lower()
