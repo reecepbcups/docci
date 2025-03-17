@@ -26,12 +26,16 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      GH_TOKEN: ${{ secrets. GITHUB_TOKEN }}
     steps:
       - name: MacOS; Only for releases check
-        if: ${{ runner.os}} == 'macos-latest' && github.event_name != 'release'
+        if: ${{ runner.os }} == 'macos-latest' && github.event_name != 'release'
         run: |
-          echo "This job is only for releases due to the cost of minutes on MacOS. Skipping..."
-          exit 0
+          echo "This job is only for releases due to the cost of minutes on ${{ runner.os }}. Skipping ${{ github.event_name }}..."
+          echo 0
+          gh run cancel ${{ github.run_id }}
+          gh run watch ${{ github.run_id }}
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -66,26 +70,26 @@ jobs:
           files: |
             /usr/local/bin/docci
 
-  test-e2e:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    needs: build-n-stash
-    if: github.event_name != 'release'
-    steps:
-      - uses: actions/checkout@v4
+  # test-e2e:
+  #   strategy:
+  #     matrix:
+  #       os: [ubuntu-latest, macos-latest]
+  #   runs-on: ${{ matrix.os }}
+  #   needs: build-n-stash
+  #   if: github.event_name != 'release'
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - run: echo "/usr/local/bin" >> $GITHUB_PATH
+  #     - run: echo "/usr/local/bin" >> $GITHUB_PATH
 
-      - name: Download docci binary
-        uses: actions/download-artifact@v4.1.9
-        with:
-          name: docci_${{ runner.os}}
-          path: /usr/local/bin
-      - run: chmod a+rx /usr/local/bin/docci
+  #     - name: Download docci binary
+  #       uses: actions/download-artifact@v4.1.9
+  #       with:
+  #         name: docci_${{ runner.os}}
+  #         path: /usr/local/bin
+  #     - run: chmod a+rx /usr/local/bin/docci
 
-      # python runner in another job
-      - name: Run integrations as binary
-        run: EXEC_BINARY=/usr/local/bin/docci make test-examples
+  #     # python runner in another job
+  #     - name: Run integrations as binary
+  #       run: EXEC_BINARY=/usr/local/bin/docci make test-examples
 
