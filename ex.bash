@@ -26,3 +26,21 @@ if command -v git &> /dev/null; then
 else
     echo "Git is not installed"
 fi
+
+
+# function myEchoer() {
+    # function nestedEchoer() {
+        # echo "This is a nested function"
+    # }
+#
+    # echo "This is a function"
+    # nestedEchoer
+# }
+#
+# myEchoer
+
+
+function myEchoer() {
+    echo "This is a function"
+}
+myEchoer

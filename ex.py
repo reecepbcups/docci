@@ -62,7 +62,13 @@ def handle_initial_cleanup(content: str) -> List[str]:
 def handle_re_merge(content: List[str]) -> str:
     output = ""
     for line in content:
+        startedFunctionFind = False
         line = line.strip()
+
+        if startedFunctionFind and "}" in line:
+            startedFunctionFind = False
+            output += f"{line}; "
+            continue
 
         # if line starts with if, then we need to merge it with the next line(s) until fi
         if line.startswith("if"):
@@ -72,6 +78,11 @@ def handle_re_merge(content: List[str]) -> str:
         elif line.startswith("else"):
             output += f"{line} "
             continue
+        elif "function " in line and "{" in line:
+            startedFunctionFind = True
+            output += f"{line} "
+            continue
+
 
 
         output += f"{line}; "
