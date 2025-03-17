@@ -1,4 +1,4 @@
-name: Build or Release
+name: Ubuntu
 
 # This action builds the binary and either:
 # - Pushes it to the release artifacts if this was a release
@@ -14,8 +14,12 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+
 jobs:
-  stash:
+  build-n-stash:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -51,16 +55,11 @@ jobs:
           files: |
             /usr/local/bin/docci
 
-  test-e2e:
+  test-e2e-with-binary:
     runs-on: ubuntu-latest
-    needs: stash
+    needs: build-n-stash
+    if: github.event_name != 'release'
     steps:
-      - name: make sure this is not a release
-        if: github.event_name == 'release'
-        run: |
-          echo "This job is not for releases, skipping..."
-          exit 0
-
       - uses: actions/checkout@v4
 
       - run: echo "/usr/local/bin" >> $GITHUB_PATH

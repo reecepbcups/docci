@@ -2,8 +2,7 @@
 EXEC_BINARY?=python3 main.py
 
 ## install: Install the binary.
-install:
-# pip install pyinstaller --break-system-packages
+install: check-pyinstaller
 	@echo ⏳ Installing docci...
 	@pyinstaller --name docci --workpath __pycache__/build --specpath __pycache__/build/ --onefile *.py
 	@sudo cp dist/docci /usr/local/bin/docci;
@@ -11,6 +10,13 @@ install:
 	sudo chmod a+xr /usr/local/bin/docci;
 	@echo ✅ docci installed
 .PHONY: install
+
+check-pyinstaller:
+	@if ! command -v pyinstaller > /dev/null 2>&1; then \
+		echo "Pyinstaller is not installed. Please run 'python3 -m pip install pyinstaller --break-system-packages' to install it."; \
+		exit 1; \
+	fi
+.PHONY: check-pyinstaller
 
 ## test: Run all unit & integration test.
 test: test-unit-integration
