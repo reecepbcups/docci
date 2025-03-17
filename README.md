@@ -108,6 +108,7 @@ notinstalledbin --version
 Create a new file from content: 📝
 
 <!-- yes, the typo is meant to be here -->
+````html
 ```html title=example.html docci-reset-file
 <html>
     <head>
@@ -115,15 +116,19 @@ Create a new file from content: 📝
     </head>
 </html>
 ```
+````
 
 Replace the typo'ed line:
 
+````html
 ```html title=example.html docci-line-replace=3
         <title>My Title</title>
 ```
+````
 
 Add new content
 
+````html
 ```html title=example.html docci-line-insert=4
     <body>
         <h1>My Header</h1>
@@ -131,13 +136,16 @@ Add new content
         <p>2 paragraph</p>
     </body>
 ```
+````
 
 Replace multiple lines
 
+````html
 ```html title=example.html docci-line-replace=7-9
         <p>First paragraph</p>
         <p>Second paragraph</p>
 ```
+````
 
 ## 🛠️ How It Works
 
