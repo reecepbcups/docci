@@ -38,11 +38,13 @@ jobs:
       - name: Build package
         run: make install
 
+      - run: echo "ARTIFACT_NAME=${docci_${{ runner.os }}_${{ runner.arch }},,}" >> $GITHUB_ENV
+
       - name: Upload docci artifact
         uses: actions/upload-artifact@v4.6.1
         if: github.event_name == 'pull_request'
         with:
-          name: docci_${{ runner.os }}_${{ runner.arch }}
+          name: ${{ env.ARTIFACT_NAME }}
           retention-days: 1
           path: /usr/local/bin/docci
 
@@ -63,11 +65,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - run: echo "/usr/local/bin" >> $GITHUB_PATH
+      - run: echo "ARTIFACT_NAME=${docci_${{ runner.os }}_${{ runner.arch }},,}" >> $GITHUB_ENV
 
       - name: Download docci binary
         uses: actions/download-artifact@v4.1.9
         with:
-          name: docci_${{ runner.os }}_${{ runner.arch }}
+          name: ${{ env.ARTIFACT_NAME }}
           path: /usr/local/bin
       - run: chmod a+rx /usr/local/bin/docci
 
