@@ -90,10 +90,15 @@ def handle_re_merge(content: List[str]) -> str:
     return output.strip()
 
 
-loaded_file = load_file("ex.bash")
+file_lines = load_file("ex.bash")
 
-cleaned_lines = handle_initial_cleanup(loaded_file)
-print(cleaned_lines)
+import shlex
 
-merged =  handle_re_merge(cleaned_lines)
-print(f"\n\n{merged=}")
+# use shlex to put the file_lines into 1 single line
+print(shlex.join(file_lines))
+
+# cleaned_lines = handle_initial_cleanup(loaded_file)
+# print(cleaned_lines)
+
+# merged =  handle_re_merge(cleaned_lines)
+# print(f"\n\n{merged=}")
