@@ -17,6 +17,7 @@ class Tags(Enum):
     MACHINE_OS = "docci-os"
 
     # file related
+    IF_FILE_DOES_NOT_EXISTS = "docci-if-file-not-exists"
     FILE_NAME = 'docci-file'
     INSERT_AT_LINE = 'docci-line-insert'
     REPLACE_AT_LINE= 'docci-line-replace' # docci-line-replace=2-4 or docci-line-replace=2 works
