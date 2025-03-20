@@ -1,5 +1,6 @@
 #!/usr/bin/env -S python3 -B
 
+import inspect
 import json
 import os
 import platform
@@ -67,7 +68,12 @@ def main():
     if os.path.isfile(cfg_input):
         config: Config = Config.load_from_file(cfg_input)
     else:
-        config: Config = Config.from_json(json.loads(cfg_input))
+        config: Config
+        try:
+            config = Config.from_json(json.loads(cfg_input))
+        except json.JSONDecodeError as e:
+            print(f"Error: Invalid JSON input: {e}. Make sure the JSON is valid or the path is correct")
+            sys.exit(1)
 
     err = do_logic(config)
     if err:
@@ -178,10 +184,12 @@ class DocsValue:
                 return None
 
         if self.wait_for_endpoint:
-            lastRes = Tuple(False, "")
+            lastRes: Tuple[bool, str] = (False, "")
             for res in self.endpoint_poll_if_applicable(poll_speed=1):
                 lastRes = res
-            if lastRes[0]:
+
+            print(lastRes)
+            if lastRes[0] == False:
                 print(lastRes[1])
                 return f"Error: endpoint not up in timeout period: {self.wait_for_endpoint.url}"
 
@@ -261,8 +269,9 @@ class DocsValue:
                         sys.stderr.flush()
                         output += stderr.decode('utf-8', errors='replace')
 
-                    if self.output_contains not in output:
-                        response = f"Error: `{self.output_contains}` is not found in output, output: {output}"
+                    # we can check output contains for any of the commands. Only error if it is the last command and we still have not found it
+                    if self.commands[-1] == command and self.output_contains not in output:
+                        response = f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
                         break
                     else:
                         if config.debugging:

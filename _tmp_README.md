@@ -15,7 +15,7 @@ make install
 ```
 
 ### 🤖 Github Actions Integration
-````yaml
+yaml
 # update the version in the URL
 # update the config path argument
 - name: Docci Readme Runner
@@ -23,7 +23,7 @@ make install
     sudo wget -O /usr/local/bin/docci https://github.com/Reecepbcups/docci/releases/download/v0.4.1/docci
     sudo chmod +x /usr/local/bin/docci
     docci .github/workflows/config.json
-````
+
 
 ### 🎮 Usage
 
@@ -56,62 +56,62 @@ docci <config_path | config_json>
 Skip needless installations if you are already set up: 🛑
 
 <!-- The 4 backticks is just so it wraps in githubs UI, real test are written normally with the nested part (just 3 backticks) -->
-````bash
+
 ```bash docci-os=linux docci-if-not-installed=node
 # this only runs if `node` is not found in the system & it's a linux system
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash
 export NVM_DIR="$HOME/.nvm"
 nvm install v21.7.3
 ```
-````
+
 
 Ensure the output contains a specific string: 📜
 
-````bash
+
 # This checks stdout and stderr
 ```bash docci-output-contains="xyzMyOutput"
 echo xyzMyOutput
 ```
-````
+
 
 Run blocking commands in the background: 🌐
 
-````bash
+
 ```bash docci-background
 python3 demo.py web-server --port 3000
 ```
-````
+
 
 Add delays between commands for stability after the endpoint from a previous command is up: ⏱️
 
-````bash
+
 ```bash docci-output-contains="GOOD" docci-wait-for-endpoint=http://localhost:3000|30
 echo "Health: `curl http://localhost:3000/health`"
 ```
-````
+
 
 Assert that a command fails: 🚨
 
-````bash
+
 ```bash docci-assert-failure
 notinstalledbin --version
 ```
-````
+
 
 And cleanup demo server if running in the background:
 
-````bash
+
 ```bash docci-output-contains="Server shutting down..."
 curl http://localhost:3000/kill
 ```
-````
+
 
 ### 💡 Code Block Tag Examples (Files)
 
 Create a new file from content: 📝
 
 <!-- yes, the typo is meant to be here -->
-````html
+html
 ```html docci-file=example.html docci-reset-file
 <html>
     <head>
@@ -119,19 +119,19 @@ Create a new file from content: 📝
     </head>
 </html>
 ```
-````
+
 
 Replace the typo'ed line:
 
-````html
+html
 ```html docci-file=example.html docci-line-replace=3
         <title>My Title</title>
 ```
-````
+
 
 Add new content
 
-````html
+html
 ```html docci-file=example.html docci-line-insert=4
     <body>
         <h1>My Header</h1>
@@ -139,16 +139,16 @@ Add new content
         <p>2 paragraph</p>
     </body>
 ```
-````
+
 
 Replace multiple lines
 
-````html
+html
 ```html docci-file=example.html docci-line-replace=7-9
         <p>First paragraph</p>
         <p>Second paragraph</p>
 ```
-````
+
 
 ## 🛠️ How It Works
 
