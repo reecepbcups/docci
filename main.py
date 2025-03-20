@@ -101,6 +101,7 @@ class DocsValue:
     machine_os: Optional[str] = None
     # Files: it will create if it does not exist.
     # when the file does, it will insert the content at the line number. if the file is empty, it will always insert at the start (idx 0)
+    if_file_not_exists: str = ""
     file_name: Optional[str] = None
     insert_at_line: Optional[int] = None
     replace_lines: Optional[Tuple[int, Optional[int]]] = None # start and optional end
@@ -208,6 +209,13 @@ class DocsValue:
             if config.debugging:
                 print(f"Skipping command since it is not for the current OS: {self.machine_os}, current: {system}")
             return None
+
+
+        if self.if_file_not_exists:
+            if os.path.exists(self.if_file_not_exists):
+                if config.debugging:
+                    print(f"Skipping command since file exists: {self.if_file_not_exists}")
+                return None
 
 
         for command in self.commands:
@@ -474,6 +482,7 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             expect_failure=Tags.has_tag(tags, Tags.ASSERT_FAILURE),
             machine_os=(extract_tag_value(tags, Tags.MACHINE_OS(), default=None, converter=alias_operating_systems) or None),
             # file specific
+            if_file_not_exists=extract_tag_value(tags, Tags.IF_FILE_DOES_NOT_EXISTS(), default=""),
             file_name=Tags.extract_tag_value(tags, Tags.FILE_NAME(), default=None),
             insert_at_line=Tags.extract_tag_value(tags, Tags.INSERT_AT_LINE(), default=None, converter=int),
             replace_lines=Tags.extract_tag_value(tags, Tags.REPLACE_AT_LINE(), default=None, converter=replace_at_line_converter),
