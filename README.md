@@ -28,7 +28,7 @@ make install
 ### 🎮 Usage
 
 ```bash docci-ignore
-docci <config_path | config_json>
+docci <config_path | config_json> [--tags]
 # e.g. docci .github/workflows/config.json
 # e.g. docci '{"paths": ["docs/README.md"],"working_dir": "docs/","cleanup_cmds": ["kill -9 $(lsof -t -i:3000)"]}'
 ```
