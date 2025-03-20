@@ -69,7 +69,7 @@ Ensure the output contains a specific string: 📜
 
 ````bash
 # This checks stdout and stderr
-```bash docci-output-contains="xyzMyOutput"
+```bash docci-contains="xyzMyOutput"
 echo xyzMyOutput
 ```
 ````

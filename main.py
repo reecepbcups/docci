@@ -52,9 +52,14 @@ def do_logic(config: Config) -> str | None:
     return None
 
 def main():
+    print(sys.argv)
     if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <config_path|config_json_blob>")
+        print(f"Usage: {sys.argv[0]} <config_path|config_json_blob> [--tags]")
         sys.exit(1)
+
+    if "--tags" in sys.argv:
+        Tags.print_tags_with_aliases()
+        sys.exit(0)
 
     cfg_input = sys.argv[1]
 
@@ -463,20 +468,20 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             tags=tags,
             content=content,
             ignored=ignored,
-            background=(Tags.BACKGROUND() in tags),
-            post_delay=extract_tag_value(tags, Tags.POST_DELAY(), default=0, converter=int),
-            cmd_delay=extract_tag_value(tags, Tags.CMD_DELAY(), default=0, converter=int),
-            binary=extract_tag_value(tags, Tags.IGNORE_IF_INSTALLED(), default=None),
+            background=Tags.has_tag(tags, Tags.BACKGROUND),
+            post_delay=Tags.extract_tag_value(tags, Tags.POST_DELAY(), default=0, converter=int),
+            cmd_delay=Tags.extract_tag_value(tags, Tags.CMD_DELAY(), default=0, converter=int),
+            binary=Tags.extract_tag_value(tags, Tags.IGNORE_IF_INSTALLED(), default=None),
             wait_for_endpoint=handle_http_polling_input(extract_tag_value(tags, Tags.HTTP_POLLING(), default=None)),
             commands=[],
-            output_contains=extract_tag_value(tags, Tags.OUTPUT_CONTAINS(), default=None),
-            expect_failure=(Tags.ASSERT_FAILURE() in tags),
+            output_contains=Tags.extract_tag_value(tags, Tags.OUTPUT_CONTAINS(), default=None),
+            expect_failure=Tags.has_tag(tags, Tags.ASSERT_FAILURE),
             machine_os=(extract_tag_value(tags, Tags.MACHINE_OS(), default=None, converter=alias_operating_systems) or None),
             # file specific
-            file_name=extract_tag_value(tags, Tags.FILE_NAME(), default=None),
-            insert_at_line=extract_tag_value(tags, Tags.INSERT_AT_LINE(), default=None, converter=int),
-            replace_lines=extract_tag_value(tags, Tags.REPLACE_AT_LINE(), default=None, converter=replace_at_line_converter),
-            file_reset=(Tags.RESET_FILE() in tags),
+            file_name=Tags.extract_tag_value(tags, Tags.FILE_NAME(), default=None),
+            insert_at_line=Tags.extract_tag_value(tags, Tags.INSERT_AT_LINE(), default=None, converter=int),
+            replace_lines=Tags.extract_tag_value(tags, Tags.REPLACE_AT_LINE(), default=None, converter=replace_at_line_converter),
+            file_reset=Tags.has_tag(tags, Tags.RESET_FILE),
         )
 
         # using regex, remove any sections of code that start with a comment '#' and end with a new line '\n', this info is not needed.
