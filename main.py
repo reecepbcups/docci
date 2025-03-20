@@ -52,7 +52,6 @@ def do_logic(config: Config) -> str | None:
     return None
 
 def main():
-    print(sys.argv)
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <config_path|config_json_blob> [--tags]")
         sys.exit(1)
@@ -82,7 +81,7 @@ def main():
 
     err = do_logic(config)
     if err:
-        print(err)
+        print("do_logic error:", err)
         sys.exit(1)
 
 @dataclass
@@ -192,10 +191,7 @@ class DocsValue:
             lastRes: Tuple[bool, str] = (False, "")
             for res in self.endpoint_poll_if_applicable(poll_speed=1):
                 lastRes = res
-
-            print(lastRes)
             if lastRes[0] == False:
-                print(lastRes[1])
                 return f"Error: endpoint not up in timeout period: {self.wait_for_endpoint.url}"
 
         if self.handle_file_content(config):
