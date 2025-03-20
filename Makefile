@@ -28,13 +28,21 @@ test-unit-integration:
 	@python -m unittest tests/integration.py
 
 ## test-examples: Run the documentation examples within this repo
-test-examples:
+test-examples: test-main-readme
 	@echo "Running integrations as $(EXEC_BINARY)"
 	@sleep 1
 	$(EXEC_BINARY) tests/config1.json
 	$(EXEC_BINARY) examples/1-node/config.json
 	$(EXEC_BINARY) examples/2-source-code-modification/config.json
 .PHONY: test-examples
+
+## test-main-readme: Run the main readme examples.
+test-main-readme:
+	@echo "Running main readme examples as $(EXEC_BINARY)"
+	@sleep 1
+	@cat README.md | sed -e 's/````bash//g' | sed -e 's/````//g' > _tmp_README.md
+	$(EXEC_BINARY) tests/main-readme.json
+.PHONY: test-main-readme
 
 .PHONY: help
 help: Makefile

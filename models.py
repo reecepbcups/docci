@@ -70,6 +70,7 @@ def handle_http_polling_input(input: str | None) -> Optional[Endpoint]:
     else:
         endpoint = input
         timeout = 30
+
     return Endpoint(url=endpoint, max_timeout=int(timeout))
 
 def alias_operating_systems(os: str) -> str:

@@ -10,9 +10,9 @@ Find sample workspaces in the [`examples/` directory](./examples/).
 
 ### 📦 Installation
 
-````bash
+```bash docci-ignore
 make install
-````
+```
 
 ### 🤖 Github Actions Integration
 ````yaml
@@ -74,24 +74,19 @@ echo xyzMyOutput
 ```
 ````
 
-Run blocking commands in the background with delays: 🌐
+Run blocking commands in the background: 🌐
 
 ````bash
-```bash docci-background docci-delay-after=5
-cp .env.example .env
-EXAMPLE_PORT=3000 make my-long-running-process
-# waits 5 seconds here
+```bash docci-background
+python3 demo.py web-server --port 3000
 ```
 ````
 
 Add delays between commands for stability after the endpoint from a previous command is up: ⏱️
 
 ````bash
-```bash docci-delay-per-cmd=1 docci-wait-for-endpoint=http://localhost:8080|30
-go run save_large_file_from_endpoint.go http://localhost:8080/my-endpoint
-# waits 1 second
-cat my-file.txt
-# waits 1 second
+```bash docci-output-contains="GOOD" docci-wait-for-endpoint=http://localhost:3000|30
+echo "Health: `curl http://localhost:3000/health`"
 ```
 ````
 
@@ -100,6 +95,14 @@ Assert that a command fails: 🚨
 ````bash
 ```bash docci-assert-failure
 notinstalledbin --version
+```
+````
+
+And cleanup demo server if running in the background:
+
+````bash
+```bash docci-output-contains="Server shutting down..."
+curl http://localhost:3000/kill
 ```
 ````
 
@@ -168,7 +171,7 @@ Control how your documentation code blocks are executed with no code, just code 
 
 ### 📝 Config Example
 
-````json
+```json
 {
   "paths": ["docs/README.md"],
   "env_vars": {
@@ -179,7 +182,7 @@ Control how your documentation code blocks are executed with no code, just code 
   "pre_cmds": ["npm install"],
   "cleanup_cmds": ["docker-compose down"],
 }
-````
+```
 
 ## 🚧 Limitations
 

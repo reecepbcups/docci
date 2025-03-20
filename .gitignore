@@ -5,3 +5,5 @@ build/
 dist/
 *.spec
 node_modules/
+example.html
+_tmp_README.md
