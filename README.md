@@ -28,7 +28,7 @@ make install
 ### 🎮 Usage
 
 ```bash docci-ignore
-docci <config_path | config_json>
+docci <config_path | config_json> [--tags]
 # e.g. docci .github/workflows/config.json
 # e.g. docci '{"paths": ["docs/README.md"],"working_dir": "docs/","cleanup_cmds": ["kill -9 $(lsof -t -i:3000)"]}'
 ```
@@ -69,7 +69,7 @@ Ensure the output contains a specific string: 📜
 
 ````bash
 # This checks stdout and stderr
-```bash docci-output-contains="xyzMyOutput"
+```bash docci-contains="xyzMyOutput"
 echo xyzMyOutput
 ```
 ````
