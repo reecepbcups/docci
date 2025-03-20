@@ -47,6 +47,7 @@ docci <config_path | config_json> [--tags]
 ### 📄 File Tags
   * `docci-file`: The file name to operate on
   * `docci-reset-file`: Reset the file to its original content
+  * `docci-if-file-not-exists`: Only run if a file does not exist
   * `docci-line-insert=N`: Insert content at line N
   * `docci-line-replace=N`: Replace content at line N
   * `docci-line-replace=N-M`: Replace content from line N to M
@@ -95,6 +96,16 @@ Assert that a command fails: 🚨
 ````bash
 ```bash docci-assert-failure
 notinstalledbin --version
+```
+````
+
+Only run a command if a file does not exist: 📄
+
+````bash
+```bash docci-if-file-not-exists="README.md" docci-contains-output="Good"
+echo "" > SomeFile.md
+# validate file was not created (since the README check exists)
+ls | grep SomeFile.md && exit 1 || echo "Good"
 ```
 ````
 
