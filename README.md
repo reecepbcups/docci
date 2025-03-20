@@ -102,10 +102,9 @@ notinstalledbin --version
 Only run a command if a file does not exist: 📄
 
 ````bash
-```bash docci-if-file-not-exists="README.md" docci-contains-output="Good"
-echo "" > SomeFile.md
-# validate file was not created (since the README check exists)
-ls | grep SomeFile.md && exit 1 || echo "Good"
+```bash docci-if-file-not-exists="README.md" docci-contains-output="ThisLineShouldNeverRun"
+# since the file does exist, this line never runs
+echo "Output"
 ```
 ````
 
