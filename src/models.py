@@ -6,6 +6,45 @@ from typing import Dict, Generator, Optional, Tuple
 import requests
 
 
+@dataclass
+class Endpoint:
+    url: str
+    max_timeout: int
+
+    @staticmethod
+    def handle_http_polling_input(input: str | None) -> Optional["Endpoint"]:
+        '''
+        Parse the input for the HTTP_POLLING tag.
+        The input should be in the format of `http://localhost:44881|30`.
+            - The first part is the endpoint URL.
+            - (optional) The second part is the maximum timeout in seconds.
+        '''
+        if input is None: return None
+
+        if '|' in input:
+            endpoint, timeout = input.split('|')
+        else:
+            endpoint = input
+            timeout = 30
+
+        return Endpoint(url=endpoint, max_timeout=int(timeout))
+
+    def poll(self, poll_speed: float = 1.0) -> Generator[Tuple[bool, str], None, None]:
+        start_time = time.time()
+        attempt = 1
+        url = self.url
+        while True:
+            try:
+                requests.get(url)
+                yield True, f"Success: endpoint is up: {url}"
+                break
+            except requests.exceptions.RequestException:
+                if time.time() - start_time > self.max_timeout: # half second buffer
+                    break
+                yield False, f"Error: endpoint not up yet: {url}, trying again. Try number: {attempt}"
+                time.sleep(poll_speed)
+            attempt += 1
+
 class Tags(Enum):
     TAGS_PREFIX = 'docci-'
 
@@ -194,44 +233,6 @@ class Tags(Enum):
                 print(tags, tag)
                 return False, tag
         return True, None
-
-@dataclass
-class Endpoint:
-    url: str
-    max_timeout: int
-
-    def poll(self, poll_speed: float = 1.0) -> Generator[Tuple[bool, str], None, None]:
-        start_time = time.time()
-        attempt = 1
-        url = self.url
-        while True:
-            try:
-                requests.get(url)
-                yield True, f"Success: endpoint is up: {url}"
-                break
-            except requests.exceptions.RequestException:
-                if time.time() - start_time > self.max_timeout: # half second buffer
-                    break
-                yield False, f"Error: endpoint not up yet: {url}, trying again. Try number: {attempt}"
-                time.sleep(poll_speed)
-            attempt += 1
-
-def handle_http_polling_input(input: str | None) -> Optional[Endpoint]:
-    '''
-    Parse the input for the HTTP_POLLING tag.
-    The input should be in the format of `http://localhost:44881|30`.
-        - The first part is the endpoint URL.
-        - (optional) The second part is the maximum timeout in seconds.
-    '''
-    if input is None: return None
-
-    if '|' in input:
-        endpoint, timeout = input.split('|')
-    else:
-        endpoint = input
-        timeout = 30
-
-    return Endpoint(url=endpoint, max_timeout=int(timeout))
 
 def alias_operating_systems(os: str) -> str:
     '''

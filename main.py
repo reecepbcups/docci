@@ -12,7 +12,6 @@ from src.processes_manager import process_manager
 
 def main():
     """Main entry point for the application."""
-    # Parse command-line arguments
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <config_path|config_json_blob> [--tags]")
         sys.exit(1)
@@ -23,22 +22,20 @@ def main():
 
     cfg_input = sys.argv[1]
 
-    # Load configuration
     try:
         config = Config.load_configuration(cfg_input)
     except Exception as e:
         print(f"Configuration error: {e}")
         sys.exit(1)
 
-    # Run the documentation processor
-    error = run_documentation(config)
+    error = run_documentation_processor(config)
     if error:
         print(f"Error: {error}")
         sys.exit(1)
 
     print("Documentation processing completed successfully.")
 
-def run_documentation(config: Config) -> Optional[str]:
+def run_documentation_processor(config: Config) -> Optional[str]:
     """
     Execute documentation code blocks according to configuration.
 
@@ -69,7 +66,7 @@ def run_documentation(config: Config) -> Optional[str]:
                     for i, block in enumerate(code_blocks):
                         error = block.run_commands(config=config)
                         if error:
-                            return f"Error({parent_path_key},{file_paths}): {error}"
+                            return f"Error({parent_path_key},{file_paths})[#{i}]: {error}"
 
             except KeyboardInterrupt:
                 print("\nKeyboardInterrupt: Quitting...")

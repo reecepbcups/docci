@@ -2,20 +2,12 @@ import re
 from typing import List, Tuple
 
 from src.config import Config, ScriptingLanguages
-from src.models import Tags, alias_operating_systems, handle_http_polling_input
 from src.managers.cmd import CommandExecutor
 from src.managers.core import DocsValue
 from src.managers.delay import DelayManager
 from src.managers.file_operations import FileOperations
+from src.models import Endpoint, Tags, alias_operating_systems
 
-
-# input could be just a number ex: 3
-# or a range of numbers; 2-4
-def replace_at_line_converter(value: str) -> Tuple[int, int | None]:
-    if '-' in value:
-        start, end = value.split('-')
-        return int(start), int(end)
-    return int(value), None
 
 def process_language_parts(language_parts):
     """Process language parts to properly handle quoted values in tags"""
@@ -158,8 +150,16 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             delay_manager=delay_manager,
             file_ops=file_ops,
             command_executor=command_executor,
-            endpoint=handle_http_polling_input(Tags.extract_tag_value(tags, Tags.HTTP_POLLING(), default=None)),
+            endpoint=Endpoint.handle_http_polling_input(Tags.extract_tag_value(tags, Tags.HTTP_POLLING(), default=None)),
         )
         results.append(value)
 
     return results
+
+# input could be just a number ex: 3
+# or a range of numbers; 2-4
+def replace_at_line_converter(value: str) -> Tuple[int, int | None]:
+    if '-' in value:
+        start, end = value.split('-')
+        return int(start), int(end)
+    return int(value), None
