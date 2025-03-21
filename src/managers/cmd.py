@@ -30,7 +30,6 @@ class CommandExecutor:
         background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"],
     ) -> str | None:
         if skip_reason := self._should_skip_execution(config):
-            print(f"{skip_reason=}")
             return None
 
         env = os.environ.copy()
@@ -133,7 +132,7 @@ class CommandExecutor:
         # Skip if marked as ignored
         if self.ignored:
             if config.debugging:
-                print("Ignoring commands...")
+                print(f"Ignoring commands... ({self.commands}))")
             return True
 
         # Skip if target file already exists

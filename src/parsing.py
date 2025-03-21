@@ -110,8 +110,6 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Code
         language = language_parts[0] if language_parts else ''
         tags = process_language_parts(language_parts) if len(language_parts) > 0 else []
 
-        print(tags)
-
         ignored = Tags.IGNORE() in tags
         if config is not None:
             ignored = ignored or language not in config.followed_languages
@@ -137,10 +135,9 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Code
             cmd_delay=Tags.extract_tag_value(tags, Tags.CMD_DELAY(), default=0, converter=int)
         )
 
-                # using regex, remove any sections of code that start with a comment '#' and end with a new line '\n', this info is not needed.
+        # using regex, remove any sections of code that start with a comment '#' and end with a new line '\n', this info is not needed.
         # an example is '# Install packages (npm & submodules)\nmake setup\n\n# Build the contracts\nforge build\n\n# Run the solidity tests\nforge test'
         # this should just be `make setup\nforge build\nforge test`
-        # TODO: other comment types need to also be supported?
         content = re.sub(r'^#.*\n', '', content, flags=re.MULTILINE)
         # if there is a # comment with no further \n after it, remove it
         content = re.sub(r'#.*$', '', content, flags=re.MULTILINE).strip()
@@ -178,8 +175,7 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Code
 
     return results
 
-# input could be just a number ex: 3
-# or a range of numbers; 2-4
+# input could be just a number ex: 3, or a range of numbers; 2-4
 def replace_at_line_converter(value: str) -> Tuple[int, int | None]:
     if '-' in value:
         start, end = value.split('-')
