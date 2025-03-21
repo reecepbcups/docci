@@ -7,11 +7,11 @@ import time
 import unittest
 
 from config_types import Config
+from execute import execute_substitution_commands
 from main import (
     DocsValue,
     Tags,
     do_logic,
-    execute_substitution_commands,
     extract_tag_value,
     parse_env,
     parse_markdown_code_blocks,

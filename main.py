@@ -11,12 +11,10 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
-from typing import Dict, Generator, List, Literal, Optional, Tuple
-
-import requests
+from typing import List, Literal, Optional, Tuple
 
 from config_types import Config, ScriptingLanguages
-from execute import execute_substitution_commands
+from execute import parse_env
 from models import Endpoint, Tags, alias_operating_systems, handle_http_polling_input
 
 # Store PIDs of background processes for later cleanup
@@ -524,51 +522,6 @@ def replace_at_line_converter(value: str) -> Tuple[int, int | None]:
         start, end = value.split('-')
         return int(start), int(end)
     return int(value), None
-
-def parse_env(command: str) -> Dict[str, str]:
-    """
-    Parse environment variable commands, handling backtick execution and inline env vars.
-
-    Args:
-        command: String containing potential env var assignments and commands
-
-    Returns:
-        Dictionary of environment variables (can be empty if no env vars found)
-    """
-    # Early return if no '=' is present in the command
-    if '=' not in command:
-        return {}
-
-    # First check for export KEY=VALUE pattern
-    export_match = re.match(r'^export\s+([A-Za-z_][A-Za-z0-9_]*)=(.*)$', command.strip())
-    if export_match:
-        key = export_match.group(1)
-        value = execute_substitution_commands(export_match.group(2))
-        return {key: value}
-
-    # Check for inline environment variables (KEY=VALUE command args)
-    inline_match = re.match(r'^([A-Za-z_][A-Za-z0-9_]*=[^ ]+(?: [A-Za-z_][A-Za-z0-9_]*=[^ ]+)*) (.+)$', command.strip())
-    if inline_match:
-        env_vars = {}
-        env_part = inline_match.group(1)
-
-        # Extract all KEY=VALUE pairs
-        for pair in env_part.split():
-            if '=' in pair:
-                key, value = pair.split('=', 1)
-                env_vars[key] = execute_substitution_commands(value)
-
-        return env_vars
-
-    # Check for standalone KEY=VALUE
-    standalone_match = re.match(r'^([A-Za-z_][A-Za-z0-9_]*)=(.*)$', command.strip())
-    if standalone_match:
-        key = standalone_match.group(1)
-        value = execute_substitution_commands(standalone_match.group(2))
-        return {key: value}
-
-    # If we get here, there were no environment variables we could parse
-    return {}
 
 if __name__ == "__main__":
     main()
