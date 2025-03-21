@@ -1,4 +1,5 @@
 import re
+import sys
 from typing import List, Tuple
 
 from src.config import Config, ScriptingLanguages
@@ -72,6 +73,25 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Code
         - 'should_run': Boolean indicating if this block should be executed (True for bash blocks without docci-ignore)
     """
 
+    # just used internally to remove outer code blocks which show nicely in markdown.
+    # also useful for anyone else who does this
+    if '````' in content:
+        modified = ""
+        for i, line in enumerate(content.split('\n')):
+            does_contain_4_backticks = '````' in line
+            if does_contain_4_backticks:
+                next_line = content.split('\n')[i + 1]
+                prev_line = content.split('\n')[i - 1] if i > 0 else ""
+                if '```' in next_line:
+                    continue
+                elif '```' in prev_line:
+                    continue
+                else:
+                    modified += line + '\n'
+            else:
+                modified += line + '\n'
+        content = modified if modified else content
+
     # Regex pattern to match code blocks: ```language ... ```
     # Capturing groups:
     # 1. Language and any additional markers (e.g., 'bash docci-ignore')
@@ -89,6 +109,8 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Code
         # Get the primary language
         language = language_parts[0] if language_parts else ''
         tags = process_language_parts(language_parts) if len(language_parts) > 0 else []
+
+        print(tags)
 
         ignored = Tags.IGNORE() in tags
         if config is not None:
