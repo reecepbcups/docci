@@ -24,35 +24,53 @@ class CommandExecutor:
     delay_manager: Optional[DelayManager] = None
     if_file_not_exists: str = ""
 
-    def _should_skip_execution(self, config: Config) -> bool:
-        """Check various conditions that would cause us to skip command execution."""
-        # Skip if marked as ignored
-        if self.ignored:
+    def run_commands(
+        self,
+        config: Config,
+        background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"],
+    ) -> str | None:
+        if skip_reason := self._should_skip_execution(config):
+            print(f"{skip_reason=}")
+            return None
+
+        env = os.environ.copy()
+        response = None
+        had_error = False
+
+        for command in self.commands:
+            if command in config.ignore_commands:
+                continue
+
+            env.update(parse_env(command))
+            cmd_background = self._should_run_in_background(command, background_exclude_commands)
+            if cmd_background and not command.strip().endswith('&'):
+                command = f"{command} &"
+
             if config.debugging:
-                print("Ignoring commands...")
-            return True
+                print(f"Running command: {command}" + (" (& added for background)" if cmd_background else ""))
 
-        # Skip if target file already exists
-        if self.if_file_not_exists:
-            file_path = os.path.join(config.working_dir, self.if_file_not_exists) if config.working_dir else self.if_file_not_exists
-            if os.path.exists(file_path):
-                if config.debugging:
-                    print(f"Skipping commands since {file_path} exists")
-                return True
+            # Handle pre-execution delay if set
+            if self.delay_manager:
+                self.delay_manager.handle_delay("cmd")
 
-        # Skip if OS doesn't match
-        system = platform.system().lower()
-        if self.machine_os and self.machine_os != system:
-            if config.debugging:
-                print(f"Skipping command since it is not for the current OS: {self.machine_os}, current: {system}")
-            return True
+            # Execute command and handle result
+            result = self._execute_command(command, env, config, cmd_background)
+            if isinstance(result, str):
+                response = result
+                break
+            elif result is True:  # Had error
+                had_error = True
 
-        # Skip if binary is already installed
-        if self.binary and shutil.which(self.binary):
-            print(f"Skipping command since {self.binary} is already installed.")
-            return True
+        if self.delay_manager:
+            self.delay_manager.handle_delay("post")
 
-        return False
+        if self.expect_failure:
+            if had_error:
+                return None
+            else:
+                return "Error: expected failure but command succeeded"
+
+        return response
 
     def _execute_command(self, command: str, env: dict, config: Config, cmd_background: bool) -> Union[str, bool, None]:
         """
@@ -110,55 +128,35 @@ class CommandExecutor:
 
         return None
 
-    def run_commands(
-        self,
-        config: Config,
-        background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"],
-    ) -> str | None:
-        if skip_reason := self._should_skip_execution(config):
-            print(f"{skip_reason=}")
-            return None
-
-        env = os.environ.copy()
-        response = None
-        had_error = False
-
-        for command in self.commands:
-            if command in config.ignore_commands:
-                continue
-
-            env.update(parse_env(command))
-            cmd_background = self._should_run_in_background(command, background_exclude_commands)
-            if cmd_background and not command.strip().endswith('&'):
-                command = f"{command} &"
-
+    def _should_skip_execution(self, config: Config) -> bool:
+        """Check various conditions that would cause us to skip command execution."""
+        # Skip if marked as ignored
+        if self.ignored:
             if config.debugging:
-                print(f"Running command: {command}" + (" (& added for background)" if cmd_background else ""))
+                print("Ignoring commands...")
+            return True
 
-            # Handle pre-execution delay if set
-            if self.delay_manager:
-                self.delay_manager.handle_delay("cmd")
+        # Skip if target file already exists
+        if self.if_file_not_exists:
+            file_path = os.path.join(config.working_dir, self.if_file_not_exists) if config.working_dir else self.if_file_not_exists
+            if os.path.exists(file_path):
+                if config.debugging:
+                    print(f"Skipping commands since {file_path} exists")
+                return True
 
-            # Execute command and handle result
-            result = self._execute_command(command, env, config, cmd_background)
-            if isinstance(result, str):
-                response = result
-                break
-            elif result is True:  # Had error
-                had_error = True
+        # Skip if OS doesn't match
+        system = platform.system().lower()
+        if self.machine_os and self.machine_os != system:
+            if config.debugging:
+                print(f"Skipping command since it is not for the current OS: {self.machine_os}, current: {system}")
+            return True
 
-        if self.delay_manager:
-            self.delay_manager.handle_delay("post")
+        # Skip if binary is already installed
+        if self.binary and shutil.which(self.binary):
+            print(f"Skipping command since {self.binary} is already installed.")
+            return True
 
-        if self.expect_failure:
-            if had_error:
-                return None
-            else:
-                return "Error: expected failure but command succeeded"
-
-        return response
-
-
+        return False
 
     def _should_run_in_background(self, command: str, exclude_commands: List[str]) -> bool:
         if not self.background:
