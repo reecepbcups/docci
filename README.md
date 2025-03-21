@@ -80,7 +80,7 @@ Run blocking commands in the background: 🌐
 
 ````bash
 ```bash docci-background
-python3 demo.py web-server --port 3000
+python3 tests/demo.py web-server --port 3000
 ```
 ````
 
