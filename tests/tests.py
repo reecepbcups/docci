@@ -7,15 +7,10 @@ import time
 import unittest
 
 from config import Config
-from execute import execute_substitution_commands
-from main import (
-    DocsValue,
-    Tags,
-    parse_env,
-    parse_markdown_code_blocks,
-    run_documentation,
-)
+from execute import execute_substitution_commands, parse_env
+from main import Tags, parse_markdown_code_blocks, run_documentation
 from models import Endpoint
+from src.managers.core import DocsValue
 from tests.test_server import MyServer
 
 curr_dir = os.path.dirname(os.path.abspath(__file__))
