@@ -1,6 +1,9 @@
+import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Optional, Tuple
+from typing import Dict, Generator, Optional, Tuple
+
+import requests
 
 
 class Tags(Enum):
@@ -196,6 +199,22 @@ class Tags(Enum):
 class Endpoint:
     url: str
     max_timeout: int
+
+    def poll(self, poll_speed: float = 1.0) -> Generator[Tuple[bool, str], None, None]:
+        start_time = time.time()
+        attempt = 1
+        url = self.url
+        while True:
+            try:
+                requests.get(url)
+                yield True, f"Success: endpoint is up: {url}"
+                break
+            except requests.exceptions.RequestException:
+                if time.time() - start_time > self.max_timeout: # half second buffer
+                    break
+                yield False, f"Error: endpoint not up yet: {url}, trying again. Try number: {attempt}"
+                time.sleep(poll_speed)
+            attempt += 1
 
 def handle_http_polling_input(input: str | None) -> Optional[Endpoint]:
     '''

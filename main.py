@@ -85,47 +85,14 @@ def main():
         sys.exit(1)
 
 @dataclass
-class DocsValue:
-    language: str # bash, python, rust, etc
-    tags: List[str] # (e.g., 'docci-ignore') in the ```bash tag1, tag2```
-    content: str # unmodified content
-    ignored: bool
-    commands: List[str]
-    background: bool = False # if the command should run in the background i.e. it is blocking
-    post_delay: int = 0 # delay in seconds after the command is run
-    cmd_delay: int = 0 # delay in seconds before each command is run
-    wait_for_endpoint: Optional[Endpoint] = None
-    binary: Optional[str] = None
-    output_contains: Optional[str] = None
-    expect_failure: bool = False
-    machine_os: Optional[str] = None
-    # Files: it will create if it does not exist.
-    # when the file does, it will insert the content at the line number. if the file is empty, it will always insert at the start (idx 0)
-    if_file_not_exists: str = ""
+class FileOperations:
     file_name: Optional[str] = None
+    content: str = ""
     insert_at_line: Optional[int] = None
-    replace_lines: Optional[Tuple[int, Optional[int]]] = None # start and optional end
+    replace_lines: Optional[Tuple[int, Optional[int]]] = None
     file_reset: bool = False
+    if_file_not_exists: str = ""
 
-    # returns a string or bool. if bool is true, success, if false, failed
-    def endpoint_poll_if_applicable(self, poll_speed: float = 1.0) -> Generator[Tuple[bool, str], None, None]:
-        start_time = time.time()
-        attempt = 1
-        url = self.wait_for_endpoint.url
-        while True:
-            try:
-                requests.get(url)
-                yield True, f"Success: endpoint is up: {url}"
-                break
-            except requests.exceptions.RequestException:
-                if time.time() - start_time > self.wait_for_endpoint.max_timeout: # half second buffer
-                    break
-                yield False, f"Error: endpoint not up yet: {url}, trying again. Try number: {attempt}"
-                time.sleep(poll_speed)
-            attempt += 1
-
-    # handle_file_content returns True if we handled a file, False if we did not
-    # NOTE: we handle this as a human reads it, lines start at ONE (1), not zero
     def handle_file_content(self, config: Config) -> bool:
         if not self.file_name:
             return False
@@ -143,19 +110,16 @@ class DocsValue:
             lines = f.readlines()
 
         if self.insert_at_line:
-            # if insert at line is negative, then it is relative to the end of the file
             insert_line = self.insert_at_line if self.insert_at_line > 0 else len(lines) + self.insert_at_line + 1
             lines.insert(insert_line, self.content)
 
         if self.replace_lines:
             start, end = self.replace_lines
-            # line based, not index :)
             start = start - 1 if start > 0 else 0
             end = end - 1 if end and end > 0 else None
             if end:
                 if end > len(lines):
                     end = len(lines) - 1
-
                 lines[start:end] = self.content
             else:
                 if start > len(lines):
@@ -168,87 +132,70 @@ class DocsValue:
 
         return True
 
+@dataclass
+class DelayManager:
+    post_delay: int = 0
+    cmd_delay: int = 0
+
+    def handle_delay(self, delay_type: Literal["post", "cmd"]) -> None:
+        delay = self.post_delay if delay_type == "post" else self.cmd_delay
+        if delay > 0:
+            print(f"Sleeping for {delay} seconds after running ({delay_type}_delay)...")
+            for i in range(delay, 0, -1):
+                print(f"Sleep: {i} seconds remaining...")
+                time.sleep(1)
+
+@dataclass
+class CommandExecutor:
+    commands: List[str]
+    background: bool = False
+    output_contains: Optional[str] = None
+    expect_failure: bool = False
+    machine_os: Optional[str] = None
+    binary: Optional[str] = None
+    ignored: bool = False
+    delay_manager: Optional[DelayManager] = None
+
     def run_commands(
         self,
         config: Config,
         background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"],
     ) -> str | None:
-        '''
-        Runs the commands. host env vars are pulled into the processes
-
-        returns: error message if any
-        '''
-
-        env = os.environ.copy()
-
-        response = None # success
-
-        if self.binary:
-            if shutil.which(self.binary):
-                print(f"Skipping command since {self.binary} is already installed.")
-                return None
-
-        if self.wait_for_endpoint:
-            lastRes: Tuple[bool, str] = (False, "")
-            for res in self.endpoint_poll_if_applicable(poll_speed=1):
-                lastRes = res
-            if lastRes[0] == False:
-                return f"Error: endpoint not up in timeout period: {self.wait_for_endpoint.url}"
-
-        if self.handle_file_content(config):
-            return None
-
         if self.ignored:
             if config.debugging:
-                c = self.content.replace('\n', '\\n').replace('    ', '\\t')
-                print(f"Ignoring commands for {self.language}... ({c})")
+                print(f"Ignoring commands...")
             return None
 
-        system = platform.system().lower() # linux (wsl included), darwin (mac), windows
+        system = platform.system().lower()
         if self.machine_os and self.machine_os != system:
             if config.debugging:
                 print(f"Skipping command since it is not for the current OS: {self.machine_os}, current: {system}")
             return None
 
+        if self.binary and shutil.which(self.binary):
+            print(f"Skipping command since {self.binary} is already installed.")
+            return None
 
-        if self.if_file_not_exists:
-            if os.path.exists(self.if_file_not_exists):
-                if config.debugging:
-                    print(f"Skipping command since file exists: {self.if_file_not_exists}")
-                return None
-
+        env = os.environ.copy()
+        response = None
 
         for command in self.commands:
             if command in config.ignore_commands:
                 continue
 
-            # parse out env vars from commands. an example format is:
-            # --> export SERVICE_MANAGER_ADDR=`make get-eigen-service-manager-from-deploy
-            # this should be done here as it is more JIT, can't do earlier else other are not ready
             env.update(parse_env(command))
+            cmd_background = self._should_run_in_background(command, background_exclude_commands)
 
-            # Determine if this specific command should run in background
-            cmd_background = self.background
-            if self.background:
-                # Check if command starts with any excluded prefix
-                first_word = command.strip().split()[0]
-                if first_word in background_exclude_commands:
-                    cmd_background = False
-
-            # Add & if running in background and not already there
             if cmd_background and not command.strip().endswith('&'):
                 command = f"{command} &"
 
             if config.debugging:
                 print(f"Running command: {command}" + (" (& added for background)" if cmd_background else ""))
 
-            if self.cmd_delay > 0:
-                print(f"Sleeping for {self.cmd_delay} seconds before running command (cmd-delay)...")
-                for i in range(self.cmd_delay, 0, -1):
-                    print(f"Sleep: {i} seconds remaining...")
-                    time.sleep(1)
+            if self.delay_manager:
+                self.delay_manager.handle_delay("cmd")
 
-            process = process = subprocess.Popen(
+            process = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE if self.output_contains else None,
                 stderr=subprocess.PIPE if self.output_contains else None,
@@ -267,10 +214,8 @@ class DocsValue:
                     output = ""
 
                     if stdout:
-                        # Write the raw bytes to preserve color codes
                         sys.stdout.buffer.write(stdout)
                         sys.stdout.flush()
-                        # For checking the content, decode without interpreting color codes
                         output += stdout.decode('utf-8', errors='replace')
 
                     if stderr:
@@ -278,7 +223,6 @@ class DocsValue:
                         sys.stderr.flush()
                         output += stderr.decode('utf-8', errors='replace')
 
-                    # we can check output contains for any of the commands. Only error if it is the last command and we still have not found it
                     if self.commands[-1] == command and self.output_contains not in output:
                         response = f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
                         break
@@ -286,20 +230,15 @@ class DocsValue:
                         if config.debugging:
                             print(f"Output contains: {self.output_contains}")
                 else:
-                    # For regular processes, wait and check return code
                     process.wait()
                     if process.returncode != 0:
                         response = f"Error running command: {command}"
                         break
 
-        if self.post_delay > 0:
-            print(f"Sleeping for {self.post_delay} seconds after running ...")
-            for i in range(self.post_delay, 0, -1):
-                print(f"Sleep: {i} seconds remaining...")
-                time.sleep(1)
+        if self.delay_manager:
+            self.delay_manager.handle_delay("post")
 
         if self.expect_failure:
-            # if response is not None, then the cmd failed so the error was expected
             if response:
                 return None
             else:
@@ -307,19 +246,46 @@ class DocsValue:
 
         return response
 
+    def _should_run_in_background(self, command: str, exclude_commands: List[str]) -> bool:
+        if not self.background:
+            return False
+        first_word = command.strip().split()[0]
+        return first_word not in exclude_commands
 
+@dataclass
+class DocsValue:
+    language: str
+    tags: List[str]
+    content: str
+    ignored: bool
+    delay_manager: DelayManager
+    file_ops: Optional[FileOperations] = None
+    command_executor: Optional[CommandExecutor] = None
+    endpoint: Optional[Endpoint] = None
 
-    def handle_delay(self, delay_type: Literal["post", "cmd"]) -> None:
-        delay = self.post_delay if delay_type == "post" else self.cmd_delay
+    def run_commands(self, config: Config) -> str | None:
+        if self.endpoint:
+            lastRes = (False, "")
+            for res in self.endpoint.poll(poll_speed=1):
+                lastRes = res
+            if not lastRes[0]:
+                return f"Error: endpoint not up in timeout period: {self.endpoint.url}"
 
-        if delay > 0:
-            print(f"Sleeping for {delay} seconds after running  ({delay_type}_delay)...")
-            for i in range(delay, 0, -1):
-                print(f"Sleep: {i} seconds remaining...")
-                time.sleep(1)
+        if self.file_ops and self.file_ops.handle_file_content(config):
+            return None
+
+        if self.command_executor:
+            response = self.command_executor.run_commands(config)
+            if response and self.command_executor.expect_failure:
+                return None
+            elif not response and self.command_executor.expect_failure:
+                return "Error: expected failure but command succeeded"
+            return response
+
+        return None
 
     def __str__(self):
-        return f"DocsValue(language={self.language}, tags={self.tags}, ignored={self.ignored}, commands={self.commands}, background={self.background}, post_delay={self.post_delay}), cmd_delay={self.cmd_delay})"
+        return f"DocsValue(language={self.language}, tags={self.tags}, ignored={self.ignored}, delay_manager={self.delay_manager})"
 
     def print(self):
         print(self.__str__())
@@ -467,26 +433,49 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
         if language in ScriptingLanguages:
             content = content.strip()
 
+        # Create file operations if any file-related tags are present
+        file_ops = None
+        if any(Tags.has_tag(tags, tag) for tag in [Tags.FILE_NAME, Tags.INSERT_AT_LINE, Tags.REPLACE_AT_LINE, Tags.RESET_FILE, Tags.IF_FILE_DOES_NOT_EXISTS]):
+            file_ops = FileOperations(
+                file_name=Tags.extract_tag_value(tags, Tags.FILE_NAME(), default=None),
+                content=content,
+                insert_at_line=Tags.extract_tag_value(tags, Tags.INSERT_AT_LINE(), default=None, converter=int),
+                replace_lines=Tags.extract_tag_value(tags, Tags.REPLACE_AT_LINE(), default=None, converter=replace_at_line_converter),
+                file_reset=Tags.has_tag(tags, Tags.RESET_FILE),
+                if_file_not_exists=extract_tag_value(tags, Tags.IF_FILE_DOES_NOT_EXISTS(), default="")
+            )
+
+        # Create command executor if any command-related tags are present
+        command_executor = None
+        if language in ScriptingLanguages:
+            command_executor = CommandExecutor(
+                commands=[],  # Commands will be set later
+                background=Tags.has_tag(tags, Tags.BACKGROUND),
+                output_contains=Tags.extract_tag_value(tags, Tags.OUTPUT_CONTAINS(), default=None),
+                expect_failure=Tags.has_tag(tags, Tags.ASSERT_FAILURE),
+                machine_os=(extract_tag_value(tags, Tags.MACHINE_OS(), default=None, converter=alias_operating_systems) or None),
+                binary=Tags.extract_tag_value(tags, Tags.IGNORE_IF_INSTALLED(), default=None),
+                ignored=ignored
+            )
+
+        # Create endpoint if HTTP polling is configured
+        endpoint = handle_http_polling_input(extract_tag_value(tags, Tags.HTTP_POLLING(), default=None))
+
+        # Create delay manager
+        delay_manager = DelayManager(
+            post_delay=Tags.extract_tag_value(tags, Tags.POST_DELAY(), default=0, converter=int),
+            cmd_delay=Tags.extract_tag_value(tags, Tags.CMD_DELAY(), default=0, converter=int)
+        )
+
         value = DocsValue(
             language=language,
             tags=tags,
             content=content,
             ignored=ignored,
-            background=Tags.has_tag(tags, Tags.BACKGROUND),
-            post_delay=Tags.extract_tag_value(tags, Tags.POST_DELAY(), default=0, converter=int),
-            cmd_delay=Tags.extract_tag_value(tags, Tags.CMD_DELAY(), default=0, converter=int),
-            binary=Tags.extract_tag_value(tags, Tags.IGNORE_IF_INSTALLED(), default=None),
-            wait_for_endpoint=handle_http_polling_input(extract_tag_value(tags, Tags.HTTP_POLLING(), default=None)),
-            commands=[],
-            output_contains=Tags.extract_tag_value(tags, Tags.OUTPUT_CONTAINS(), default=None),
-            expect_failure=Tags.has_tag(tags, Tags.ASSERT_FAILURE),
-            machine_os=(extract_tag_value(tags, Tags.MACHINE_OS(), default=None, converter=alias_operating_systems) or None),
-            # file specific
-            if_file_not_exists=extract_tag_value(tags, Tags.IF_FILE_DOES_NOT_EXISTS(), default=""),
-            file_name=Tags.extract_tag_value(tags, Tags.FILE_NAME(), default=None),
-            insert_at_line=Tags.extract_tag_value(tags, Tags.INSERT_AT_LINE(), default=None, converter=int),
-            replace_lines=Tags.extract_tag_value(tags, Tags.REPLACE_AT_LINE(), default=None, converter=replace_at_line_converter),
-            file_reset=Tags.has_tag(tags, Tags.RESET_FILE),
+            delay_manager=delay_manager,
+            file_ops=file_ops,
+            command_executor=command_executor,
+            endpoint=endpoint
         )
 
         # using regex, remove any sections of code that start with a comment '#' and end with a new line '\n', this info is not needed.
@@ -562,7 +551,6 @@ def parse_env(command: str) -> Dict[str, str]:
 
     # If we get here, there were no environment variables we could parse
     return {}
-
 
 if __name__ == "__main__":
     main()
