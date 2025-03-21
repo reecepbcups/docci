@@ -72,7 +72,7 @@ class TestSomething(unittest.TestCase):
         self.assertEqual(dv.language, 'bash')
         self.assertEqual(dv.tags, [])
         self.assertEqual(dv.content, 'export MY_VARIABLE=`echo 123`')
-        self.assertEqual(dv.commands, ['export MY_VARIABLE=`echo 123`'])
+        self.assertEqual(dv.command_executor.commands, ['export MY_VARIABLE=`echo 123`'])
         self.assertEqual(dv.command_executor.background, False)
         self.assertEqual(dv.delay_manager.post_delay, 0)
         self.assertEqual(dv.delay_manager.cmd_delay, 0)

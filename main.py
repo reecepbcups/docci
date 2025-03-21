@@ -99,6 +99,12 @@ class FileOperations:
 
         file_path = os.path.join(config.working_dir, self.file_name) if config.working_dir else self.file_name
 
+        # Check if_file_not_exists condition
+        if self.if_file_not_exists and os.path.exists(file_path):
+            if config.debugging:
+                print(f"Skipping file operation since {file_path} exists and if_file_not_exists is set")
+            return False
+
         if not os.path.exists(file_path) or self.file_reset:
             if config.debugging:
                 print(f"Refreshing file: {file_path}", "since file reset is on" if self.file_reset else "")
@@ -155,6 +161,7 @@ class CommandExecutor:
     binary: Optional[str] = None
     ignored: bool = False
     delay_manager: Optional[DelayManager] = None
+    if_file_not_exists: str = ""
 
     def run_commands(
         self,
@@ -165,6 +172,14 @@ class CommandExecutor:
             if config.debugging:
                 print(f"Ignoring commands...")
             return None
+
+        # Check if file exists when if_file_not_exists is set
+        if self.if_file_not_exists:
+            file_path = os.path.join(config.working_dir, self.if_file_not_exists) if config.working_dir else self.if_file_not_exists
+            if os.path.exists(file_path):
+                if config.debugging:
+                    print(f"Skipping commands since {file_path} exists")
+                return None
 
         system = platform.system().lower()
         if self.machine_os and self.machine_os != system:
@@ -178,6 +193,7 @@ class CommandExecutor:
 
         env = os.environ.copy()
         response = None
+        had_error = False
 
         for command in self.commands:
             if command in config.ignore_commands:
@@ -221,7 +237,10 @@ class CommandExecutor:
                     if stderr:
                         sys.stderr.buffer.write(stderr)
                         sys.stderr.flush()
-                        output += stderr.decode('utf-8', errors='replace')
+                        err = stderr.decode('utf-8', errors='replace')
+                        output += err
+                        if err:
+                            had_error = True
 
                     if self.commands[-1] == command and self.output_contains not in output:
                         response = f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
@@ -239,7 +258,7 @@ class CommandExecutor:
             self.delay_manager.handle_delay("post")
 
         if self.expect_failure:
-            if response:
+            if had_error:
                 return None
             else:
                 return "Error: expected failure but command succeeded"
@@ -265,6 +284,7 @@ class DocsValue:
 
     def run_commands(self, config: Config) -> str | None:
         if self.endpoint:
+            print(f"waiting for endpoint: {self.endpoint}")
             lastRes = (False, "")
             for res in self.endpoint.poll(poll_speed=1):
                 lastRes = res
@@ -445,27 +465,38 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
                 if_file_not_exists=extract_tag_value(tags, Tags.IF_FILE_DOES_NOT_EXISTS(), default="")
             )
 
-        # Create command executor if any command-related tags are present
-        command_executor = None
-        if language in ScriptingLanguages:
-            command_executor = CommandExecutor(
-                commands=[],  # Commands will be set later
-                background=Tags.has_tag(tags, Tags.BACKGROUND),
-                output_contains=Tags.extract_tag_value(tags, Tags.OUTPUT_CONTAINS(), default=None),
-                expect_failure=Tags.has_tag(tags, Tags.ASSERT_FAILURE),
-                machine_os=(extract_tag_value(tags, Tags.MACHINE_OS(), default=None, converter=alias_operating_systems) or None),
-                binary=Tags.extract_tag_value(tags, Tags.IGNORE_IF_INSTALLED(), default=None),
-                ignored=ignored
-            )
-
-        # Create endpoint if HTTP polling is configured
-        endpoint = handle_http_polling_input(extract_tag_value(tags, Tags.HTTP_POLLING(), default=None))
-
         # Create delay manager
         delay_manager = DelayManager(
             post_delay=Tags.extract_tag_value(tags, Tags.POST_DELAY(), default=0, converter=int),
             cmd_delay=Tags.extract_tag_value(tags, Tags.CMD_DELAY(), default=0, converter=int)
         )
+
+                # using regex, remove any sections of code that start with a comment '#' and end with a new line '\n', this info is not needed.
+        # an example is '# Install packages (npm & submodules)\nmake setup\n\n# Build the contracts\nforge build\n\n# Run the solidity tests\nforge test'
+        # this should just be `make setup\nforge build\nforge test`
+        # TODO: other comment types need to also be supported?
+        content = re.sub(r'^#.*\n', '', content, flags=re.MULTILINE)
+        # if there is a # comment with no further \n after it, remove it
+        content = re.sub(r'#.*$', '', content, flags=re.MULTILINE).strip()
+        # ensure only 1 \n is present, not ever \n\n or more
+        content = re.sub(r'\n+', '\n', content)
+        # split by the \n to get a list of commands
+        commands = content.split('\n')
+
+        # Create command executor if any command-related tags are present
+        command_executor = None
+        if language in ScriptingLanguages:
+            command_executor = CommandExecutor(
+                commands=commands,
+                background=Tags.has_tag(tags, Tags.BACKGROUND),
+                output_contains=Tags.extract_tag_value(tags, Tags.OUTPUT_CONTAINS(), default=None),
+                expect_failure=Tags.has_tag(tags, Tags.ASSERT_FAILURE),
+                machine_os=(extract_tag_value(tags, Tags.MACHINE_OS(), default=None, converter=alias_operating_systems) or None),
+                binary=Tags.extract_tag_value(tags, Tags.IGNORE_IF_INSTALLED(), default=None),
+                ignored=ignored,
+                delay_manager=delay_manager,
+                if_file_not_exists=extract_tag_value(tags, Tags.IF_FILE_DOES_NOT_EXISTS(), default="") # TODO: remove from the other type?
+            )
 
         value = DocsValue(
             language=language,
@@ -475,30 +506,11 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             delay_manager=delay_manager,
             file_ops=file_ops,
             command_executor=command_executor,
-            endpoint=endpoint
+            endpoint=handle_http_polling_input(extract_tag_value(tags, Tags.HTTP_POLLING(), default=None)),
         )
-
-        # using regex, remove any sections of code that start with a comment '#' and end with a new line '\n', this info is not needed.
-        # an example is '# Install packages (npm & submodules)\nmake setup\n\n# Build the contracts\nforge build\n\n# Run the solidity tests\nforge test'
-        # this should just be `make setup\nforge build\nforge test`
-        # TODO: other comment types need to also be supported?
-        content = re.sub(r'^#.*\n', '', content, flags=re.MULTILINE)
-
-        # if there is a # comment with no further \n after it, remove it
-        content = re.sub(r'#.*$', '', content, flags=re.MULTILINE).strip()
-
-        # ensure only 1 \n is present, not ever \n\n or more
-        content = re.sub(r'\n+', '\n', content)
-
-        # split by the \n to get a list of commands
-        commands = content.split('\n')
-
-        # Now set the attributes on your value object
-        value.commands = commands
         results.append(value)
 
     return results
-
 # input could be just a number ex: 3
 # or a range of numbers; 2-4
 def replace_at_line_converter(value: str) -> Tuple[int, int | None]:
