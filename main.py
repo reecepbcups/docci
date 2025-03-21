@@ -18,8 +18,6 @@ from execute import parse_env
 from models import Endpoint, Tags, alias_operating_systems, handle_http_polling_input
 from src.processes_manager import process_manager
 
-# Store PIDs of background processes for later cleanup
-background_processes = []
 
 def run_documentation(config: Config) -> Optional[str]:
     """
@@ -273,7 +271,7 @@ class CommandExecutor:
 
             if cmd_background:
                 if process.pid:
-                    background_processes.append(process.pid)
+                    process_manager.add_process(process.pid)
             else:
                 if self.output_contains:
                     stdout, stderr = process.communicate()
@@ -359,23 +357,6 @@ class DocsValue:
 
     def print(self):
         print(self.__str__())
-
-def cleanup_background_processes():
-    """Kill all saved background processes"""
-    if not background_processes:
-        return
-
-    print(f"\nCleaning up {len(background_processes)} background processes...")
-    for pid in background_processes:
-        try:
-            os.kill(pid, signal.SIGTERM)
-            print(f"Terminated process with PID: {pid}")
-        except OSError as e:
-            # print(f"Error terminating process {pid}: {e}")
-            pass
-
-    # Clear the list
-    background_processes.clear()
 
 
 def extract_tag_value(tags, tag_type, default=None, converter=None):
