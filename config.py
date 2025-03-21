@@ -90,4 +90,32 @@ class Config:
                 exit(1)
             return Config.from_json(data)
 
+    @staticmethod
+    def load_configuration(cfg_input: str) -> "Config":
+        """
+        Load configuration from file or JSON string.
+
+        Args:
+            cfg_input: Path to config file or JSON string
+
+        Returns:
+            Loaded configuration object
+
+        Raises:
+            ValueError: If configuration cannot be loaded
+        """
+        # If input is a directory, look for config.json
+        if os.path.isdir(cfg_input):
+            cfg_input = os.path.join(cfg_input, 'config.json')
+            if not os.path.exists(cfg_input):
+                raise ValueError(f"config.json not found in directory: {cfg_input}")
+
+        # Load from file or parse JSON string
+        if os.path.isfile(cfg_input):
+            return Config.load_from_file(cfg_input)
+        else:
+            try:
+                return Config.from_json(json.loads(cfg_input))
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON input: {e}")
 

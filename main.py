@@ -13,11 +13,40 @@ import time
 from dataclasses import dataclass
 from typing import List, Literal, Optional, Tuple
 
-from config_types import Config, ScriptingLanguages
+from config import Config, ScriptingLanguages
 from execute import parse_env
 from models import Endpoint, Tags, alias_operating_systems, handle_http_polling_input
+from src.managers.delay import DelayManager
 from src.processes_manager import process_manager
 
+
+def main():
+    """Main entry point for the application."""
+    # Parse command-line arguments
+    if len(sys.argv) != 2:
+        print(f"Usage: {sys.argv[0]} <config_path|config_json_blob> [--tags]")
+        sys.exit(1)
+
+    if "--tags" in sys.argv:
+        Tags.print_tags_with_aliases()
+        sys.exit(0)
+
+    cfg_input = sys.argv[1]
+
+    # Load configuration
+    try:
+        config = Config.load_configuration(cfg_input)
+    except Exception as e:
+        print(f"Configuration error: {e}")
+        sys.exit(1)
+
+    # Run the documentation processor
+    error = run_documentation(config)
+    if error:
+        print(f"Error: {error}")
+        sys.exit(1)
+
+    print("Documentation processing completed successfully.")
 
 def run_documentation(config: Config) -> Optional[str]:
     """
@@ -68,61 +97,6 @@ def run_documentation(config: Config) -> Optional[str]:
     return None
 
 
-def main():
-    """Main entry point for the application."""
-    # Parse command-line arguments
-    if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <config_path|config_json_blob> [--tags]")
-        sys.exit(1)
-
-    if "--tags" in sys.argv:
-        Tags.print_tags_with_aliases()
-        sys.exit(0)
-
-    cfg_input = sys.argv[1]
-
-    # Load configuration
-    try:
-        config = load_configuration(cfg_input)
-    except Exception as e:
-        print(f"Configuration error: {e}")
-        sys.exit(1)
-
-    # Run the documentation processor
-    error = run_documentation(config)
-    if error:
-        print(f"Error: {error}")
-        sys.exit(1)
-
-    print("Documentation processing completed successfully.")
-
-def load_configuration(cfg_input: str) -> Config:
-    """
-    Load configuration from file or JSON string.
-
-    Args:
-        cfg_input: Path to config file or JSON string
-
-    Returns:
-        Loaded configuration object
-
-    Raises:
-        ValueError: If configuration cannot be loaded
-    """
-    # If input is a directory, look for config.json
-    if os.path.isdir(cfg_input):
-        cfg_input = os.path.join(cfg_input, 'config.json')
-        if not os.path.exists(cfg_input):
-            raise ValueError(f"config.json not found in directory: {cfg_input}")
-
-    # Load from file or parse JSON string
-    if os.path.isfile(cfg_input):
-        return Config.load_from_file(cfg_input)
-    else:
-        try:
-            return Config.from_json(json.loads(cfg_input))
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON input: {e}")
 
 @dataclass
 class FileOperations:
@@ -186,18 +160,7 @@ class FileOperations:
 
         return True
 
-@dataclass
-class DelayManager:
-    post_delay: int = 0
-    cmd_delay: int = 0
 
-    def handle_delay(self, delay_type: Literal["post", "cmd"]) -> None:
-        delay = self.post_delay if delay_type == "post" else self.cmd_delay
-        if delay > 0:
-            print(f"Sleeping for {delay} seconds after running ({delay_type}_delay)...")
-            for i in range(delay, 0, -1):
-                print(f"Sleep: {i} seconds remaining...")
-                time.sleep(1)
 
 @dataclass
 class CommandExecutor:
@@ -359,40 +322,40 @@ class DocsValue:
         print(self.__str__())
 
 
-def extract_tag_value(tags, tag_type, default=None, converter=None):
-    """
-    Extract value from a tag of format 'tag_type=value' or 'tag_type="value with spaces"'
-    """
-    matching_tags = []
+# def extract_tag_value(tags, tag_type, default=None, converter=None):
+#     """
+#     Extract value from a tag of format 'tag_type=value' or 'tag_type="value with spaces"'
+#     """
+#     matching_tags = []
 
-    for tag in tags:
-        if tag_type in tag:
-            # Find the position of the equals sign
-            equals_pos = tag.find('=')
-            if equals_pos != -1:
-                # Get everything after the equals sign
-                value = tag[equals_pos + 1:]
+#     for tag in tags:
+#         if tag_type in tag:
+#             # Find the position of the equals sign
+#             equals_pos = tag.find('=')
+#             if equals_pos != -1:
+#                 # Get everything after the equals sign
+#                 value = tag[equals_pos + 1:]
 
-                # Check if the value starts with a quote
-                if value and (value[0] == '"' or value[0] == "'"):
-                    quote_char = value[0]
-                    # Look for the matching closing quote
-                    for i in range(1, len(value)):
-                        if value[i] == quote_char:
-                            # Extract the value WITHOUT quotes
-                            value = value[1:i]
-                            break
-                else:
-                    # No quotes, just use the value as is
-                    value = value
+#                 # Check if the value starts with a quote
+#                 if value and (value[0] == '"' or value[0] == "'"):
+#                     quote_char = value[0]
+#                     # Look for the matching closing quote
+#                     for i in range(1, len(value)):
+#                         if value[i] == quote_char:
+#                             # Extract the value WITHOUT quotes
+#                             value = value[1:i]
+#                             break
+#                 else:
+#                     # No quotes, just use the value as is
+#                     value = value
 
-                matching_tags.append(value)
+#                 matching_tags.append(value)
 
-    if not matching_tags:
-        return default
+#     if not matching_tags:
+#         return default
 
-    value = matching_tags[0]
-    return converter(value) if converter else value
+#     value = matching_tags[0]
+#     return converter(value) if converter else value
 
 def process_language_parts(language_parts):
     """Process language parts to properly handle quoted values in tags"""
@@ -491,7 +454,7 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             insert_at_line=Tags.extract_tag_value(tags, Tags.INSERT_AT_LINE(), default=None, converter=int),
             replace_lines=Tags.extract_tag_value(tags, Tags.REPLACE_AT_LINE(), default=None, converter=replace_at_line_converter),
             file_reset=Tags.has_tag(tags, Tags.RESET_FILE),
-            if_file_not_exists=extract_tag_value(tags, Tags.IF_FILE_DOES_NOT_EXISTS(), default="")
+            if_file_not_exists=Tags.extract_tag_value(tags, Tags.IF_FILE_DOES_NOT_EXISTS(), default="")
         )
 
         # Create delay manager
@@ -520,11 +483,11 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
                 background=Tags.has_tag(tags, Tags.BACKGROUND),
                 output_contains=Tags.extract_tag_value(tags, Tags.OUTPUT_CONTAINS(), default=None),
                 expect_failure=Tags.has_tag(tags, Tags.ASSERT_FAILURE),
-                machine_os=(extract_tag_value(tags, Tags.MACHINE_OS(), default=None, converter=alias_operating_systems) or None),
+                machine_os=(Tags.extract_tag_value(tags, Tags.MACHINE_OS(), default=None, converter=alias_operating_systems) or None),
                 binary=Tags.extract_tag_value(tags, Tags.IGNORE_IF_INSTALLED(), default=None),
                 ignored=ignored,
                 delay_manager=delay_manager,
-                if_file_not_exists=extract_tag_value(tags, Tags.IF_FILE_DOES_NOT_EXISTS(), default="") # TODO: remove from the other type?
+                if_file_not_exists=Tags.extract_tag_value(tags, Tags.IF_FILE_DOES_NOT_EXISTS(), default="") # TODO: remove from the other type?
             )
 
         value = DocsValue(
@@ -535,7 +498,7 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             delay_manager=delay_manager,
             file_ops=file_ops,
             command_executor=command_executor,
-            endpoint=handle_http_polling_input(extract_tag_value(tags, Tags.HTTP_POLLING(), default=None)),
+            endpoint=handle_http_polling_input(Tags.extract_tag_value(tags, Tags.HTTP_POLLING(), default=None)),
         )
         results.append(value)
 

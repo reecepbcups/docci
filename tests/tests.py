@@ -6,12 +6,11 @@ import threading
 import time
 import unittest
 
-from config_types import Config
+from config import Config
 from execute import execute_substitution_commands
 from main import (
     DocsValue,
     Tags,
-    extract_tag_value,
     parse_env,
     parse_markdown_code_blocks,
     run_documentation,
@@ -34,11 +33,11 @@ class TestSomething(unittest.TestCase):
 
     def test_extract_tag_value(self):
         # this is after process_language_parts, we just input good values here for verification
-        resp = extract_tag_value(tags=['docci-output-contains="My Value"'], tag_type=Tags.OUTPUT_CONTAINS(), default=None)
+        resp = Tags.extract_tag_value(tags=['docci-output-contains="My Value"'], tag_type=Tags.OUTPUT_CONTAINS(), default=None)
         self.assertEqual(resp, "My Value")
-        resp = extract_tag_value(tags=['docci-delay-after=123'], tag_type=Tags.POST_DELAY(), default=None, converter=int)
+        resp = Tags.extract_tag_value(tags=['docci-delay-after=123'], tag_type=Tags.POST_DELAY(), default=None, converter=int)
         self.assertEqual(resp, 123)
-        resp = extract_tag_value(tags=['docci-file=proto/example/example.proto'], tag_type=Tags.FILE_NAME(), default=None)
+        resp = Tags.extract_tag_value(tags=['docci-file=proto/example/example.proto'], tag_type=Tags.FILE_NAME(), default=None)
         self.assertEqual(resp, "proto/example/example.proto")
 
     def test_config_run_1(self):
