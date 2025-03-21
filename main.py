@@ -105,33 +105,41 @@ class FileOperations:
                 print(f"Skipping file operation since {file_path} exists and if_file_not_exists is set")
             return False
 
+        # Ensure content ends with newline for proper line operations
+        content_with_newline = self.content if self.content.endswith('\n') else self.content + '\n'
+
         if not os.path.exists(file_path) or self.file_reset:
             if config.debugging:
                 print(f"Refreshing file: {file_path}", "since file reset is on" if self.file_reset else "")
             with open(file_path, 'w') as f:
-                f.write(self.content)
+                f.write(content_with_newline)
 
         # read and insert at the given line
         with open(file_path, 'r') as f:
             lines = f.readlines()
 
         if self.insert_at_line:
+            # if insert at line is negative, then it is relative to the end of the file
             insert_line = self.insert_at_line if self.insert_at_line > 0 else len(lines) + self.insert_at_line + 1
-            lines.insert(insert_line, self.content)
+            # Ensure we don't go out of bounds
+            insert_line = max(0, min(insert_line, len(lines)))
+            lines.insert(insert_line, content_with_newline)
 
         if self.replace_lines:
             start, end = self.replace_lines
+            # line based, not index :)
             start = start - 1 if start > 0 else 0
             end = end - 1 if end and end > 0 else None
+
             if end:
-                if end > len(lines):
-                    end = len(lines) - 1
-                lines[start:end] = self.content
+                if end >= len(lines):
+                    end = len(lines)
+                lines[start:end] = [content_with_newline]
             else:
-                if start > len(lines):
-                    lines.append(self.content)
+                if start >= len(lines):
+                    lines.append(content_with_newline)
                 else:
-                    lines[start] = self.content
+                    lines[start] = content_with_newline
 
         with open(file_path, 'w') as f:
             f.write(''.join(lines))
@@ -454,16 +462,14 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
             content = content.strip()
 
         # Create file operations if any file-related tags are present
-        file_ops = None
-        if any(Tags.has_tag(tags, tag) for tag in [Tags.FILE_NAME, Tags.INSERT_AT_LINE, Tags.REPLACE_AT_LINE, Tags.RESET_FILE, Tags.IF_FILE_DOES_NOT_EXISTS]):
-            file_ops = FileOperations(
-                file_name=Tags.extract_tag_value(tags, Tags.FILE_NAME(), default=None),
-                content=content,
-                insert_at_line=Tags.extract_tag_value(tags, Tags.INSERT_AT_LINE(), default=None, converter=int),
-                replace_lines=Tags.extract_tag_value(tags, Tags.REPLACE_AT_LINE(), default=None, converter=replace_at_line_converter),
-                file_reset=Tags.has_tag(tags, Tags.RESET_FILE),
-                if_file_not_exists=extract_tag_value(tags, Tags.IF_FILE_DOES_NOT_EXISTS(), default="")
-            )
+        file_ops = FileOperations(
+            file_name=Tags.extract_tag_value(tags, Tags.FILE_NAME(), default=None),
+            content=content,
+            insert_at_line=Tags.extract_tag_value(tags, Tags.INSERT_AT_LINE(), default=None, converter=int),
+            replace_lines=Tags.extract_tag_value(tags, Tags.REPLACE_AT_LINE(), default=None, converter=replace_at_line_converter),
+            file_reset=Tags.has_tag(tags, Tags.RESET_FILE),
+            if_file_not_exists=extract_tag_value(tags, Tags.IF_FILE_DOES_NOT_EXISTS(), default="")
+        )
 
         # Create delay manager
         delay_manager = DelayManager(
