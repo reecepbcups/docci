@@ -16,40 +16,63 @@ from typing import List, Literal, Optional, Tuple
 from config_types import Config, ScriptingLanguages
 from execute import parse_env
 from models import Endpoint, Tags, alias_operating_systems, handle_http_polling_input
+from src.processes_manager import process_manager
 
 # Store PIDs of background processes for later cleanup
 background_processes = []
 
-# do_logic returns an error if it fails
-def do_logic(config: Config) -> str | None:
-    config.run_pre_cmds(hide_output=True)
-    for key, value in config.env_vars.items():
-        os.environ[key] = value
+def run_documentation(config: Config) -> Optional[str]:
+    """
+    Execute documentation code blocks according to configuration.
 
-    for parentPathKey, file_paths in config.get_all_possible_paths().items():
-        try:
-            for file_path in file_paths:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
+    Args:
+        config: The loaded configuration
 
-                values = parse_markdown_code_blocks(config, content)
-                # if config.debugging: print(f"Values: {values}")
+    Returns:
+        Error message or None if successful
+    """
+    try:
+        # Set up environment
+        config.run_pre_cmds(hide_output=True)
+        for key, value in config.env_vars.items():
+            os.environ[key] = value
 
-                for i, value in enumerate(values):
-                    err = value.run_commands(config=config)
-                    if err:
-                        return f"Error({parentPathKey},{file_paths}): {err}"
-        except KeyboardInterrupt:
-            print("\nKeyboardInterrupt: Quitting...")
-        except Exception as e:
-            return f"Error({parentPathKey},{file_paths}): {e}"
-        finally:
-            cleanup_background_processes()
-            config.run_cleanup_cmds(hide_output=True)
+        # Process all content paths
+        for parent_path_key, file_paths in config.get_all_possible_paths().items():
+            try:
+                for file_path in file_paths:
+                    # Read and parse file content
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+
+                    # Extract and process code blocks
+                    code_blocks = parse_markdown_code_blocks(config, content)
+
+                    # Execute commands for each code block
+                    for i, block in enumerate(code_blocks):
+                        error = block.run_commands(config=config)
+                        if error:
+                            return f"Error({parent_path_key},{file_paths}): {error}"
+
+            except KeyboardInterrupt:
+                print("\nKeyboardInterrupt: Quitting...")
+                return "Interrupted by user"
+            except Exception as e:
+                return f"Error({parent_path_key},{file_paths}): {e}"
+
+    except Exception as e:
+        return f"Setup error: {e}"
+    finally:
+        # Always clean up resources
+        process_manager.cleanup()
+        config.run_cleanup_cmds(hide_output=True)
 
     return None
 
+
 def main():
+    """Main entry point for the application."""
+    # Parse command-line arguments
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <config_path|config_json_blob> [--tags]")
         sys.exit(1)
@@ -60,27 +83,48 @@ def main():
 
     cfg_input = sys.argv[1]
 
+    # Load configuration
+    try:
+        config = load_configuration(cfg_input)
+    except Exception as e:
+        print(f"Configuration error: {e}")
+        sys.exit(1)
+
+    # Run the documentation processor
+    error = run_documentation(config)
+    if error:
+        print(f"Error: {error}")
+        sys.exit(1)
+
+    print("Documentation processing completed successfully.")
+
+def load_configuration(cfg_input: str) -> Config:
+    """
+    Load configuration from file or JSON string.
+
+    Args:
+        cfg_input: Path to config file or JSON string
+
+    Returns:
+        Loaded configuration object
+
+    Raises:
+        ValueError: If configuration cannot be loaded
+    """
+    # If input is a directory, look for config.json
     if os.path.isdir(cfg_input):
-        # TODO: search through all json files in dir & find ones content whose matches the expected layout
         cfg_input = os.path.join(cfg_input, 'config.json')
         if not os.path.exists(cfg_input):
-            print(f"Error: config.json not found in directory: {sys.argv[1]}")
-            sys.exit(1)
+            raise ValueError(f"config.json not found in directory: {cfg_input}")
 
+    # Load from file or parse JSON string
     if os.path.isfile(cfg_input):
-        config: Config = Config.load_from_file(cfg_input)
+        return Config.load_from_file(cfg_input)
     else:
-        config: Config
         try:
-            config = Config.from_json(json.loads(cfg_input))
+            return Config.from_json(json.loads(cfg_input))
         except json.JSONDecodeError as e:
-            print(f"Error: Invalid JSON input: {e}. Make sure the JSON is valid or the path is correct")
-            sys.exit(1)
-
-    err = do_logic(config)
-    if err:
-        print("do_logic error:", err)
-        sys.exit(1)
+            raise ValueError(f"Invalid JSON input: {e}")
 
 @dataclass
 class FileOperations:

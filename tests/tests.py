@@ -11,10 +11,10 @@ from execute import execute_substitution_commands
 from main import (
     DocsValue,
     Tags,
-    do_logic,
     extract_tag_value,
     parse_env,
     parse_markdown_code_blocks,
+    run_documentation,
 )
 from models import Endpoint
 from tests.test_server import MyServer
@@ -42,12 +42,12 @@ class TestSomething(unittest.TestCase):
         self.assertEqual(resp, "proto/example/example.proto")
 
     def test_config_run_1(self):
-        err = do_logic(Config.load_from_file(os.path.join(curr_dir, "config1.json")))
+        err = run_documentation(Config.load_from_file(os.path.join(curr_dir, "config1.json")))
         self.assertEqual(err, None, err)
 
     def test_multiple_paths_same_output(self):
         # if you use multiple paths here, you HAVE to have the same outputs to actually verify. Good for duplicate documentation places that should match up exactly
-        err = do_logic(Config.from_json({"paths":["tests/README1.md", "tests/README2.md"],"env_vars": {},"pre_cmds": [],"cleanup_cmds": []}))
+        err = run_documentation(Config.from_json({"paths":["tests/README1.md", "tests/README2.md"],"env_vars": {},"pre_cmds": [],"cleanup_cmds": []}))
         self.assertEqual(err, None, err)
 
     def test_execute_substitution_commands(self):
