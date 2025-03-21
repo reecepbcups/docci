@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 from src.config import Config, ScriptingLanguages
 from src.managers.cmd import CommandExecutor
-from src.managers.core import DocsValue
+from src.managers.core import CodeBlockCore
 from src.managers.delay import DelayManager
 from src.managers.file_operations import FileOperations
 from src.models import Endpoint, Tags, alias_operating_systems
@@ -58,7 +58,7 @@ def process_language_parts(language_parts):
 
     return processed_tags
 
-def parse_markdown_code_blocks(config: Config | None, content: str) -> List[DocsValue]:
+def parse_markdown_code_blocks(config: Config | None, content: str) -> List[CodeBlockCore]:
     """
     Parse a markdown file and extract all code blocks with their language and content.
 
@@ -81,7 +81,7 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
     # Find all matches with re.DOTALL to include newlines
     matches = re.findall(pattern, content, re.DOTALL)
 
-    results: List[DocsValue] = []
+    results: List[CodeBlockCore] = []
     for language_info, block_content in matches:
         language_info = language_info.strip()
         language_parts = language_info.split()
@@ -142,7 +142,7 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Docs
                 if_file_not_exists=Tags.extract_tag_value(tags, Tags.IF_FILE_DOES_NOT_EXISTS(), default="") # TODO: remove from the other type?
             )
 
-        value = DocsValue(
+        value = CodeBlockCore(
             language=language,
             tags=tags,
             content=content,

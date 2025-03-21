@@ -9,7 +9,7 @@ import unittest
 from main import Tags, parse_markdown_code_blocks, run_documentation_processor
 from src.config import Config
 from src.execute import execute_substitution_commands, parse_env
-from src.managers.core import DocsValue
+from src.managers.core import CodeBlockCore
 from src.models import Endpoint
 from tests.test_server import MyServer
 
@@ -62,7 +62,7 @@ class TestSomething(unittest.TestCase):
 
     def test_parse_markdown_code_blocks(self):
         # basic
-        dv: DocsValue = parse_markdown_code_blocks(config=None, content='```bash\nexport MY_VARIABLE=`echo 123`\n```')[0]
+        dv: CodeBlockCore = parse_markdown_code_blocks(config=None, content='```bash\nexport MY_VARIABLE=`echo 123`\n```')[0]
         self.assertEqual(dv.language, 'bash')
         self.assertEqual(dv.tags, [])
         self.assertEqual(dv.content, 'export MY_VARIABLE=`echo 123`')
@@ -72,12 +72,12 @@ class TestSomething(unittest.TestCase):
         self.assertEqual(dv.delay_manager.cmd_delay, 0)
 
         # ignore block
-        dv: DocsValue = parse_markdown_code_blocks(config=None, content='# header\nhere is some text\n\n```bash docci-ignore\nexport MY_VARIABLE=`echo 123`\n```')[0]
+        dv: CodeBlockCore = parse_markdown_code_blocks(config=None, content='# header\nhere is some text\n\n```bash docci-ignore\nexport MY_VARIABLE=`echo 123`\n```')[0]
         self.assertEqual(dv.ignored, True)
         self.assertEqual(dv.tags, [Tags.IGNORE()])
 
         # multiple tags
-        dv: DocsValue = parse_markdown_code_blocks(config=None, content='''# header
+        dv: CodeBlockCore = parse_markdown_code_blocks(config=None, content='''# header
                 here is some text\n\n
                 ```bash docci-delay-after=5 docci-delay-per-cmd=1
                     export MY_VARIABLE=`echo 123`
@@ -92,7 +92,7 @@ class TestSomething(unittest.TestCase):
     def test_http_polling_failure_then_success_when_up(self):
         port = MyServer.get_free_port()
 
-        dv: DocsValue = parse_markdown_code_blocks(config=None, content=f'```bash docci-wait-for-endpoint=http://localhost:{port}|30\nexport MY_VARIABLE=`echo 123`\n```')[0]
+        dv: CodeBlockCore = parse_markdown_code_blocks(config=None, content=f'```bash docci-wait-for-endpoint=http://localhost:{port}|30\nexport MY_VARIABLE=`echo 123`\n```')[0]
         self.assertEqual(dv.endpoint, Endpoint(url=f'http://localhost:{port}', max_timeout=30))
         self.assertEqual(dv.tags, [f"{Tags.HTTP_POLLING()}=http://localhost:{port}|30"])
 
@@ -121,7 +121,7 @@ class TestSomething(unittest.TestCase):
         port = MyServer.get_free_port()
 
         max_timeout = 2
-        dv: DocsValue = parse_markdown_code_blocks(config=None, content=f'```bash docci-wait-for-endpoint=http://localhost:{port}|{max_timeout}\nexport MY_VARIABLE=`echo 123`\n```')[0]
+        dv: CodeBlockCore = parse_markdown_code_blocks(config=None, content=f'```bash docci-wait-for-endpoint=http://localhost:{port}|{max_timeout}\nexport MY_VARIABLE=`echo 123`\n```')[0]
         self.assertEqual(dv.endpoint, Endpoint(url=f'http://localhost:{port}', max_timeout=max_timeout))
 
         startTime = time.time()

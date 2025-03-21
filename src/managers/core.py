@@ -2,14 +2,14 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from src.config import Config
-from src.models import Endpoint
 from src.managers.cmd import CommandExecutor
 from src.managers.delay import DelayManager
 from src.managers.file_operations import FileOperations
+from src.models import Endpoint
 
 
 @dataclass
-class DocsValue:
+class CodeBlockCore:
     language: str
     tags: List[str]
     content: str
