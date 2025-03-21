@@ -1,7 +1,7 @@
 
 import os
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from src.config import Config
 
@@ -21,10 +21,7 @@ class FileOperations:
 
         file_path = os.path.join(config.working_dir, self.file_name) if config.working_dir else self.file_name
 
-        # Check if_file_not_exists condition
-        if self.if_file_not_exists and os.path.exists(file_path):
-            if config.debugging:
-                print(f"Skipping file operation since {file_path} exists and if_file_not_exists is set")
+        if self._should_skip_execution(config, file_path):
             return False
 
         # Ensure content ends with newline for proper line operations
@@ -47,6 +44,22 @@ class FileOperations:
             insert_line = max(0, min(insert_line, len(lines)))
             lines.insert(insert_line, content_with_newline)
 
+        lines = self._replace_lines(lines, content_with_newline)
+
+        with open(file_path, 'w') as f:
+            f.write(''.join(lines))
+
+        return True
+
+    def _should_skip_execution(self, config: Config, file_path: str) -> bool:
+        # Check if_file_not_exists condition
+        if self.if_file_not_exists and os.path.exists(file_path):
+            if config.debugging:
+                print(f"Skipping file operation since {file_path} exists and if_file_not_exists is set")
+            return True
+        return False
+
+    def _replace_lines(self, lines: List[str], content: str) -> List[str]:
         if self.replace_lines:
             start, end = self.replace_lines
             # line based, not index :)
@@ -56,14 +69,11 @@ class FileOperations:
             if end:
                 if end >= len(lines):
                     end = len(lines)
-                lines[start:end] = [content_with_newline]
+                lines[start:end] = [content]
             else:
                 if start >= len(lines):
-                    lines.append(content_with_newline)
+                    lines.append(content)
                 else:
-                    lines[start] = content_with_newline
+                    lines[start] = content
 
-        with open(file_path, 'w') as f:
-            f.write(''.join(lines))
-
-        return True
+        return lines
