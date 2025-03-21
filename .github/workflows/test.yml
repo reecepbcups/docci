@@ -24,7 +24,7 @@ jobs:
       - run: pip install -r requirements.txt --break-system-packages
 
       - name: Run Python unit tests
-        run: make tests
+        run: make test
 
       - name: Run integration tests (python)
         run: make test-examples

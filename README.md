@@ -67,10 +67,9 @@ nvm install v21.7.3
 ```
 ````
 
-Ensure the output contains a specific string: 📜
+Ensure the output (stdout or stderr) contains a specific string: 📜
 
 ````bash
-# This checks stdout and stderr
 ```bash docci-contains="xyzMyOutput"
 echo xyzMyOutput
 ```
@@ -80,7 +79,7 @@ Run blocking commands in the background: 🌐
 
 ````bash
 ```bash docci-background
-python3 demo.py web-server --port 3000
+python3 tests/demo.py web-server --port 3000
 ```
 ````
 
