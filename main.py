@@ -2,10 +2,10 @@
 
 import os
 import sys
-from typing import Optional, Tuple
+from typing import Optional
 
-from config import Config
-from models import Tags
+from src.config import Config
+from src.models import Tags
 from src.parsing import parse_markdown_code_blocks
 from src.processes_manager import process_manager
 

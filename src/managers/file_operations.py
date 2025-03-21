@@ -3,7 +3,7 @@ import os
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
-from config import Config
+from src.config import Config
 
 
 @dataclass

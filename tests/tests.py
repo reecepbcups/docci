@@ -6,10 +6,10 @@ import threading
 import time
 import unittest
 
-from config import Config
-from execute import execute_substitution_commands, parse_env
+from src.config import Config
+from src.execute import execute_substitution_commands, parse_env
 from main import Tags, parse_markdown_code_blocks, run_documentation
-from models import Endpoint
+from src.models import Endpoint
 from src.managers.core import DocsValue
 from tests.test_server import MyServer
 

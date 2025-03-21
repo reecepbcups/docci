@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from config import Config
-from models import Endpoint
+from src.config import Config
+from src.models import Endpoint
 from src.managers.cmd import CommandExecutor
 from src.managers.delay import DelayManager
 from src.managers.file_operations import FileOperations

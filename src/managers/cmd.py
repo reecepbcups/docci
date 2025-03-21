@@ -6,8 +6,8 @@ import sys
 from dataclasses import dataclass
 from typing import List, Optional
 
-from config import Config
-from execute import parse_env
+from src.config import Config
+from src.execute import parse_env
 from src.managers.delay import DelayManager
 from src.processes_manager import process_manager
 

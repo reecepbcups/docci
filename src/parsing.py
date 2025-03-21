@@ -1,8 +1,8 @@
 import re
 from typing import List, Tuple
 
-from config import Config, ScriptingLanguages
-from models import Tags, alias_operating_systems, handle_http_polling_input
+from src.config import Config, ScriptingLanguages
+from src.models import Tags, alias_operating_systems, handle_http_polling_input
 from src.managers.cmd import CommandExecutor
 from src.managers.core import DocsValue
 from src.managers.delay import DelayManager

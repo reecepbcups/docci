@@ -5,7 +5,7 @@ import os
 import unittest
 from typing import Dict, List
 
-from models import Tags
+from src.models import Tags
 
 
 class TestIntegration(unittest.TestCase):
