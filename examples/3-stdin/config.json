@@ -1,0 +1,10 @@
+{
+    "paths": [
+      "examples/3-stdin/README.md"
+    ],
+    "working_dir": "examples/3-stdin",
+    "cleanup_cmds": [],
+    "env_vars": {},
+    "pre_cmds": [],
+    "debugging": false
+  }

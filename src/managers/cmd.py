@@ -71,7 +71,7 @@ class CommandExecutor:
 
         return response
 
-    def _execute_command(self, command: str, env: dict, config: Config, cmd_background: bool) -> Union[str, bool, None]:
+    def _execute_command(self, command: str, env: dict, config: Config, cmd_background: bool, stdin_data: str | None = None) -> Union[str, bool, None]:
         """
         Execute a command and handle its output.
         Returns:
@@ -79,10 +79,19 @@ class CommandExecutor:
             - True: If stderr had output (error occurred)
             - None: If command executed successfully
         """
+        input_bytes: Optional[bytes] = None
+        if stdin_data is not None:
+            if isinstance(stdin_data, str):
+                # Encode string to bytes, assuming utf-8
+                input_bytes = stdin_data.encode("utf-8")
+            else:
+                input_bytes = stdin_data  # Assume it's already bytes
+
         process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE if self.output_contains else None,
             stderr=subprocess.PIPE if self.output_contains else None,
+            stdin=subprocess.PIPE,
             shell=True,
             env=env,
             cwd=config.working_dir,
@@ -96,7 +105,7 @@ class CommandExecutor:
 
         # Handle foreground process
         if self.output_contains:
-            stdout, stderr = process.communicate()
+            stdout, stderr = process.communicate(input=input_bytes)
             output = ""
 
             # Process stdout if any

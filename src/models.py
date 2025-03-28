@@ -76,6 +76,7 @@ class Tags(Enum):
     def get_aliases() -> Dict[str, 'Tags']:
         return {
             'docci-contains-output': Tags.OUTPUT_CONTAINS,
+            'docci-expected-output': Tags.OUTPUT_CONTAINS,
             'docci-contains': Tags.OUTPUT_CONTAINS,
             'docci-after-delay': Tags.POST_DELAY,
             'docci-cmd-delay': Tags.CMD_DELAY,
