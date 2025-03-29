@@ -9,12 +9,17 @@ cd ./examples/3-stdin
 ```
 
 ```bash docci-expected-output="246"
-python3 example.py <<< "123"
+python3 example.py <<< 123
 ```
 
 ```bash docci-expected-output="246"
 VALUE=123
 python3 example.py <<< ${VALUE}
+```
+
+```bash docci-expected-output="246"
+VALUE=123
+echo ${VALUE} | python3 example.py
 ```
 
 ```bash docci-expected-output="246"

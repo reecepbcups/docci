@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -81,6 +82,7 @@ class CommandExecutor:
         """
         # Extract stdin data from heredoc if present
         stdin_data = None
+
         if "<<<" in command:
             cmd_parts = command.split("<<<")
             command = cmd_parts[0].strip()
@@ -90,6 +92,51 @@ class CommandExecutor:
             if stdin_data.startswith("${") and stdin_data.endswith("}"):
                 var_name = stdin_data[2:-1]
                 stdin_data = env.get(var_name, "")
+                # If the value contains spaces, wrap it in single quotes
+                if ' ' in stdin_data and not (stdin_data.startswith("'") and stdin_data.endswith("'")):
+                    stdin_data = f"'{stdin_data}'"
+
+            # Handle quoted strings only if not already handled by env var
+            elif stdin_data.startswith('"') and stdin_data.endswith('"'):
+                stdin_data = stdin_data[1:-1]  # Remove outer quotes
+            elif stdin_data.startswith("'") and stdin_data.endswith("'"):
+                stdin_data = stdin_data[1:-1]  # Remove outer quotes
+
+            # Add newline if not present
+            if not stdin_data.endswith('\n'):
+                stdin_data += '\n'
+
+        elif "|" in command:
+            # Handle piped commands
+            cmd_parts = command.split("|")
+            input_cmd = cmd_parts[0].strip()
+            command = "|".join(cmd_parts[1:]).strip()
+
+            # Special handling for echo commands with variables
+            if input_cmd.startswith('echo "') and '"' in input_cmd:
+                # Extract the variable name from echo "${VAR_NAME}"
+                var_match = re.search(r'echo "\${([^}]+)}"', input_cmd)
+                if var_match:
+                    var_name = var_match.group(1)
+                    stdin_data = env.get(var_name, "")
+                    if stdin_data and not stdin_data.endswith('\n'):
+                        stdin_data += '\n'
+            else:
+                # Execute the input command to get stdin data
+                input_process = subprocess.Popen(
+                    input_cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    shell=True,
+                    env=env,
+                    cwd=config.working_dir,
+                    text=True
+                )
+                stdin_data_raw, _ = input_process.communicate()
+                if stdin_data_raw:
+                    stdin_data = stdin_data_raw.strip()
+                    if not stdin_data.endswith('\n'):
+                        stdin_data += '\n'
 
         process = subprocess.Popen(
             command,
@@ -99,7 +146,7 @@ class CommandExecutor:
             shell=True,
             env=env,
             cwd=config.working_dir,
-            text=False,
+            text=True,
         )
 
         if cmd_background:
@@ -107,24 +154,22 @@ class CommandExecutor:
                 process_manager.add_process(process.pid)
             return None
 
-        # Handle foreground process
         if self.output_contains:
-            stdout, stderr = process.communicate(input=stdin_data.encode('utf-8') if stdin_data else None)
+            stdout, stderr = process.communicate(input=stdin_data)
             output = ""
 
             # Process stdout if any
             if stdout:
-                sys.stdout.buffer.write(stdout)
+                sys.stdout.write(stdout)
                 sys.stdout.flush()
-                output += stdout.decode('utf-8', errors='replace')
+                output += stdout
 
             # Process stderr if any
             if stderr:
-                sys.stderr.buffer.write(stderr)
+                sys.stderr.write(stderr)
                 sys.stderr.flush()
-                err = stderr.decode('utf-8', errors='replace')
-                output += err
-                if err:
+                output += stderr
+                if stderr:
                     return True  # Indicates an error occurred
 
             # Check if expected output is present in final command
@@ -134,7 +179,7 @@ class CommandExecutor:
                 print(f"Output contains: {self.output_contains}")
         else:
             # Simple wait and check exit code
-            process.communicate(input=stdin_data.encode('utf-8') if stdin_data else None)
+            process.communicate(input=stdin_data)
             if process.returncode != 0:
                 return f"Error running command: {command}"
 
