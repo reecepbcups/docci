@@ -111,47 +111,16 @@ class CommandExecutor:
             if not stdin_data.endswith('\n'):
                 stdin_data += '\n'
 
-        elif "|" in command:
-            # Handle piped commands
-            cmd_parts = command.split("|")
-            input_cmd = cmd_parts[0].strip()
-            command = "|".join(cmd_parts[1:]).strip()
-
-            # Special handling for echo commands with variables
-            if input_cmd.startswith('echo "') and '"' in input_cmd:
-                # Extract the variable name from echo "${VAR_NAME}"
-                var_match = re.search(r'echo "\${([^}]+)}"', input_cmd)
-                if var_match:
-                    var_name = var_match.group(1)
-                    stdin_data = env.get(var_name, "")
-                    if stdin_data and not stdin_data.endswith('\n'):
-                        stdin_data += '\n'
-            else:
-                # Execute the input command to get stdin data
-                input_process = subprocess.Popen(
-                    input_cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    shell=True,
-                    env=env,
-                    cwd=config.working_dir,
-                    text=True
-                )
-                stdin_data_raw, _ = input_process.communicate()
-                if stdin_data_raw:
-                    stdin_data = stdin_data_raw.strip()
-                    if not stdin_data.endswith('\n'):
-                        stdin_data += '\n'
-
         process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE if self.output_contains else None,
             stderr=subprocess.PIPE if self.output_contains else None,
-            stdin=subprocess.PIPE,
+            stdin=subprocess.PIPE if stdin_data is not None else None,
             shell=True,
             env=env,
             cwd=config.working_dir,
             text=True,
+            executable='/bin/bash'  # Use bash for better shell feature support
         )
 
         if cmd_background:
@@ -178,16 +147,18 @@ class CommandExecutor:
                     return True  # Indicates an error occurred
 
             # Check if expected output is present in final command
-            if self.commands[-1] == command:
-                if self.output_contains not in output:
-                    return f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
-                elif config.debugging:
-                    print(f"Output contains: {self.output_contains}")
+            if self.commands[-1] == command and self.output_contains not in output:
+                return f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
+            elif config.debugging:
+                print(f"Output contains: {self.output_contains}")
         else:
             # Simple wait and check exit code
-            process.communicate(input=stdin_data)
+            stdout, stderr = process.communicate(input=stdin_data)
             if process.returncode != 0:
-                return f"Error running command: {command}"
+                error_msg = f"Error running command: {command}"
+                if stderr:
+                    error_msg += f"\nError: {stderr}"
+                return error_msg
 
         return None
 
