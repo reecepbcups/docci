@@ -33,11 +33,19 @@ class CommandExecutor:
         if skip_reason := self._should_skip_execution(config):
             return None
 
+        # Skip if no commands to run
+        if not self.commands:
+            return None
+
         env = os.environ.copy()
         response = None
         had_error = False
 
         for command in self.commands:
+            # Skip empty commands and comments
+            if not command.strip() or command.strip().startswith('#'):
+                continue
+
             if command in config.ignore_commands:
                 continue
 
@@ -147,7 +155,9 @@ class CommandExecutor:
                     return True  # Indicates an error occurred
 
             # Check if expected output is present in final command
-            if self.commands[-1] == command and self.output_contains not in output:
+            # Only check output contains if this is the last non-empty command
+            non_empty_commands = [cmd for cmd in self.commands if cmd.strip() and not cmd.strip().startswith('#')]
+            if non_empty_commands and command == non_empty_commands[-1] and self.output_contains not in output:
                 return f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
             elif config.debugging:
                 print(f"Output contains: {self.output_contains}")
