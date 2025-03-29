@@ -3,7 +3,7 @@ def main():
     try:
         num = int(res)
     except ValueError:
-        print("Error: invalid number")
+        print("Error: invalid number", res)
         return
 
     print(f"\nNumber doubled: {num*2}")

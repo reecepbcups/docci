@@ -71,7 +71,7 @@ class CommandExecutor:
 
         return response
 
-    def _execute_command(self, command: str, env: dict, config: Config, cmd_background: bool, stdin_data: str | None = None) -> Union[str, bool, None]:
+    def _execute_command(self, command: str, env: dict, config: Config, cmd_background: bool) -> Union[str, bool, None]:
         """
         Execute a command and handle its output.
         Returns:
@@ -79,13 +79,17 @@ class CommandExecutor:
             - True: If stderr had output (error occurred)
             - None: If command executed successfully
         """
-        input_bytes: Optional[bytes] = None
-        if stdin_data is not None:
-            if isinstance(stdin_data, str):
-                # Encode string to bytes, assuming utf-8
-                input_bytes = stdin_data.encode("utf-8")
-            else:
-                input_bytes = stdin_data  # Assume it's already bytes
+        # Extract stdin data from heredoc if present
+        stdin_data = None
+        if "<<<" in command:
+            cmd_parts = command.split("<<<")
+            command = cmd_parts[0].strip()
+            stdin_data = cmd_parts[1].strip()
+
+            # Handle variable substitution in stdin data
+            if stdin_data.startswith("${") and stdin_data.endswith("}"):
+                var_name = stdin_data[2:-1]
+                stdin_data = env.get(var_name, "")
 
         process = subprocess.Popen(
             command,
@@ -105,7 +109,7 @@ class CommandExecutor:
 
         # Handle foreground process
         if self.output_contains:
-            stdout, stderr = process.communicate(input=input_bytes)
+            stdout, stderr = process.communicate(input=stdin_data.encode('utf-8') if stdin_data else None)
             output = ""
 
             # Process stdout if any
@@ -130,7 +134,7 @@ class CommandExecutor:
                 print(f"Output contains: {self.output_contains}")
         else:
             # Simple wait and check exit code
-            process.wait()
+            process.communicate(input=stdin_data.encode('utf-8') if stdin_data else None)
             if process.returncode != 0:
                 return f"Error running command: {command}"
 
