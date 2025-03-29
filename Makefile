@@ -34,6 +34,7 @@ test-examples: test-main-readme
 	$(EXEC_BINARY) examples/1-node/config.json
 	$(EXEC_BINARY) examples/2-source-code-modification/config.json
 	$(EXEC_BINARY) examples/3-stdin/config.json
+	$(EXEC_BINARY) examples/4-misc/config.json
 .PHONY: test-examples
 
 ## test-main-readme: Run the main readme examples.

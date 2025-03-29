@@ -1,0 +1,10 @@
+{
+    "paths": [
+      "examples/4-misc/README.md"
+    ],
+    "working_dir": "examples/4-misc",
+    "cleanup_cmds": [],
+    "env_vars": {},
+    "pre_cmds": [],
+    "debugging": false
+  }
