@@ -178,10 +178,11 @@ class CommandExecutor:
                     return True  # Indicates an error occurred
 
             # Check if expected output is present in final command
-            if self.commands[-1] == command and self.output_contains not in output:
-                return f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
-            elif config.debugging:
-                print(f"Output contains: {self.output_contains}")
+            if self.commands[-1] == command:
+                if self.output_contains not in output:
+                    return f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
+                elif config.debugging:
+                    print(f"Output contains: {self.output_contains}")
         else:
             # Simple wait and check exit code
             process.communicate(input=stdin_data)
