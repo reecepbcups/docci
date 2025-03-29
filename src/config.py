@@ -54,7 +54,7 @@ class Config:
 
 
     def __run_cmd(self, cmd: str, hide_output: bool, cwd: str | None = None):
-        subprocess.run(cmd, shell=True, cwd=cwd, stdout=subprocess.DEVNULL if hide_output else None, stderr=subprocess.DEVNULL if hide_output else None)
+        subprocess.run(cmd, env=self.env_vars, shell=True, cwd=cwd, stdout=subprocess.DEVNULL if hide_output else None, stderr=subprocess.DEVNULL if hide_output else None)
 
     def run_pre_cmds(self, hide_output: bool = False):
         for cmd in self.pre_cmds:

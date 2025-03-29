@@ -1,3 +1,4 @@
+import os
 import re
 import subprocess
 from typing import Dict
@@ -6,7 +7,7 @@ from typing import Dict
 def execute_command(command: str) -> str:
     """Execute a shell command and return its output."""
     try:
-        return subprocess.check_output(command, shell=True, text=True).strip()
+        return subprocess.check_output(command, shell=True, text=True, env=os.environ.copy()).strip()
     except subprocess.CalledProcessError as e:
         print(f"Warning: Failed to execute command: {command}")
         print(f"Error: {e}")

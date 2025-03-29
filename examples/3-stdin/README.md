@@ -9,5 +9,10 @@ cd ./examples/3-stdin
 ```
 
 ```bash docci-expected-output="246"
-echo "123" | python3 example.py
+python3 example.py <<< "123"
+```
+
+
+```bash docci-expected-output="246"
+printf "123\n" | python3 example.py
 ```
