@@ -1,6 +1,3 @@
-
-
-
 import os
 import threading
 import time
@@ -34,6 +31,14 @@ class TestSomething(unittest.TestCase):
         self.assertEqual(resp, 123)
         resp = Tags.extract_tag_value(tags=['docci-file=proto/example/example.proto'], tag_type=Tags.FILE_NAME(), default=None)
         self.assertEqual(resp, "proto/example/example.proto")
+
+        # Test escaped quotes
+        resp = Tags.extract_tag_value(tags=['docci-output-contains="Value with \\"quoted\\" text"'], tag_type=Tags.OUTPUT_CONTAINS(), default=None)
+        self.assertEqual(resp, 'Value with "quoted" text')
+
+        # Test escaped backslashes
+        resp = Tags.extract_tag_value(tags=['docci-output-contains="Value with \\\\ backslash"'], tag_type=Tags.OUTPUT_CONTAINS(), default=None)
+        self.assertEqual(resp, 'Value with \\ backslash')
 
     def test_config_run_1(self):
         err = run_documentation_processor(Config.load_from_file(os.path.join(curr_dir, "config1.json")))

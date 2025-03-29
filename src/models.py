@@ -137,7 +137,7 @@ class Tags(Enum):
     def extract_tag_value(tags, tag_type, default=None, converter=None):
         """
         Extract value from a tag of format 'tag_type=value' or 'tag_type="value with spaces"'
-        Also supports aliases for tag_type.
+        Also supports aliases for tag_type and handles escaped quotes.
         """
         matching_tags = []
 
@@ -168,15 +168,29 @@ class Tags(Enum):
                         # Check if the value starts with a quote
                         if value and (value[0] == '"' or value[0] == "'"):
                             quote_char = value[0]
-                            # Look for the matching closing quote
-                            for i in range(1, len(value)):
-                                if value[i] == quote_char:
-                                    # Extract the value WITHOUT quotes
-                                    value = value[1:i]
+                            value = value[1:]  # Remove opening quote
+
+                            # Process the value character by character
+                            processed_value = []
+                            i = 0
+                            while i < len(value):
+                                if value[i] == '\\' and i + 1 < len(value):
+                                    # Handle escaped characters
+                                    if value[i + 1] == quote_char:
+                                        processed_value.append(quote_char)
+                                        i += 2  # Skip both the backslash and the quote
+                                        continue
+                                    elif value[i + 1] == '\\':
+                                        processed_value.append('\\')
+                                        i += 2  # Skip both backslashes
+                                        continue
+                                elif value[i] == quote_char:
+                                    # Found unescaped closing quote
                                     break
-                        else:
-                            # No quotes, just use the value as is
-                            value = value
+                                processed_value.append(value[i])
+                                i += 1
+
+                            value = ''.join(processed_value)
 
                         matching_tags.append(value)
                         break  # Found a match, no need to check other possible tags
