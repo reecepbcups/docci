@@ -1,4 +1,6 @@
 import os
+import threading
+import time
 
 import pexpect
 
@@ -120,3 +122,65 @@ echo $VALUE2
 assert "12345" in result
 
 print(result)
+
+
+# ----------------------------
+
+# did noit require any command changes
+
+def monitor_process(proc):
+    """Function to run in a separate thread that monitors the process"""
+    try:
+        # This will block in the thread but not the main program
+        proc.expect(pexpect.EOF, timeout=None)
+        print("Process has terminated naturally")
+    except Exception as e:
+        print(f"Exception in monitor thread: {e}")
+
+# run in the background and do not block the main thread
+# process = pexpect.spawn('bash -c "while true; do date; sleep 1; done"')
+process = pexpect.spawn('''bash -c "echo 'test' > test.txt && ondod start"''')
+pid = process.pid
+print(f"Process started with PID: {pid}")
+
+# Create and start a monitoring thread
+monitor_thread = threading.Thread(target=monitor_process, args=(process,), daemon=True)
+monitor_thread.start()
+
+print("Main program continues running...")
+# Main program continues running
+print("Main program is running...")
+
+# Do stuff in your main program
+for i in range(5):
+    # Periodically check on the process or read output
+    if process.isalive():
+        try:
+            # Read any available output without blocking
+            output = process.read_nonblocking(size=1024, timeout=0.1)
+            if output:
+                print(f"Got output: {output.decode('utf-8').strip()}")
+        except pexpect.TIMEOUT:
+            # No output available right now
+            pass
+        except pexpect.EOF:
+            print("Process has ended")
+    else:
+        print("Process is no longer running")
+        break
+
+    print(f"Main program still working... ({i+1}/5)")
+    time.sleep(2)
+
+print("Main program work is complete")
+
+# Later, when you want to terminate the process
+if process.isalive():
+    print(f"Terminating process {pid}...")
+    process.terminate(force=True)
+    print("Process terminated")
+
+# Wait for the monitor thread to finish
+monitor_thread.join(timeout=2)
+
+print("Program exiting")
