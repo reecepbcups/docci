@@ -37,6 +37,10 @@ class CommandExecutor:
         had_error = False
 
         for command in self.commands:
+            # Skip empty commands and comments
+            if not command.strip() or command.strip().startswith('#'):
+                continue
+
             if command in config.ignore_commands:
                 continue
 
