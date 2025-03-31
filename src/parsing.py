@@ -131,8 +131,8 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Code
 
         # Create delay manager
         delay_manager = DelayManager(
-            post_delay=Tags.extract_tag_value(tags, Tags.POST_DELAY(), default=0, converter=int),
-            cmd_delay=Tags.extract_tag_value(tags, Tags.CMD_DELAY(), default=0, converter=int)
+            post_delay=Tags.extract_tag_value(tags, Tags.POST_DELAY(), default=0, converter=float),
+            cmd_delay=Tags.extract_tag_value(tags, Tags.CMD_DELAY(), default=0, converter=float)
         )
 
         # using regex, remove any sections of code that start with a comment '#' and end with a new line '\n', this info is not needed.
