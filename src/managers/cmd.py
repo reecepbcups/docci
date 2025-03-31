@@ -44,7 +44,12 @@ class CommandExecutor:
             if command in config.ignore_commands:
                 continue
 
-            env.update(parse_env(command))
+            # Parse and update both local and global environment
+            new_env_vars = parse_env(command)
+            env.update(new_env_vars)
+            # Update global environment
+            os.environ.update(new_env_vars)
+
             cmd_background = self._should_run_in_background(command, background_exclude_commands)
             if cmd_background and not command.strip().endswith('&'):
                 command = f"{command} &"
