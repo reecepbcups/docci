@@ -2,49 +2,37 @@ import os
 import re
 from typing import Dict
 
-# import subprocess
 import pexpect
 
 
-# TODO: resultOnly is only used in execute_substitution_commands, simplify back to not including.
-def execute_command(command: str, resultOnly: bool = False) -> tuple[int, str]:
+def execute_command(command: str) -> tuple[int, str]:
     """Execute a shell command and return its exit status and output."""
-    result, status = pexpect.run(f'''bash -c "{command}"''', env=os.environ, cwd=None,  withexitstatus=True)
-    res = result.decode('utf-8').replace("\r\n", "")
-    if resultOnly:
-        return res
-    return status, res
+    result, status = pexpect.run(f'''bash -c "{command}"''', env=os.environ, withexitstatus=True)
+    return status, result.decode('utf-8').replace("\r\n", "")
 
-
-# TODO: simplify?
 def execute_substitution_commands(value: str) -> str:
     """
     Execute commands inside backticks or $() and return the value with output substituted.
-
-    Args:
-        value: String that may contain backtick or $() commands
-
-    Returns:
-        String with commands replaced by their output
     """
     result = value
 
-    # Process all commands
-    patterns = [
-        (r'`(.*?)`', lambda match: execute_command(match.group(1), resultOnly=True)),
-        (r'\$\((.*?)\)', lambda match: execute_command(match.group(1), resultOnly=True))
-    ]
+    # Process all backtick commands
+    while '`' in result:
+        match = re.search(r'`(.*?)`', result)
+        if not match:
+            break
+        cmd = match.group(1)
+        _, output = execute_command(cmd)
+        result = result.replace(match.group(0), output)
 
-    for pattern, handler in patterns:
-        # Keep replacing until no more matches
-        while True:
-            match = re.search(pattern, result)
-            if not match:
-                break
-
-            full_match = match.group(0)
-            replacement = handler(match)
-            result = result.replace(full_match, replacement)
+    # Process all $() commands
+    while '$(' in result:
+        match = re.search(r'\$\((.*?)\)', result)
+        if not match:
+            break
+        cmd = match.group(1)
+        _, output = execute_command(cmd)
+        result = result.replace(match.group(0), output)
 
     return result
 
