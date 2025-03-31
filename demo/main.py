@@ -68,12 +68,23 @@ def parse_envs_from_lines(lines: str | list[str]) -> dict[str, str]:
     return envs
 
 def run_commands(lines: str | list[str], returnDecoded: bool = True) -> str:
-    if isinstance(lines, list):
-        lines = "\n".join(lines)
+    if isinstance(lines, str):
+        lines = lines.split("\n")
+
+    # now we can insert delays after each line if we need too based on tags
+
 
     os.environ.update(parse_envs_from_lines(lines))
 
-    result = pexpect.run(f'''bash -c "{lines}"''', env=os.environ, cwd=None)
+    # withexitstatus=1
+    # then -> (command_output, exitstatus) = run
+    # events={'(?i)password':'secret\\n'} is input if ever seen
+
+
+    lines = "\n".join(lines)
+    result, status = pexpect.run(f'''bash -c "{lines}"''', env=os.environ, cwd=None,  withexitstatus=True)
+    if status != 0:
+        raise Exception(f"Failed to run commands: status: {status} {result}")
     return result.decode('utf-8') if returnDecoded else result
 
 # result = pexpect.run('''bash -c "
