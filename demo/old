@@ -1,0 +1,28 @@
+import pexpect
+
+shell = pexpect.spawn('bash')
+shell.expect('[$#] ') # Wait for bash prompt
+
+# child.expect('Name .*: ') << this works to then send in lines?
+shell.sendline('x=500')
+shell.expect('[$#] ') # Wait for bash prompt
+
+shell.sendline('echo $x')
+shell.expect('[$#] ') # Wait for bash prompt
+
+# Get the output
+output = shell.before.decode('utf-8')
+print(f"Output from command: {output}")
+
+
+result = pexpect.run('bash -c "x=500; echo $x"').decode('utf-8')
+print(f"Output from command: {result}")
+
+
+result = pexpect.run('''bash -c "
+x=500
+echo $x
+echo 'Current directory:'
+ls -la
+"''').decode('utf-8')
+print(result)
