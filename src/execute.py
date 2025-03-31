@@ -16,12 +16,21 @@ def execute_command(command: str, **kwargs) -> tuple[int, str]:
 
 # make sure this matches `execute_command` pretty closely
 def execute_command_process(command: str, **kwargs) -> pexpect.spawn:
-    """Execute a shell command and return its exit status and output."""
-    kwargs['env'] = kwargs.get('env', os.environ.copy())
-    # kwargs['withexitstatus'] = True # TODO: does not exist
+    """Execute a shell command and return its process."""
+    env = kwargs.get('env', os.environ.copy())
+    cwd = kwargs.get('cwd', None)
+    is_background = kwargs.pop('background', False)
 
-    # TODO: logfile=None
-    return pexpect.spawn(f'''bash -c "{command}"''', **kwargs)
+    spawn_kwargs = {
+        'env': env,
+        'cwd': cwd,
+    }
+
+    # Don't wrap background commands in bash -c to prevent premature termination
+    if is_background:
+        return pexpect.spawn(command, **spawn_kwargs)
+    else:
+        return pexpect.spawn(f'''bash -c "{command}"''', **spawn_kwargs)
 
 # use with `execute_command_process`
 def monitor_process(proc):

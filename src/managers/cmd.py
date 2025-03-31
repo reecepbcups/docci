@@ -52,10 +52,10 @@ class CommandExecutor:
 
             cmd_background = self._should_run_in_background(command, background_exclude_commands)
             if cmd_background and not command.strip().endswith('&'):
-                command = f"{command} &"
+                command = f"{command} &" # TODO:
 
             if config.debugging:
-                print(f"Running command: {command}" + (" (& added for background)" if cmd_background else ""))
+                print(f"Running command: {command}", {cmd_background})
 
             # Handle pre-execution delay if set
             if self.delay_manager:
@@ -81,6 +81,32 @@ class CommandExecutor:
         return response
 
 
+    def run_background_process(self, command) -> Optional[pexpect.spawn]:
+        """
+        Runs a command in the background using pexpect.
+
+        Args:
+            command (str): The command to execute.
+        Returns:
+            pexpect.spawn: The spawned process
+        """
+        try:
+            process = execute_command_process(command, background=True)
+            pid = process.pid
+            print(f"Background process started with PID: {pid}")
+
+            # Start a monitoring thread
+            monitor_thread = threading.Thread(
+                target=monitor_process,
+                args=(process,),
+                daemon=True
+            )
+            monitor_thread.start()
+
+            return process
+        except Exception as e:
+            print(f"Error starting background process: {e}")
+            return None
 
     def _execute_command(self, command: str, env: dict, config: Config, cmd_background: bool) -> Union[str, bool, None]:
         """
@@ -100,17 +126,23 @@ class CommandExecutor:
         #     text=False,
         # )
         # status, resp = execute_command(command, cwd=config.working_dir)
-        process = execute_command_process(command, cwd=config.working_dir)
+
 
         if cmd_background:
-            if process.pid:
+            print(f"--- Running command in background: {command}")
+            process = self.run_background_process(command)
+            if process:
+                print(f"--- Running command in background: pid:{process.pid}, {command}")
                 process_manager.add_process(process.pid)
             return None
+        else:
+            process = execute_command_process(command, cwd=config.working_dir)
 
-        monitor_thread: Optional[threading.Thread] = None
+        # monitor_thread: Optional[threading.Thread] = None
         if cmd_background:
-            monitor_thread = threading.Thread(target=monitor_process, args=(process,), daemon=True)
-            monitor_thread.start()
+            # monitor_thread = threading.Thread(target=monitor_process, args=(process,), daemon=True)
+            # print(f"--- Running command in background: monitor_thread: {monitor_thread}")
+            # monitor_thread.start()
             # TODO: do I join or anything?
             return None
 
