@@ -36,7 +36,6 @@ class Endpoint:
         while True:
             try:
                 requests.get(url)
-                time.sleep(2)
                 yield True, f"Success: endpoint is up: {url}"
                 break
             except requests.exceptions.RequestException:

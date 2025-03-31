@@ -55,7 +55,7 @@ class CommandExecutor:
                 command = f"{command} &" # TODO:
 
             if config.debugging:
-                print(f"Running command: {command}", {cmd_background})
+                print(f"Running: {command=}, {cmd_background=}")
 
             # Handle pre-execution delay if set
             if self.delay_manager:
@@ -108,6 +108,7 @@ class CommandExecutor:
             print(f"Error starting background process: {e}")
             return None
 
+    # TODO: remove cmd_background and just set if the line ends with &
     def _execute_command(self, command: str, env: dict, config: Config, cmd_background: bool) -> Union[str, bool, None]:
         """
         Execute a command and handle its output.
@@ -116,35 +117,15 @@ class CommandExecutor:
             - True: If stderr had output (error occurred)
             - None: If command executed successfully
         """
-        # process = subprocess.Popen(
-        #     command,
-        #     stdout=subprocess.PIPE if self.output_contains else None,
-        #     stderr=subprocess.PIPE if self.output_contains else None,
-        #     shell=True,
-        #     env=env,
-        #     cwd=config.working_dir,
-        #     text=False,
-        # )
-        # status, resp = execute_command(command, cwd=config.working_dir)
-
-
         if cmd_background:
             print(f"--- Running command in background: {command}")
             process = self.run_background_process(command)
             if process:
-                print(f"--- Running command in background: pid:{process.pid}, {command}")
-                process_manager.add_process(process.pid)
+                print(f"--- Running command in background: {process.pid=}, {command=}")
+                process_manager.add_process(process.pid, command)
             return None
         else:
             process = execute_command_process(command, cwd=config.working_dir)
-
-        # monitor_thread: Optional[threading.Thread] = None
-        if cmd_background:
-            # monitor_thread = threading.Thread(target=monitor_process, args=(process,), daemon=True)
-            # print(f"--- Running command in background: monitor_thread: {monitor_thread}")
-            # monitor_thread.start()
-            # TODO: do I join or anything?
-            return None
 
         if self.output_contains:
             # TODO: while? or
@@ -170,6 +151,7 @@ class CommandExecutor:
                     print("Process has ended")
         else:
             returncode = process.wait()
+            print(f'---return code {returncode}')
             if returncode != 0:
                 return f"Error running command: {command}; returncode: {returncode}"
 
