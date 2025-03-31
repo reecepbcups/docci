@@ -29,26 +29,19 @@ class CommandExecutor:
         config: Config,
         background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"],
     ) -> str | None:
-        if skip_reason := self._should_skip_execution(config):
+        if skip_reason := self._should_skip_codeblock_execution(config):
+            print(f"{skip_reason=}")
             return None
 
-        env = os.environ.copy()
         response = None
         had_error = False
 
         for command in self.commands:
-            # Skip empty commands and comments
-            if not command.strip() or command.strip().startswith('#'):
+            if self._should_skip_cmd_execution(config, command):
                 continue
 
-            if command in config.ignore_commands:
-                continue
-
-            # Parse and update both local and global environment
-            new_env_vars = parse_env(command)
-            env.update(new_env_vars)
             # Update global environment
-            os.environ.update(new_env_vars)
+            os.environ.update(parse_env(command))
 
             cmd_background = self._should_run_in_background(command, background_exclude_commands)
             if cmd_background and not command.strip().endswith('&'):
@@ -62,7 +55,7 @@ class CommandExecutor:
                 self.delay_manager.handle_delay("cmd")
 
             # Execute command and handle result
-            result = self._execute_command(command, env, config, cmd_background)
+            result = self._execute_command(command, os.environ.copy(), config, cmd_background)
             if isinstance(result, str):
                 response = result
                 break
@@ -138,7 +131,16 @@ class CommandExecutor:
 
         return None
 
-    def _should_skip_execution(self, config: Config) -> bool:
+    def _should_skip_cmd_execution(self, config:Config, command: str) -> bool:
+        # Skip empty commands and comments
+        if not command.strip() or command.strip().startswith('#'):
+            return True
+
+        if command in config.ignore_commands:
+            return True
+        return False
+
+    def _should_skip_codeblock_execution(self, config: Config) -> bool:
         """Check various conditions that would cause us to skip command execution."""
         # Skip if marked as ignored
         if self.ignored:
