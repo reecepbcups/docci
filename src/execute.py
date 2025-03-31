@@ -1,17 +1,22 @@
+import os
 import re
-import subprocess
 from typing import Dict
 
+# import subprocess
+import pexpect
 
-def execute_command(command: str) -> str:
-    """Execute a shell command and return its output."""
-    try:
-        return subprocess.check_output(command, shell=True, text=True).strip()
-    except subprocess.CalledProcessError as e:
-        print(f"Warning: Failed to execute command: {command}")
-        print(f"Error: {e}")
-        return command  # Return original command if execution fails
 
+# TODO: resultOnly is only used in execute_substitution_commands, simplify back to not including.
+def execute_command(command: str, resultOnly: bool = False) -> tuple[int, str]:
+    """Execute a shell command and return its exit status and output."""
+    result, status = pexpect.run(f'''bash -c "{command}"''', env=os.environ, cwd=None,  withexitstatus=True)
+    res = result.decode('utf-8').replace("\r\n", "")
+    if resultOnly:
+        return res
+    return status, res
+
+
+# TODO: simplify?
 def execute_substitution_commands(value: str) -> str:
     """
     Execute commands inside backticks or $() and return the value with output substituted.
@@ -26,8 +31,8 @@ def execute_substitution_commands(value: str) -> str:
 
     # Process all commands
     patterns = [
-        (r'`(.*?)`', lambda match: execute_command(match.group(1))),
-        (r'\$\((.*?)\)', lambda match: execute_command(match.group(1)))
+        (r'`(.*?)`', lambda match: execute_command(match.group(1), resultOnly=True)),
+        (r'\$\((.*?)\)', lambda match: execute_command(match.group(1), resultOnly=True))
     ]
 
     for pattern, handler in patterns:
@@ -57,6 +62,7 @@ def parse_env(command: str) -> Dict[str, str]:
     if '=' not in command:
         return {}
 
+    # TODO: how to merge this with the normal, we should not need an export specific method.
     # First check for export KEY=VALUE pattern
     export_match = re.match(r'^export\s+([A-Za-z_][A-Za-z0-9_]*)=(.*)$', command.strip())
     if export_match:

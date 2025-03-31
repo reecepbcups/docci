@@ -29,8 +29,8 @@ class CommandExecutor:
         config: Config,
         background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"],
     ) -> str | None:
-        if skip_reason := self._should_skip_codeblock_execution(config):
-            print(f"{skip_reason=}")
+        if should_skip := self._should_skip_codeblock_execution(config):
+            print(f"{should_skip=}")
             return None
 
         response = None
