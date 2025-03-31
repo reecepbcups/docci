@@ -37,10 +37,19 @@ class CommandExecutor:
         had_error = False
 
         for command in self.commands:
+            # Skip empty commands and comments
+            if not command.strip() or command.strip().startswith('#'):
+                continue
+
             if command in config.ignore_commands:
                 continue
 
-            env.update(parse_env(command))
+            # Parse and update both local and global environment
+            new_env_vars = parse_env(command)
+            env.update(new_env_vars)
+            # Update global environment
+            os.environ.update(new_env_vars)
+
             cmd_background = self._should_run_in_background(command, background_exclude_commands)
             if cmd_background and not command.strip().endswith('&'):
                 command = f"{command} &"
@@ -114,11 +123,13 @@ class CommandExecutor:
                 if err:
                     return True  # Indicates an error occurred
 
-            # Check if expected output is present in final command
-            if self.commands[-1] == command and self.output_contains not in output:
-                return f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
-            elif config.debugging:
-                print(f"Output contains: {self.output_contains}")
+            # Only check output contains if this is the last non-empty command
+            non_empty_commands = [cmd for cmd in self.commands if cmd.strip() and not cmd.strip().startswith('#')]
+            if non_empty_commands and command == non_empty_commands[-1]:
+                if self.output_contains not in output:
+                    return f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
+                elif config.debugging:
+                    print(f"Output contains: {self.output_contains}")
         else:
             # Simple wait and check exit code
             process.wait()

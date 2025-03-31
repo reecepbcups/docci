@@ -35,6 +35,29 @@ class TestSomething(unittest.TestCase):
         resp = Tags.extract_tag_value(tags=['docci-file=proto/example/example.proto'], tag_type=Tags.FILE_NAME(), default=None)
         self.assertEqual(resp, "proto/example/example.proto")
 
+    def test_delays(self):
+        # Test integer delay
+        resp = Tags.extract_tag_value(tags=['docci-delay-after=123'], tag_type=Tags.POST_DELAY(), default=None, converter=float)
+        self.assertEqual(resp, 123.0)
+
+        # Test float delay
+        resp = Tags.extract_tag_value(tags=['docci-delay-after=0.5'], tag_type=Tags.POST_DELAY(), default=None, converter=float)
+        self.assertEqual(resp, 0.5)
+
+        # Test float delay with multiple decimal places
+        resp = Tags.extract_tag_value(tags=['docci-delay-after=1.234'], tag_type=Tags.POST_DELAY(), default=None, converter=float)
+        self.assertEqual(resp, 1.234)
+
+    # TODO:
+    # def test_escaped_quoptes(self):
+    #     # Test escaped quotes
+    #     resp = Tags.extract_tag_value(tags=['docci-output-contains="Value with \\"quoted\\" text"'], tag_type=Tags.OUTPUT_CONTAINS(), default=None)
+    #     self.assertEqual(resp, 'Value with "quoted" text')
+
+    #     # Test escaped backslashes
+    #     resp = Tags.extract_tag_value(tags=['docci-output-contains="Value with \\\\ backslash"'], tag_type=Tags.OUTPUT_CONTAINS(), default=None)
+    #     self.assertEqual(resp, 'Value with \\ backslash')
+
     def test_config_run_1(self):
         err = run_documentation_processor(Config.load_from_file(os.path.join(curr_dir, "config1.json")))
         self.assertEqual(err, None, err)
@@ -130,3 +153,18 @@ class TestSomething(unittest.TestCase):
             # always less than max timeout (reason for little added buffer here)
             self.assertTrue(time.time() - startTime < max_timeout+0.5, f"Time exceeded {max_timeout} seconds")
 
+    def test_float_delays(self):
+        # Test float delay in code block
+        start_time = time.time()
+        delay = 0.5
+
+        dv = parse_markdown_code_blocks(config=None, content=f'''```bash docci-delay-after={delay}
+        echo "test"
+        ```''')[0]
+
+        self.assertEqual(dv.delay_manager.post_delay, delay)
+        dv.delay_manager.handle_delay("post")
+
+        elapsed = time.time() - start_time
+        # Allow for small timing variations but ensure it's close to the delay
+        self.assertTrue(delay - 0.1 <= elapsed <= delay + 0.1, f"Expected delay around {delay}s, got {elapsed}s")
