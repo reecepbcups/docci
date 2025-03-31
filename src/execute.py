@@ -5,9 +5,13 @@ from typing import Dict
 import pexpect
 
 
-def execute_command(command: str) -> tuple[int, str]:
+def execute_command(command: str, **kwargs) -> tuple[int, str]:
     """Execute a shell command and return its exit status and output."""
-    result, status = pexpect.run(f'''bash -c "{command}"''', env=os.environ, withexitstatus=True)
+    kwargs['env'] = kwargs.get('env', os.environ)
+    kwargs['withexitstatus'] = True
+
+    # TODO: logfile=None
+    result, status = pexpect.run(f'''bash -c "{command}"''', **kwargs)
     return status, result.decode('utf-8').replace("\r\n", "")
 
 def execute_substitution_commands(value: str) -> str:
@@ -36,6 +40,7 @@ def execute_substitution_commands(value: str) -> str:
 
     return result
 
+# TODO: is $(command) supported here as well?
 def parse_env(command: str) -> Dict[str, str]:
     """
     Parse environment variable commands, handling backtick execution and inline env vars.

@@ -3,6 +3,8 @@ import os
 import subprocess
 from typing import Dict, List
 
+from src.execute import execute_command
+
  # https://github.com/rouge-ruby/rouge/wiki/List-of-supported-languages-and-lexers
 ScriptingLanguages = ["shell", "bash", "sh", "zsh", "ksh"] # if it is not in here then it is likely a source ode
 
@@ -53,8 +55,9 @@ class Config:
         return collected_files
 
 
+    # TODO: remove hide_output ?
     def __run_cmd(self, cmd: str, hide_output: bool, cwd: str | None = None):
-        subprocess.run(cmd, shell=True, cwd=cwd, stdout=subprocess.DEVNULL if hide_output else None, stderr=subprocess.DEVNULL if hide_output else None)
+        execute_command(cmd, cwd=cwd)
 
     def run_pre_cmds(self, hide_output: bool = False):
         for cmd in self.pre_cmds:
