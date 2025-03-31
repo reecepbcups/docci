@@ -7,12 +7,31 @@ import pexpect
 
 def execute_command(command: str, **kwargs) -> tuple[int, str]:
     """Execute a shell command and return its exit status and output."""
-    kwargs['env'] = kwargs.get('env', os.environ)
+    kwargs['env'] = kwargs.get('env', os.environ.copy())
     kwargs['withexitstatus'] = True
 
     # TODO: logfile=None
     result, status = pexpect.run(f'''bash -c "{command}"''', **kwargs)
     return status, result.decode('utf-8').replace("\r\n", "")
+
+# make sure this matches `execute_command` pretty closely
+def execute_command_process(command: str, **kwargs) -> pexpect.spawn:
+    """Execute a shell command and return its exit status and output."""
+    kwargs['env'] = kwargs.get('env', os.environ.copy())
+    # kwargs['withexitstatus'] = True # TODO: does not exist
+
+    # TODO: logfile=None
+    return pexpect.spawn(f'''bash -c "{command}"''', **kwargs)
+
+# use with `execute_command_process`
+def monitor_process(proc):
+    """Function to run in a separate thread that monitors the process"""
+    try:
+        # This will block in the thread but not the main program
+        proc.expect(pexpect.EOF, timeout=None)
+        print("Process has terminated naturally")
+    except Exception as e:
+        print(f"Exception in monitor thread: {e}")
 
 def execute_substitution_commands(value: str) -> str:
     """

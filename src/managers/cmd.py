@@ -1,13 +1,20 @@
 import os
 import platform
 import shutil
-import subprocess
 import sys
+import threading
 from dataclasses import dataclass
 from typing import List, Optional, Union
 
+import pexpect
+
 from src.config import Config
-from src.execute import parse_env
+from src.execute import (
+    execute_command,
+    execute_command_process,
+    monitor_process,
+    parse_env,
+)
 from src.managers.delay import DelayManager
 from src.processes_manager import process_manager
 
@@ -73,6 +80,8 @@ class CommandExecutor:
 
         return response
 
+
+
     def _execute_command(self, command: str, env: dict, config: Config, cmd_background: bool) -> Union[str, bool, None]:
         """
         Execute a command and handle its output.
@@ -81,53 +90,90 @@ class CommandExecutor:
             - True: If stderr had output (error occurred)
             - None: If command executed successfully
         """
-        process = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE if self.output_contains else None,
-            stderr=subprocess.PIPE if self.output_contains else None,
-            shell=True,
-            env=env,
-            cwd=config.working_dir,
-            text=False,
-        )
+        # process = subprocess.Popen(
+        #     command,
+        #     stdout=subprocess.PIPE if self.output_contains else None,
+        #     stderr=subprocess.PIPE if self.output_contains else None,
+        #     shell=True,
+        #     env=env,
+        #     cwd=config.working_dir,
+        #     text=False,
+        # )
+        # status, resp = execute_command(command, cwd=config.working_dir)
+        process = execute_command_process(command, cwd=config.working_dir)
 
         if cmd_background:
             if process.pid:
                 process_manager.add_process(process.pid)
             return None
 
-        # Handle foreground process
+        monitor_thread: Optional[threading.Thread] = None
+        if cmd_background:
+            monitor_thread = threading.Thread(target=monitor_process, args=(process,), daemon=True)
+            monitor_thread.start()
+            # TODO: do I join or anything?
+            return None
+
         if self.output_contains:
-            stdout, stderr = process.communicate()
-            output = ""
+            # TODO: while? or
+            if process.isalive():
+                try:
+                    # Read any available output without blocking
+                    o = process.read_nonblocking(size=1024, timeout=0.1)
+                    if o:
+                        output = o.decode('utf-8').strip()
+                        print(f"Got output: {output}")
 
-            # Process stdout if any
-            if stdout:
-                sys.stdout.buffer.write(stdout)
-                sys.stdout.flush()
-                output += stdout.decode('utf-8', errors='replace')
+                        non_empty_commands = [cmd for cmd in self.commands if cmd.strip() and not cmd.strip().startswith('#')]
+                        if non_empty_commands and command == non_empty_commands[-1]:
+                            if self.output_contains not in output:
+                                return f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
+                            elif config.debugging:
+                                print(f"Output contains: {self.output_contains}")
 
-            # Process stderr if any
-            if stderr:
-                sys.stderr.buffer.write(stderr)
-                sys.stderr.flush()
-                err = stderr.decode('utf-8', errors='replace')
-                output += err
-                if err:
-                    return True  # Indicates an error occurred
-
-            # Only check output contains if this is the last non-empty command
-            non_empty_commands = [cmd for cmd in self.commands if cmd.strip() and not cmd.strip().startswith('#')]
-            if non_empty_commands and command == non_empty_commands[-1]:
-                if self.output_contains not in output:
-                    return f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
-                elif config.debugging:
-                    print(f"Output contains: {self.output_contains}")
+                except pexpect.TIMEOUT:
+                    # No output available right now
+                    pass
+                except pexpect.EOF:
+                    print("Process has ended")
         else:
-            # Simple wait and check exit code
-            process.wait()
-            if process.returncode != 0:
-                return f"Error running command: {command}"
+            returncode = process.wait()
+            if returncode != 0:
+                return f"Error running command: {command}; returncode: {returncode}"
+
+
+        # Handle foreground process
+        # if self.output_contains:
+        #     stdout, stderr = process.communicate()
+        #     output = ""
+
+        #     # Process stdout if any
+        #     if stdout:
+        #         sys.stdout.buffer.write(stdout)
+        #         sys.stdout.flush()
+        #         output += stdout.decode('utf-8', errors='replace')
+
+        #     # Process stderr if any
+        #     if stderr:
+        #         sys.stderr.buffer.write(stderr)
+        #         sys.stderr.flush()
+        #         err = stderr.decode('utf-8', errors='replace')
+        #         output += err
+        #         if err:
+        #             return True  # Indicates an error occurred
+
+        #     # Only check output contains if this is the last non-empty command
+        #     non_empty_commands = [cmd for cmd in self.commands if cmd.strip() and not cmd.strip().startswith('#')]
+        #     if non_empty_commands and command == non_empty_commands[-1]:
+        #         if self.output_contains not in output:
+        #             return f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
+        #         elif config.debugging:
+        #             print(f"Output contains: {self.output_contains}")
+        # else:
+        #     # Simple wait and check exit code
+        #     process.wait()
+        #     if process.returncode != 0:
+        #         return f"Error running command: {command}"
 
         return None
 

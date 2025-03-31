@@ -1,6 +1,5 @@
 import json
 import os
-import subprocess
 from typing import Dict, List
 
 from src.execute import execute_command
