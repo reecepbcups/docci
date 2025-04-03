@@ -119,22 +119,27 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
 status, res = execute_command("echo 12345", is_debugging=True, cwd=os.getcwd())
 print(status, res)
 
-repo_root = os.popen("git rev-parse --show-toplevel").read().strip()
-node_ex_dir = os.path.join(repo_root, "examples", "1-node") ## ensures another cwd exists and works
+# repo_root = os.popen("git rev-parse --show-toplevel").read().strip()
+# node_ex_dir = os.path.join(repo_root, "examples", "1-node") ## ensures another cwd exists and works
 
 # spawn = execute_command("ping 8.8.8.8", is_debugging=True, cwd=repo_root, is_background=True)
 # print(spawn.pid)
 
+# set env variable DEPLOYER_PRIV_KEY to `DEPLOYER_PRIV_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
+os.environ['DEPLOYER_PRIV_KEY'] = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
+
+# working input example
+print(execute_command('echo "12345678" | ondod keys unsafe-import-eth-key test-deploy-acc ${DEPLOYER_PRIV_KEY} --keyring-backend test', is_debugging=True, cwd=os.getcwd()))
+print(execute_command('ondod keys delete test-deploy-acc <<< "Y"', is_debugging=True, cwd=os.getcwd()))
 
 
 
 # streaming_process = StreamingProcess("ping -n -i 0.1 8.8.8.8").start().attach_consumer(StreamingProcess.output_consumer)
-streaming_process = StreamingProcess("ondod start").start().attach_consumer(StreamingProcess.output_consumer)
-
-# iterate throguh numbers here
-for i in range(10):
-    print(i)
-    time.sleep(1)
-
-# kill the process
-streaming_process.stop()
+#
+# streaming_process = StreamingProcess("ondod start").start().attach_consumer(StreamingProcess.output_consumer)
+# # iterate throguh numbers here
+# for i in range(10):
+#     print(i)
+#     time.sleep(1)
+# # kill the process
+# streaming_process.stop()
