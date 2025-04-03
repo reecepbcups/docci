@@ -1,5 +1,6 @@
 import os
 import re
+import shlex
 import sys
 from typing import Dict
 
@@ -28,13 +29,25 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
 
     # command may ONLY be a single line that is a bash env variable export. How can I check for this in pexpect?
 
+    def cmd_to_run() -> str:
+        _tmp = command
+
+        # replace any " with ' in the command
+        # annoying little hack required for bash -c to be happy for commands that need
+        # to nest cmds
+        _tmp = _tmp.replace('"', "'")
+
+        res = f'''bash -c "{_tmp}"'''
+        print(f"Running actual nested command: {res}")
+        return res
+
     if not is_background:
         kwargs['withexitstatus'] = True
         env = os.environ.copy()  # Start with a copy of the current env
         env.update(
             kwargs.pop("env", {})
         )  # Update with any env vars passed in kwargs
-        result, status = pexpect.run(f'''bash -c "{command}"''', env=env, **kwargs)
+        result, status = pexpect.run(cmd_to_run(), env=env, **kwargs)
 
         # (cosmetic) sometimes color is not set so a previous end of command color is used.
         # if the result has a proper color code then that will be used instead.
@@ -49,7 +62,7 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
         return status, decoded
 
 
-    spawn = StreamingProcess(f'''bash -c "{command}"''', cwd=kwargs['cwd']).start().attach_consumer(StreamingProcess.output_consumer)
+    spawn = StreamingProcess(cmd_to_run(), cwd=kwargs['cwd']).start().attach_consumer(StreamingProcess.output_consumer)
     process = spawn.process
     if process.pid:
         process_manager.add_process(spawn, command)
