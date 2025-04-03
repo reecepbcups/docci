@@ -37,11 +37,7 @@ class CommandExecutor:
         had_error = False
 
         for command in self.commands:
-            # Skip empty commands and comments
-            if not command.strip() or command.strip().startswith('#'):
-                continue
-
-            if command in config.ignore_commands:
+            if self._should_skip_cmd_execution(config, command):
                 continue
 
             # Parse and update both local and global environment
@@ -166,6 +162,15 @@ class CommandExecutor:
             print(f"Skipping command since {self.binary} is already installed.")
             return True
 
+        return False
+
+    def _should_skip_cmd_execution(self, config:Config, command: str) -> bool:
+        # Skip empty commands and comments
+        if not command.strip() or command.strip().startswith('#'):
+            return True
+
+        if command in config.ignore_commands:
+            return True
         return False
 
     def _should_run_in_background(self, command: str, exclude_commands: List[str]) -> bool:
