@@ -99,10 +99,7 @@ class CommandExecutor:
         tmp = execute_command(command, is_background=cmd_background, is_debugging=config.debugging, cwd=config.working_dir)
 
         if cmd_background:
-            process: spawn = tmp
-            # TODO: move this when we spawn it actually? i.e. no reason to actually return spawn here
-            if process.pid:
-                process_manager.add_process(process.pid, command)
+            # process: spawn = tmp
             return None
 
         status: int = tmp[0]
