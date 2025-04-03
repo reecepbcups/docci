@@ -27,9 +27,9 @@ class CommandExecutor:
     def run_commands(
         self,
         config: Config,
-        background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"],
+        background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"], # TODO: remove?
     ) -> str | None:
-        if skip_reason := self._should_skip_execution(config):
+        if skip_reason := self._should_skip_codeblock_execution(config):
             return None
 
         env = os.environ.copy()
@@ -37,32 +37,26 @@ class CommandExecutor:
         had_error = False
 
         for command in self.commands:
-            # Skip empty commands and comments
-            if not command.strip() or command.strip().startswith('#'):
+            if self._should_skip_cmd_execution(config, command):
                 continue
 
-            if command in config.ignore_commands:
-                continue
-
-            # Parse and update both local and global environment
-            new_env_vars = parse_env(command)
-            env.update(new_env_vars)
-            # Update global environment
-            os.environ.update(new_env_vars)
+            # Update global environment (and persist through the future codeblock sections on this test)
+            os.environ.update(parse_env(command))
 
             cmd_background = self._should_run_in_background(command, background_exclude_commands)
+            # TODO: remove and handle in the actual execution instead
             if cmd_background and not command.strip().endswith('&'):
                 command = f"{command} &"
 
             if config.debugging:
-                print(f"Running command: {command}" + (" (& added for background)" if cmd_background else ""))
+                print(f"Running: {command=}, {cmd_background=}")
 
             # Handle pre-execution delay if set
             if self.delay_manager:
                 self.delay_manager.handle_delay("cmd")
 
             # Execute command and handle result
-            result = self._execute_command(command, env, config, cmd_background)
+            result = self._execute_command(command, os.environ.copy(), config, cmd_background)
             if isinstance(result, str):
                 response = result
                 break
@@ -100,7 +94,7 @@ class CommandExecutor:
 
         if cmd_background:
             if process.pid:
-                process_manager.add_process(process.pid)
+                process_manager.add_process(process.pid, command)
             return None
 
         # Handle foreground process
@@ -138,7 +132,7 @@ class CommandExecutor:
 
         return None
 
-    def _should_skip_execution(self, config: Config) -> bool:
+    def _should_skip_codeblock_execution(self, config: Config) -> bool:
         """Check various conditions that would cause us to skip command execution."""
         # Skip if marked as ignored
         if self.ignored:
@@ -166,6 +160,15 @@ class CommandExecutor:
             print(f"Skipping command since {self.binary} is already installed.")
             return True
 
+        return False
+
+    def _should_skip_cmd_execution(self, config:Config, command: str) -> bool:
+        # Skip empty commands and comments
+        if not command.strip() or command.strip().startswith('#'):
+            return True
+
+        if command in config.ignore_commands:
+            return True
         return False
 
     def _should_run_in_background(self, command: str, exclude_commands: List[str]) -> bool:
