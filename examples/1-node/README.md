@@ -10,6 +10,7 @@ export NVM_DIR="$HOME/.nvm"
 nvm install v21.7.3
 ```
 
+<!-- TODO: how to persist this within the shell for the duration of the docci run? -->
 ```bash docci-ignore
 cd examples/1-node
 ```

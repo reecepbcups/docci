@@ -36,8 +36,7 @@ class CommandExecutor:
         config: Config,
         background_exclude_commands: List[str] = [], # TODO: is this needed?
     ) -> str | None:
-        if should_skip := self._should_skip_codeblock_execution(config):
-            # print(f"{should_skip=}")
+        if self._should_skip_codeblock_execution(config):
             return None
 
         response = None
@@ -47,12 +46,12 @@ class CommandExecutor:
             if self._should_skip_cmd_execution(config, command):
                 continue
 
-            # Update global environment
+            # Update global environment (and persist through the future codeblock sections on this test)
             os.environ.update(parse_env(command))
 
             cmd_background = self._should_run_in_background(command, background_exclude_commands)
-            # if cmd_background and not command.strip().endswith('&'): # TODO: seeing if it will just run in the background no issues
-            #     command = f"{command} &" # TODO:
+            # if cmd_background and not command.strip().endswith('&'):
+            #     command = f"{command} &"
 
             if config.debugging:
                 print(f"Running: {command=}, {cmd_background=}")
@@ -193,15 +192,6 @@ class CommandExecutor:
 
         return None
 
-    def _should_skip_cmd_execution(self, config:Config, command: str) -> bool:
-        # Skip empty commands and comments
-        if not command.strip() or command.strip().startswith('#'):
-            return True
-
-        if command in config.ignore_commands:
-            return True
-        return False
-
     def _should_skip_codeblock_execution(self, config: Config) -> bool:
         """Check various conditions that would cause us to skip command execution."""
         # Skip if marked as ignored
@@ -230,6 +220,15 @@ class CommandExecutor:
             print(f"Skipping command since {self.binary} is already installed.")
             return True
 
+        return False
+
+    def _should_skip_cmd_execution(self, config:Config, command: str) -> bool:
+        # Skip empty commands and comments
+        if not command.strip() or command.strip().startswith('#'):
+            return True
+
+        if command in config.ignore_commands:
+            return True
         return False
 
     def _should_run_in_background(self, command: str, exclude_commands: List[str]) -> bool:

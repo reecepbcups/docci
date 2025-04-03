@@ -9,7 +9,7 @@ class _ProcessManager:
     def __init__(self):
         self.background_processes: Dict[int, str] = {}
 
-    def add_process(self, pid: int, description: str) -> None:
+    def add_process(self, pid: int, description: str = "") -> None:
         """Add a process ID to the tracked list."""
         self.background_processes[pid] = description
 
