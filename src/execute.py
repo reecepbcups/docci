@@ -26,7 +26,7 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
     # TODO: process if it is an env var and pass through `` and $()
 
     # if is_debugging:
-    print(f"    Executing {command=} in {kwargs['cwd']=}")
+    print(f"    Executing: {command=} in {kwargs['cwd']=}")
 
     if not is_background:
         kwargs['withexitstatus'] = True
@@ -44,7 +44,7 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
     spawn = StreamingProcess(f"{command}", cwd=kwargs['cwd']).start().attach_consumer(StreamingProcess.output_consumer)
     process = spawn.process
     if process.pid:
-        process_manager.add_process(process.pid, command)
+        process_manager.add_process(spawn, command)
     return process
 
 def execute_substitution_commands(value: str) -> str:

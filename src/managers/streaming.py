@@ -87,9 +87,3 @@ class StreamingProcess:
                     self.process.close(force=True)  # Terminate the process
                 except:
                     pass  # Handle potential errors when closing
-            if self.read_thread and self.read_thread.is_alive():
-                self.read_thread.join(timeout=2)  # Wait for thread to finish
-            if self.consume_thread and self.consume_thread.is_alive():
-                self.consume_thread.join(timeout=2)
-
-            print(f"StreamingProcess stopped for {self.command=}")

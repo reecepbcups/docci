@@ -93,6 +93,8 @@ os.environ.update({k: v})
 
 print(execute_command('echo hello ${PRIV_KEY}', cwd=os.getcwd())[1])
 
+print(execute_command('EXAMPLE_PORT=3001 node dist/app.js', cwd='/home/reece/Desktop/Programming/Docs/docci/examples/1-node')[1])
+
 time.sleep(1)
 
 # streaming_process = StreamingProcess("ping -n -i 0.1 8.8.8.8").start().attach_consumer(StreamingProcess.output_consumer)
