@@ -6,8 +6,10 @@ import sys
 from dataclasses import dataclass
 from typing import List, Optional, Union
 
+from pexpect import spawn
+
 from src.config import Config
-from src.execute import parse_env
+from src.execute import execute_command, parse_env
 from src.managers.delay import DelayManager
 from src.processes_manager import process_manager
 
@@ -41,12 +43,14 @@ class CommandExecutor:
                 continue
 
             # Update global environment (and persist through the future codeblock sections on this test)
+            # _execute_command will load in this
             os.environ.update(parse_env(command))
 
             cmd_background = self._should_run_in_background(command, background_exclude_commands)
-            # TODO: remove and handle in the actual execution instead
-            if cmd_background and not command.strip().endswith('&'):
-                command = f"{command} &"
+
+            # TODO: I do not think this is required anymore due to pexpect
+            # if cmd_background and not command.strip().endswith('&'):
+            #     command = f"{command} &"
 
             if config.debugging:
                 print(f"Running: {command=}, {cmd_background=}")
@@ -56,7 +60,7 @@ class CommandExecutor:
                 self.delay_manager.handle_delay("cmd")
 
             # Execute command and handle result
-            result = self._execute_command(command, os.environ.copy(), config, cmd_background)
+            result = self._execute_command(command, config, cmd_background)
             if isinstance(result, str):
                 response = result
                 break
@@ -74,7 +78,7 @@ class CommandExecutor:
 
         return response
 
-    def _execute_command(self, command: str, env: dict, config: Config, cmd_background: bool) -> Union[str, bool, None]:
+    def _execute_command(self, command: str, config: Config, cmd_background: bool) -> Union[str, bool, None]:
         """
         Execute a command and handle its output.
         Returns:
@@ -82,42 +86,55 @@ class CommandExecutor:
             - True: If stderr had output (error occurred)
             - None: If command executed successfully
         """
-        process = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE if self.output_contains else None,
-            stderr=subprocess.PIPE if self.output_contains else None,
-            shell=True,
-            env=env,
-            cwd=config.working_dir,
-            text=False,
-        )
+        # process = subprocess.Popen(
+        #     command,
+        #     stdout=subprocess.PIPE if self.output_contains else None,
+        #     stderr=subprocess.PIPE if self.output_contains else None,
+        #     shell=True,
+        #     env=env,
+        #     cwd=config.working_dir,
+        #     text=False,
+        # )
+
+        tmp = execute_command(command, is_background=cmd_background, is_debugging=config.debugging, cwd=config.working_dir)
 
         if cmd_background:
+            process: spawn = tmp
+            # TODO: move this when we spawn it actually? i.e. no reason to actually return spawn here
             if process.pid:
                 process_manager.add_process(process.pid, command)
             return None
 
+        status: int = tmp[0]
+        output: str = tmp[1] # TODO: validate this returns both stdout & stderr combined
+
         # Handle foreground process
+
+
         if self.output_contains:
-            stdout, stderr = process.communicate()
-            output = ""
+            # flush output to stdout
+            # TODO: is this proper or should I just do up higher?
 
-            # Process stdout if any
-            if stdout:
-                sys.stdout.buffer.write(stdout)
-                sys.stdout.flush()
-                output += stdout.decode('utf-8', errors='replace')
 
-            # Process stderr if any
-            if stderr:
-                sys.stderr.buffer.write(stderr)
-                sys.stderr.flush()
-                err = stderr.decode('utf-8', errors='replace')
-                output += err
-                if err:
-                    return True  # Indicates an error occurred
+        #     stdout, stderr = process.communicate()
+        #     output = ""
 
-            # Only check output contains if this is the last non-empty command
+        #     # Process stdout if any
+        #     if stdout:
+        #         sys.stdout.buffer.write(stdout)
+        #         sys.stdout.flush()
+        #         output += stdout.decode('utf-8', errors='replace')
+
+        #     # Process stderr if any
+        #     if stderr:
+        #         sys.stderr.buffer.write(stderr)
+        #         sys.stderr.flush()
+        #         err = stderr.decode('utf-8', errors='replace')
+        #         output += err
+        #         if err:
+        #             return True  # Indicates an error occurred
+
+        #     # Only check output contains if this is the last non-empty command
             non_empty_commands = [cmd for cmd in self.commands if cmd.strip() and not cmd.strip().startswith('#')]
             if non_empty_commands and command == non_empty_commands[-1]:
                 if self.output_contains not in output:
@@ -125,10 +142,8 @@ class CommandExecutor:
                 elif config.debugging:
                     print(f"Output contains: {self.output_contains}")
         else:
-            # Simple wait and check exit code
-            process.wait()
-            if process.returncode != 0:
-                return f"Error running command: {command}"
+            if status != 0:
+                return f"Error ({status=}) {command=} "
 
         return None
 
