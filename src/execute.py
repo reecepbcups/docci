@@ -32,11 +32,6 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
     def cmd_to_run() -> str:
         _tmp = command
 
-        # replace any " with ' in the command
-        # annoying little hack required for bash -c to be happy for commands that need
-        # to nest cmds
-        _tmp = _tmp.replace('"', "'")
-
         res = f'''bash -c "{_tmp}"'''
         print(f"Running actual nested command: {res}")
         return res
