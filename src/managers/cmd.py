@@ -91,7 +91,7 @@ class CommandExecutor:
             # process: spawn = tmp
             return None
 
-        status: int = tmp[0]
+        status: int | None = tmp[0]
         output: str = tmp[1]
 
 
@@ -104,8 +104,11 @@ class CommandExecutor:
                 elif config.debugging:
                     print(f"Output contains: {self.output_contains}")
         else:
+            if status is None:
+                return None
+
             if status != 0:
-                return f"Error ({status=}) {command=} "
+                return f"Error ({status=}) {command=}"
 
         return None
 
