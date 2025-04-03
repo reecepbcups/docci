@@ -44,13 +44,11 @@ class CommandExecutor:
 
             # Update global environment (and persist through the future codeblock sections on this test)
             # _execute_command will load in this
-            os.environ.update(parse_env(command))
+            envs = parse_env(command)
+            print(f"    ENVS: {envs} for {command=}")
+            os.environ.update(envs)
 
             cmd_background = self._should_run_in_background(command, background_exclude_commands)
-
-            # TODO: I do not think this is required anymore due to pexpect
-            # if cmd_background and not command.strip().endswith('&'):
-            #     command = f"{command} &"
 
             if config.debugging:
                 print(f"Running: {command=}, {cmd_background=}")
@@ -86,52 +84,19 @@ class CommandExecutor:
             - True: If stderr had output (error occurred)
             - None: If command executed successfully
         """
-        # process = subprocess.Popen(
-        #     command,
-        #     stdout=subprocess.PIPE if self.output_contains else None,
-        #     stderr=subprocess.PIPE if self.output_contains else None,
-        #     shell=True,
-        #     env=env,
-        #     cwd=config.working_dir,
-        #     text=False,
-        # )
-
         tmp = execute_command(command, is_background=cmd_background, is_debugging=config.debugging, cwd=config.working_dir)
 
+        # already handled in execute_command to run a background process thread
         if cmd_background:
             # process: spawn = tmp
             return None
 
         status: int = tmp[0]
-        output: str = tmp[1] # TODO: validate this returns both stdout & stderr combined
-
-        # Handle foreground process
+        output: str = tmp[1]
 
 
         if self.output_contains:
-            # flush output to stdout
-            # TODO: is this proper or should I just do up higher?
-
-
-        #     stdout, stderr = process.communicate()
-        #     output = ""
-
-        #     # Process stdout if any
-        #     if stdout:
-        #         sys.stdout.buffer.write(stdout)
-        #         sys.stdout.flush()
-        #         output += stdout.decode('utf-8', errors='replace')
-
-        #     # Process stderr if any
-        #     if stderr:
-        #         sys.stderr.buffer.write(stderr)
-        #         sys.stderr.flush()
-        #         err = stderr.decode('utf-8', errors='replace')
-        #         output += err
-        #         if err:
-        #             return True  # Indicates an error occurred
-
-        #     # Only check output contains if this is the last non-empty command
+            # Only check output contains if this is the last non-empty command
             non_empty_commands = [cmd for cmd in self.commands if cmd.strip() and not cmd.strip().startswith('#')]
             if non_empty_commands and command == non_empty_commands[-1]:
                 if self.output_contains not in output:

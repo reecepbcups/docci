@@ -18,8 +18,6 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
     kwargs['cwd'] = kwargs.get('cwd', os.getcwd())
     if kwargs['cwd'] is None:
         kwargs['cwd'] = os.getcwd()
-
-    # ensure cwd exists, if not error
     if not os.path.exists(kwargs['cwd']):
         raise ValueError(f"cwd {kwargs['cwd']} does not exist")
 
@@ -30,7 +28,11 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
 
     if not is_background:
         kwargs['withexitstatus'] = True
-        result, status = pexpect.run(f'''bash -c "{command}"''', **kwargs)
+        env = os.environ.copy()  # Start with a copy of the current env
+        env.update(
+            kwargs.pop("env", {})
+        )  # Update with any env vars passed in kwargs
+        result, status = pexpect.run(f'''bash -c "{command}"''', env=env, **kwargs)
 
         if status == 0:
             sys.stdout.buffer.write(result); sys.stdout.flush()
@@ -41,7 +43,7 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
         return status, decoded
 
 
-    spawn = StreamingProcess(f"{command}", cwd=kwargs['cwd']).start().attach_consumer(StreamingProcess.output_consumer)
+    spawn = StreamingProcess(f'''bash -c "{command}"''', cwd=kwargs['cwd']).start().attach_consumer(StreamingProcess.output_consumer)
     process = spawn.process
     if process.pid:
         process_manager.add_process(spawn, command)
@@ -88,6 +90,7 @@ def parse_env(command: str) -> Dict[str, str]:
     Returns:
         Dictionary of environment variables (can be empty if no env vars found)
     """
+
     # Early return if no '=' is present in the command
     if '=' not in command:
         return {}
