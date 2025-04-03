@@ -81,7 +81,7 @@ class CommandExecutor:
         return response
 
 
-    def run_background_process(self, command) -> Optional[pexpect.spawn]:
+    def run_background_process(self, command: str, config: Config) -> Optional[pexpect.spawn]:
         """
         Runs a command in the background using pexpect.
 
@@ -91,17 +91,21 @@ class CommandExecutor:
             pexpect.spawn: The spawned process
         """
         try:
-            process = execute_command_process(command, background=True)
+            process = execute_command_process(command, cwd=config.working_dir)
             pid = process.pid
-            print(f"Background process started with PID: {pid}")
+            print(f"Background process started with PID: {pid}, cmd: {command}")
 
+
+            # pass in monitor_process with is_background=True
             # Start a monitoring thread
             monitor_thread = threading.Thread(
-                target=monitor_process,
+                target=lambda x: monitor_process(x, is_background=True),
                 args=(process,),
                 daemon=True
             )
             monitor_thread.start()
+
+            process_manager.add_process(pid, command)
 
             return process
         except Exception as e:
@@ -118,11 +122,9 @@ class CommandExecutor:
             - None: If command executed successfully
         """
         if cmd_background:
-            print(f"--- Running command in background: {command}")
-            process = self.run_background_process(command)
+            process = self.run_background_process(command, config)
             if process:
-                print(f"--- Running command in background: {process.pid=}, {command=}")
-                process_manager.add_process(process.pid, command)
+                print(f"--- Running command in background: {process.pid=}, {config.working_dir=}, {command=}")
             return None
         else:
             process = execute_command_process(command, cwd=config.working_dir)
