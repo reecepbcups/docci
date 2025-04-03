@@ -26,6 +26,8 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
     # if is_debugging:
     print(f"    Executing: {command=} in {kwargs['cwd']=}")
 
+    # command may ONLY be a single line that is a bash env variable export. How can I check for this in pexpect?
+
     if not is_background:
         kwargs['withexitstatus'] = True
         env = os.environ.copy()  # Start with a copy of the current env
@@ -34,10 +36,14 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
         )  # Update with any env vars passed in kwargs
         result, status = pexpect.run(f'''bash -c "{command}"''', env=env, **kwargs)
 
+        # (cosmetic) sometimes color is not set so a previous end of command color is used.
+        # if the result has a proper color code then that will be used instead.
+        reset_color = b"\x1b[0m"
         if status == 0:
-            sys.stdout.buffer.write(result); sys.stdout.flush()
+            sys.stdout.buffer.write(reset_color + result); sys.stdout.flush()
         else:
-            sys.stderr.buffer.write(result); sys.stderr.flush()
+            # prepend \x1b[31m (red) to the result
+            sys.stderr.buffer.write(reset_color + result); sys.stderr.flush()
 
         decoded = result.decode('utf-8').replace("\r\n", "")
         return status, decoded
