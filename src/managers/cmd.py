@@ -29,7 +29,7 @@ class CommandExecutor:
         config: Config,
         background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"],
     ) -> str | None:
-        if skip_reason := self._should_skip_execution(config):
+        if skip_reason := self._should_skip_codeblock_execution(config):
             return None
 
         env = os.environ.copy()
@@ -134,7 +134,7 @@ class CommandExecutor:
 
         return None
 
-    def _should_skip_execution(self, config: Config) -> bool:
+    def _should_skip_codeblock_execution(self, config: Config) -> bool:
         """Check various conditions that would cause us to skip command execution."""
         # Skip if marked as ignored
         if self.ignored:
