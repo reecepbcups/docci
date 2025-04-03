@@ -100,7 +100,7 @@ class CommandExecutor:
 
         if cmd_background:
             if process.pid:
-                process_manager.add_process(process.pid)
+                process_manager.add_process(process.pid, command)
             return None
 
         # Handle foreground process
