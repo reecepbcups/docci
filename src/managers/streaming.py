@@ -9,7 +9,7 @@ import pexpect
 
 # StreamingProcess streams the output from a command in a non blocking way.
 class StreamingProcess:
-    def __init__(self, command, encoding='utf-8'):
+    def __init__(self, command, encoding='utf-8', **spawn_kwargs):
         self.command = command
         self.encoding = encoding
         self.process = None
@@ -17,10 +17,11 @@ class StreamingProcess:
         self.read_thread = None  # Separate thread for reading output
         self.consume_thread = None # Separate thread for consuming output
         self.is_running = False
+        self.spawn_kwargs = spawn_kwargs # i.e. pass through cwd=
 
     def start(self) -> "StreamingProcess":
         self.is_running = True
-        self.process = pexpect.spawn(self.command, encoding=self.encoding)
+        self.process = pexpect.spawn(self.command, encoding=self.encoding, **self.spawn_kwargs)
         self.read_thread = threading.Thread(target=self._read_output, daemon=True)
         self.read_thread.start()
         return self
