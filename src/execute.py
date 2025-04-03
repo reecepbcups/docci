@@ -5,14 +5,9 @@ from typing import Dict
 
 import pexpect
 
-# def execute_command(command: str) -> str:
-#     """Execute a shell command and return its output."""
-#     try:
-#         return subprocess.check_output(command, shell=True, text=True).strip()
-#     except subprocess.CalledProcessError as e:
-#         print(f"Warning: Failed to execute command: {command}")
-#         print(f"Error: {e}")
-#         return command  # Return original command if execution fails
+from src.managers.streaming import StreamingProcess
+from src.processes_manager import process_manager
+
 
 # TODO: add is_debugging
 def execute_command(command: str, is_debugging: bool = False, is_background: bool = False, **kwargs) -> tuple[int, str] | pexpect.spawn:
@@ -36,21 +31,21 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
     if not is_background:
         kwargs['withexitstatus'] = True
         result, status = pexpect.run(f'''bash -c "{command}"''', **kwargs)
+
         if status == 0:
             sys.stdout.buffer.write(result); sys.stdout.flush()
         else:
             sys.stderr.buffer.write(result); sys.stderr.flush()
 
         decoded = result.decode('utf-8').replace("\r\n", "")
-        # write to stdout
-
-
         return status, decoded
 
 
-    spawn = pexpect.spawn(f"{command}", **kwargs)
-    # TODO: cleanup PID later
-    return spawn
+    spawn = StreamingProcess(f"{command}", cwd=kwargs['cwd']).start().attach_consumer(StreamingProcess.output_consumer)
+    process = spawn.process
+    if process.pid:
+        process_manager.add_process(process.pid, command)
+    return process
 
 def execute_substitution_commands(value: str) -> str:
     """
