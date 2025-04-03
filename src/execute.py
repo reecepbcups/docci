@@ -53,7 +53,8 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
             # prepend \x1b[31m (red) to the result
             sys.stderr.buffer.write(reset_color + result); sys.stderr.flush()
 
-        decoded = result.decode('utf-8').replace("\r\n", "")
+        # Replace only \r\n with \n to standardize line endings, but preserve the newlines
+        decoded = result.decode('utf-8').replace("\r\n", "\n").strip()
         return status, decoded
 
 
