@@ -19,30 +19,42 @@ class StreamingProcess:
         self.consume_thread = None # Separate thread for consuming output
         self.is_running = False
 
-    def start(self):
+    def start(self) -> "StreamingProcess":
         self.is_running = True
         self.process = pexpect.spawn(self.command, encoding=self.encoding)
         self.read_thread = threading.Thread(target=self._read_output, daemon=True)
         self.read_thread.start()
+        return self
 
     def _read_output(self):
         try:
             while self.is_running:
-                line = self.process.readline()
+                try:
+                    line = self.process.readline()
+                except pexpect.exceptions.EOF:
+                    break # Expected when process finishes
+                except OSError as e:
+                    # Handle "Bad file descriptor" error gracefully, especially after process termination
+                    if e.errno == 9:  #errno.EBADF
+                        break
+                    else:
+                        print(f"Unexpected OSError in read_output: {e}")
+                        break
+                except Exception as e:
+                    print(f"Error reading output: {e}")
+                    break
+
                 if not line:
                     break  # Process finished or EOF
                 self.output_queue.put(line)
-        except pexpect.exceptions.EOF:
-            pass  # Expected when process finishes
-        except Exception as e:
-            print(f"Error reading output: {e}")
         finally:
             self.stop()  # Ensure cleanup
 
-    def attach_consumer(self, consumer_function):
+    def attach_consumer(self, consumer_function) -> "StreamingProcess":
          """Attaches a consumer function to process the output in a non blocking way."""
          self.consume_thread = threading.Thread(target=self._consume_output, args=(consumer_function,), daemon=True)
          self.consume_thread.start()
+         return self
 
     @staticmethod
     def output_consumer(line: str):
@@ -115,14 +127,14 @@ node_ex_dir = os.path.join(repo_root, "examples", "1-node") ## ensures another c
 
 
 
-command_to_run = "ping -n -i 0.1 8.8.8.8"  # Replace with your service command
 
-streaming_process = StreamingProcess(command_to_run)
-streaming_process.start()
-# Attach the consumer function to watch logs output
-streaming_process.attach_consumer(StreamingProcess.output_consumer)
+# streaming_process = StreamingProcess("ping -n -i 0.1 8.8.8.8").start().attach_consumer(StreamingProcess.output_consumer)
+streaming_process = StreamingProcess("ondod start").start().attach_consumer(StreamingProcess.output_consumer)
 
 # iterate throguh numbers here
 for i in range(10):
     print(i)
     time.sleep(1)
+
+# kill the process
+streaming_process.stop()
