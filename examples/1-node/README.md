@@ -11,7 +11,7 @@ nvm install v21.7.3
 ```
 
 ```bash docci-ignore
-cd tests/example1
+cd examples/1-node
 ```
 
 ## Install dependencies
@@ -28,14 +28,23 @@ npx tsc
 
 ## Run the blocking process in the background
 
-```bash docci-background docci-delay-after=1
-EXAMPLE_PORT=3000 node dist/app.js
+<!-- TODO: move this back in with the node background command. for now it does not parse -->
+```bash
+EXAMPLE_PORT=3000
+```
+
+```bash
+pwd
+```
+
+```bash docci-background docci-delay-after=2
+node dist/app.js
 ```
 
 ## Test the server output matches expected
 
 ```bash docci-output-contains="Hello World!"
-curl -X GET http://localhost:3000 --no-progress-meter
+curl -X GET http://localhost:3000
 ```
 
 ## Kill the server after testing

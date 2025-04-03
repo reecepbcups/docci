@@ -34,10 +34,10 @@ class CommandExecutor:
     def run_commands(
         self,
         config: Config,
-        background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"],
+        background_exclude_commands: List[str] = [], # TODO: is this needed?
     ) -> str | None:
         if should_skip := self._should_skip_codeblock_execution(config):
-            print(f"{should_skip=}")
+            # print(f"{should_skip=}")
             return None
 
         response = None
@@ -51,8 +51,8 @@ class CommandExecutor:
             os.environ.update(parse_env(command))
 
             cmd_background = self._should_run_in_background(command, background_exclude_commands)
-            if cmd_background and not command.strip().endswith('&'):
-                command = f"{command} &" # TODO:
+            # if cmd_background and not command.strip().endswith('&'): # TODO: seeing if it will just run in the background no issues
+            #     command = f"{command} &" # TODO:
 
             if config.debugging:
                 print(f"Running: {command=}, {cmd_background=}")
@@ -91,7 +91,7 @@ class CommandExecutor:
             pexpect.spawn: The spawned process
         """
         try:
-            process = execute_command_process(command, cwd=config.working_dir)
+            process = execute_command_process(command, is_debugging=config.debugging, cwd=config.working_dir)
             pid = process.pid
             print(f"Background process started with PID: {pid}, cmd: {command}")
 
@@ -137,7 +137,7 @@ class CommandExecutor:
                     o = process.read_nonblocking(size=1024, timeout=0.1)
                     if o:
                         output = o.decode('utf-8').strip()
-                        print(f"Got output: {output}")
+                        print(f" --- output: {output}")
 
                         non_empty_commands = [cmd for cmd in self.commands if cmd.strip() and not cmd.strip().startswith('#')]
                         if non_empty_commands and command == non_empty_commands[-1]:
@@ -153,7 +153,7 @@ class CommandExecutor:
                     print("Process has ended")
         else:
             returncode = process.wait()
-            print(f'---return code {returncode}')
+            print(f' -- return code {returncode}')
             if returncode != 0:
                 return f"Error running command: {command}; returncode: {returncode}"
 

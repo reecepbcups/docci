@@ -1,5 +1,6 @@
 import os
 import re
+import time
 from typing import Dict
 
 import pexpect
@@ -15,30 +16,41 @@ def execute_command(command: str, **kwargs) -> tuple[int, str]:
     return status, result.decode('utf-8').replace("\r\n", "")
 
 # make sure this matches `execute_command` pretty closely
-def execute_command_process(command: str, **kwargs) -> pexpect.spawn:
+def execute_command_process(command: str, is_debugging: bool = False, **kwargs) -> pexpect.spawn:
     """Execute a shell command and return its process."""
-    env = kwargs.get('env', os.environ.copy())
-    cwd = kwargs.get('cwd', None)
     is_background = kwargs.pop('background', False)
 
     spawn_kwargs = {
-        'env': env,
-        'cwd': cwd,
+        'env': kwargs.get('env', os.environ.copy()),
+        'cwd':  kwargs.get('cwd', None),
     }
+
+    if is_debugging:
+        print(f" --- {spawn_kwargs['cwd']=}, {is_background=}, {command=}")
 
     # Don't wrap background commands in bash -c to prevent premature termination
     if is_background:
-        return pexpect.spawn(command, **spawn_kwargs)
+        return pexpect.spawn(f"{command}", **spawn_kwargs)
     else:
         return pexpect.spawn(f'''bash -c "{command}"''', **spawn_kwargs)
 
 # use with `execute_command_process`
-def monitor_process(proc):
+def monitor_process(proc: pexpect.spawn, is_background=False) -> None:
     """Function to run in a separate thread that monitors the process"""
+
+    # if is_background then we do not expect anything, just sleep? or just verify it is alive still?
+    if is_background:
+        try:
+            while True:
+                time.sleep(1)
+        except Exception as e:
+            print(f"Exception in monitor thread: {e}")
+
     try:
+        # time.sleep(0.5)  # Give the background process a chance to start
         # This will block in the thread but not the main program
         proc.expect(pexpect.EOF, timeout=None)
-        print("Process has terminated naturally")
+        print("Process has terminated naturally", proc.pid)
     except Exception as e:
         print(f"Exception in monitor thread: {e}")
 

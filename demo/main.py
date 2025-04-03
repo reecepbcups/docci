@@ -139,7 +139,7 @@ def monitor_process(proc):
 
 # run in the background and do not block the main thread
 # process = pexpect.spawn('bash -c "while true; do date; sleep 1; done"')
-process = pexpect.spawn('''bash -c "echo 'test' > test.txt && ondod start"''')
+process = pexpect.spawn('''bash -c "cd ./examples/1-node && node dist/app.js"''')
 pid = process.pid
 print(f"Process started with PID: {pid}")
 
