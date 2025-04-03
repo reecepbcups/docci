@@ -34,7 +34,6 @@ class CommandExecutor:
         if skip_reason := self._should_skip_codeblock_execution(config):
             return None
 
-        env = os.environ.copy()
         response = None
         had_error = False
 
@@ -58,7 +57,8 @@ class CommandExecutor:
                 self.delay_manager.handle_delay("cmd")
 
             # Execute command and handle result
-            result = self._execute_command(command, config, cmd_background)
+            # this passes the os.environ copy due to working with multiple threads
+            result = self._execute_command(command, config, cmd_background, env=os.environ.copy())
             if isinstance(result, str):
                 response = result
                 break
@@ -76,7 +76,7 @@ class CommandExecutor:
 
         return response
 
-    def _execute_command(self, command: str, config: Config, cmd_background: bool) -> Union[str, bool, None]:
+    def _execute_command(self, command: str, config: Config, cmd_background: bool, env: dict) -> Union[str, bool, None]:
         """
         Execute a command and handle its output.
         Returns:
@@ -84,7 +84,7 @@ class CommandExecutor:
             - True: If stderr had output (error occurred)
             - None: If command executed successfully
         """
-        tmp = execute_command(command, is_background=cmd_background, is_debugging=config.debugging, cwd=config.working_dir)
+        tmp = execute_command(command, is_background=cmd_background, is_debugging=config.debugging, cwd=config.working_dir, env=env)
 
         # already handled in execute_command to run a background process thread
         if cmd_background:
