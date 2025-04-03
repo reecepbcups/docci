@@ -87,7 +87,7 @@ Add delays between commands for stability after the endpoint from a previous com
 
 ````bash
 ```bash docci-output-contains="GOOD" docci-wait-for-endpoint=http://localhost:3000|30
-echo "Health: `curl http://localhost:3000/health`"
+curl http://localhost:3000/health
 ```
 ````
 
