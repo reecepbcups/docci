@@ -1,8 +1,7 @@
 import os
 import re
-import shlex
 import sys
-from typing import Dict
+from typing import Dict, Optional
 
 import pexpect
 
@@ -27,14 +26,14 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
     # if is_debugging:
     print(f"    Executing: {command=} in {kwargs['cwd']=}")
 
+    if error := validate_command(command):
+        print(f"    Error: {error}")
+        return 1, error
+
     # command may ONLY be a single line that is a bash env variable export. How can I check for this in pexpect?
+    cmd = f'''bash -c "{command}"'''
+    timeout = None
 
-    def cmd_to_run() -> str:
-        _tmp = command
-
-        res = f'''bash -c "{_tmp}"'''
-        print(f"Running actual nested command: {res}")
-        return res
 
     if not is_background:
         kwargs['withexitstatus'] = True
@@ -42,7 +41,7 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
         env.update(
             kwargs.pop("env", {})
         )  # Update with any env vars passed in kwargs
-        result, status = pexpect.run(cmd_to_run(), env=env, **kwargs)
+        result, status = pexpect.run(cmd, env=env, timeout=timeout, **kwargs)
 
         # (cosmetic) sometimes color is not set so a previous end of command color is used.
         # if the result has a proper color code then that will be used instead.
@@ -58,7 +57,7 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
         return status, decoded
 
 
-    spawn = StreamingProcess(cmd_to_run(), cwd=kwargs['cwd']).start().attach_consumer(StreamingProcess.output_consumer)
+    spawn = StreamingProcess(cmd, cwd=kwargs['cwd'], timeout=timeout).start().attach_consumer(StreamingProcess.output_consumer)
     process = spawn.process
     if process.pid:
         process_manager.add_process(spawn, command)
@@ -140,3 +139,11 @@ def parse_env(command: str) -> Dict[str, str]:
 
     # If we get here, there were no environment variables we could parse
     return {}
+
+# validate_command handles 1 edge case where a nested double quote is used in a command
+# that breaks. I think this is something specific to the forge (ethereum tool) command line.
+def validate_command(cmd: str) -> Optional[str]:
+    if 'forge script' in cmd and '\\\"' in cmd:
+        return "Please use single quotes for forge script `--sig`, not double quotes"
+
+    return None
