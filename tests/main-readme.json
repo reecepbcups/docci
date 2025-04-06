@@ -1,4 +1,4 @@
 {
     "paths": ["README.md"],
-    "debugging": true
+    "log_level": "debug"
 }

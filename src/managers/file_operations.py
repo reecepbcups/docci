@@ -1,6 +1,7 @@
 
 import os
 from dataclasses import dataclass
+from logging import getLogger
 from typing import List, Optional, Tuple
 
 from src.config import Config
@@ -28,8 +29,10 @@ class FileOperations:
         content_with_newline = self.content if self.content.endswith('\n') else self.content + '\n'
 
         if not os.path.exists(file_path) or self.file_reset:
-            if config.debugging:
-                print(f"Refreshing file: {file_path}", "since file reset is on" if self.file_reset else "")
+
+            msg = f"Refreshing file: {file_path}", "since file reset is on" if self.file_reset else ""
+            getLogger(__name__).debug(msg)
+
             with open(file_path, 'w') as f:
                 f.write(content_with_newline)
 
@@ -54,8 +57,7 @@ class FileOperations:
     def _should_skip_execution(self, config: Config, file_path: str) -> bool:
         # Check if_file_not_exists condition
         if self.if_file_not_exists and os.path.exists(file_path):
-            if config.debugging:
-                print(f"Skipping file operation since {file_path} exists and if_file_not_exists is set")
+            getLogger(__name__).debug(f"Skipping file operation since {file_path} exists and if_file_not_exists is set")
             return True
         return False
 

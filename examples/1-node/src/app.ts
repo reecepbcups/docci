@@ -10,7 +10,7 @@ app.get('/', (req, res) => {
 // create a new get endpoint for hidden_path if it is set, if it is, return "found!"
 if (hidden_path) {
   app.get(`/${hidden_path}`, (req, res) => {
-    res.send('found!');
+    res.send('found!\n');
   });
 }
 

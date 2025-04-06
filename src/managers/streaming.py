@@ -3,6 +3,7 @@
 import queue
 import threading
 import time
+from logging import getLogger
 
 import pexpect
 
@@ -38,10 +39,10 @@ class StreamingProcess:
                     if e.errno == 9:  #errno.EBADF
                         break
                     else:
-                        print(f"Unexpected OSError in read_output: {e}")
+                        getLogger(__name__).error(f"Unexpected OSError in read_output: {e}")
                         break
                 except Exception as e:
-                    print(f"Error reading output: {e}")
+                    getLogger(__name__).error(f"Unexpected error in read_output: {e}")
                     break
 
                 if not line:
@@ -75,7 +76,7 @@ class StreamingProcess:
                     pass
 
         except Exception as e:
-            print(f"Error consuming output: {e}")
+            getLogger(__name__).error(f"Error consuming output: {e}")
         finally:
             pass
 

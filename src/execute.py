@@ -1,16 +1,16 @@
 import os
 import re
 import sys
+from logging import getLogger
 from typing import Dict, Optional
 
 import pexpect
 
+from src.managers.process import process_manager
 from src.managers.streaming import StreamingProcess
-from src.processes_manager import process_manager
 
 
-# TODO: add is_debugging
-def execute_command(command: str, is_debugging: bool = False, is_background: bool = False, **kwargs) -> tuple[int, str] | pexpect.spawn:
+def execute_command(command: str, is_background: bool = False, **kwargs) -> tuple[int, str] | pexpect.spawn:
     """Execute a shell command and return its exit status and output."""
     kwargs['env'] = kwargs.get('env', os.environ.copy())
 
@@ -23,11 +23,10 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
 
     # TODO: process if it is an env var and pass through `` and $()
 
-    # if is_debugging:
-    print(f"    Executing: {command=} in {kwargs['cwd']=}")
+    getLogger(__name__).debug(f"\tExecuting: {command=} in {kwargs['cwd']}")
 
     if error := validate_command(command):
-        print(f"    Error: {error}")
+        getLogger(__name__).error(f"\tError: {error}")
         return 1, error
 
     # command may ONLY be a single line that is a bash env variable export. How can I check for this in pexpect?

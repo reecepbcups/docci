@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from logging import getLogger
 from typing import List, Optional, Union
 
 from pexpect import spawn
@@ -11,7 +12,6 @@ from pexpect import spawn
 from src.config import Config
 from src.execute import execute_command, parse_env
 from src.managers.delay import DelayManager
-from src.processes_manager import process_manager
 
 
 @dataclass
@@ -44,13 +44,12 @@ class CommandExecutor:
             # Update global environment (and persist through the future codeblock sections on this test)
             # _execute_command will load in this
             envs = parse_env(command)
-            print(f"    ENVS: {envs} for {command=}")
+            # if envs:
             os.environ.update(envs)
 
             cmd_background = self._should_run_in_background(command, background_exclude_commands)
 
-            if config.debugging:
-                print(f"Running: {command=}, {cmd_background=}")
+            getLogger(__name__).debug(f"\t{envs=},{cmd_background=}")
 
             # Handle pre-execution delay if set
             if self.delay_manager:
@@ -84,7 +83,7 @@ class CommandExecutor:
             - True: If stderr had output (error occurred)
             - None: If command executed successfully
         """
-        tmp = execute_command(command, is_background=cmd_background, is_debugging=config.debugging, cwd=config.working_dir, env=env)
+        tmp = execute_command(command, is_background=cmd_background, cwd=config.working_dir, env=env)
 
         # already handled in execute_command to run a background process thread
         if cmd_background:
@@ -101,8 +100,9 @@ class CommandExecutor:
             if non_empty_commands and command == non_empty_commands[-1]:
                 if self.output_contains not in output:
                     return f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
-                elif config.debugging:
-                    print(f"Output contains: {self.output_contains}")
+
+                getLogger(__name__).debug(f"\tOutput contains: '{self.output_contains}' for {command=}\n")
+
         else:
             if status is None:
                 return None
@@ -116,28 +116,25 @@ class CommandExecutor:
         """Check various conditions that would cause us to skip command execution."""
         # Skip if marked as ignored
         if self.ignored:
-            if config.debugging:
-                print(f"Ignoring commands... ({self.commands}))")
+            getLogger(__name__).debug(f"Ignoring commands... ({self.commands})")
             return True
 
         # Skip if target file already exists
         if self.if_file_not_exists:
             file_path = os.path.join(config.working_dir, self.if_file_not_exists) if config.working_dir else self.if_file_not_exists
             if os.path.exists(file_path):
-                if config.debugging:
-                    print(f"Skipping commands since {file_path} exists")
+                getLogger(__name__).debug(f"Skipping commands since {file_path} exists")
                 return True
 
         # Skip if OS doesn't match
         system = platform.system().lower()
         if self.machine_os and self.machine_os != system:
-            if config.debugging:
-                print(f"Skipping command since it is not for the current OS: {self.machine_os}, current: {system}")
+            getLogger(__name__).debug(f"Skipping command since it is not for the current OS: {self.machine_os}, current: {system}")
             return True
 
         # Skip if binary is already installed
         if self.binary and shutil.which(self.binary):
-            print(f"Skipping command since {self.binary} is already installed.")
+            getLogger(__name__).debug(f"Skipping command since {self.binary} is already installed.")
             return True
 
         return False
