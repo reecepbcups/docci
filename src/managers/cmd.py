@@ -108,7 +108,7 @@ class CommandExecutor:
                 return None
 
             if status != 0:
-                return f"Error ({status=}) {command=}"
+                return f"Error ({status=}) {command=} failed with output: {output}"
 
         return None
 
