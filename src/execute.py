@@ -14,7 +14,6 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
     """Execute a shell command and return its exit status and output."""
     kwargs['env'] = kwargs.get('env', os.environ.copy())
 
-    # assert 'cwd' in kwargs, "execute_command cwd must be provided"
     kwargs['cwd'] = kwargs.get('cwd', os.getcwd())
     if kwargs['cwd'] is None:
         kwargs['cwd'] = os.getcwd()
@@ -34,7 +33,6 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
     cmd = f'''bash -c "{command}"'''
     timeout = None
 
-
     if not is_background:
         kwargs['withexitstatus'] = True
         env = os.environ.copy()  # Start with a copy of the current env
@@ -49,7 +47,6 @@ def execute_command(command: str, is_debugging: bool = False, is_background: boo
         if status == 0:
             sys.stdout.buffer.write(reset_color + result); sys.stdout.flush()
         else:
-            # prepend \x1b[31m (red) to the result
             sys.stderr.buffer.write(reset_color + result); sys.stderr.flush()
 
         # Replace only \r\n with \n to standardize line endings, but preserve the newlines
