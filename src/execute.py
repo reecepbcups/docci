@@ -1,16 +1,67 @@
+import os
 import re
-import subprocess
-from typing import Dict
+import sys
+from typing import Dict, Optional
+
+import pexpect
+
+from src.managers.streaming import StreamingProcess
+from src.processes_manager import process_manager
 
 
-def execute_command(command: str) -> str:
-    """Execute a shell command and return its output."""
-    try:
-        return subprocess.check_output(command, shell=True, text=True).strip()
-    except subprocess.CalledProcessError as e:
-        print(f"Warning: Failed to execute command: {command}")
-        print(f"Error: {e}")
-        return command  # Return original command if execution fails
+# TODO: add is_debugging
+def execute_command(command: str, is_debugging: bool = False, is_background: bool = False, **kwargs) -> tuple[int, str] | pexpect.spawn:
+    """Execute a shell command and return its exit status and output."""
+    kwargs['env'] = kwargs.get('env', os.environ.copy())
+
+    # assert 'cwd' in kwargs, "execute_command cwd must be provided"
+    kwargs['cwd'] = kwargs.get('cwd', os.getcwd())
+    if kwargs['cwd'] is None:
+        kwargs['cwd'] = os.getcwd()
+    if not os.path.exists(kwargs['cwd']):
+        raise ValueError(f"cwd {kwargs['cwd']} does not exist")
+
+    # TODO: process if it is an env var and pass through `` and $()
+
+    # if is_debugging:
+    print(f"    Executing: {command=} in {kwargs['cwd']=}")
+
+    if error := validate_command(command):
+        print(f"    Error: {error}")
+        return 1, error
+
+    # command may ONLY be a single line that is a bash env variable export. How can I check for this in pexpect?
+    cmd = f'''bash -c "{command}"'''
+    timeout = None
+
+
+    if not is_background:
+        kwargs['withexitstatus'] = True
+        env = os.environ.copy()  # Start with a copy of the current env
+        env.update(
+            kwargs.pop("env", {})
+        )  # Update with any env vars passed in kwargs
+        result, status = pexpect.run(cmd, env=env, timeout=timeout, **kwargs)
+
+        # (cosmetic) sometimes color is not set so a previous end of command color is used.
+        # if the result has a proper color code then that will be used instead.
+        reset_color = b"\x1b[0m"
+        if status == 0:
+            sys.stdout.buffer.write(reset_color + result); sys.stdout.flush()
+        else:
+            # prepend \x1b[31m (red) to the result
+            sys.stderr.buffer.write(reset_color + result); sys.stderr.flush()
+
+        # Replace only \r\n with \n to standardize line endings, but preserve the newlines
+        decoded = result.decode('utf-8').replace("\r\n", "\n").strip()
+        return status, decoded
+
+
+    spawn = StreamingProcess(cmd, cwd=kwargs['cwd'], timeout=timeout).start().attach_consumer(StreamingProcess.output_consumer)
+    process = spawn.process
+    if process.pid:
+        process_manager.add_process(spawn, command)
+    return process
 
 def execute_substitution_commands(value: str) -> str:
     """
@@ -39,7 +90,7 @@ def execute_substitution_commands(value: str) -> str:
 
             full_match = match.group(0)
             replacement = handler(match)
-            result = result.replace(full_match, replacement)
+            result = result.replace(full_match, replacement[1]) # returns tuple[int, str] from the execute_command
 
     return result
 
@@ -53,6 +104,7 @@ def parse_env(command: str) -> Dict[str, str]:
     Returns:
         Dictionary of environment variables (can be empty if no env vars found)
     """
+
     # Early return if no '=' is present in the command
     if '=' not in command:
         return {}
@@ -87,3 +139,11 @@ def parse_env(command: str) -> Dict[str, str]:
 
     # If we get here, there were no environment variables we could parse
     return {}
+
+# validate_command handles 1 edge case where a nested double quote is used in a command
+# that breaks. I think this is something specific to the forge (ethereum tool) command line.
+def validate_command(cmd: str) -> Optional[str]:
+    if 'forge script' in cmd and '\\\"' in cmd:
+        return "Please use single quotes for forge script `--sig`, not double quotes"
+
+    return None
