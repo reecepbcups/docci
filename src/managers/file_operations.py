@@ -29,8 +29,9 @@ class FileOperations:
         content_with_newline = self.content if self.content.endswith('\n') else self.content + '\n'
 
         if not os.path.exists(file_path) or self.file_reset:
-
-            msg = f"Refreshing file: {file_path}", "since file reset is on" if self.file_reset else ""
+            msg = f"Creating file: {file_path}"
+            if self.file_reset:
+                msg = f"Refreshing file: {file_path} since file reset is on"
             getLogger(__name__).debug(msg)
 
             with open(file_path, 'w') as f:

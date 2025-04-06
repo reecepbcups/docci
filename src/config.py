@@ -109,9 +109,8 @@ class Config:
     def validate_legacy_options(_json: str) -> None:
         options: List[str] = []
 
-        # ex: in v0.5 we used "debugging" but now it is "log_level" in v0.6
         if _json.get("debugging") is not None:
-            options.append(options, "`debugging` is now `log_level`")
+            options.append(options, "v0.6: `debugging` is now `log_level`")
 
         if len(options) > 0:
             getLogger(__name__).warning("Your config contains legacy options. Update to the latest config format.")
