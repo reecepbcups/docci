@@ -44,7 +44,6 @@ class CommandExecutor:
             # Update global environment (and persist through the future codeblock sections on this test)
             # _execute_command will load in this
             envs = parse_env(command)
-            # if envs:
             os.environ.update(envs)
 
             cmd_background = self._should_run_in_background(command, background_exclude_commands)

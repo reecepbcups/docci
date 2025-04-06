@@ -101,7 +101,22 @@ class Config:
             except json.JSONDecodeError:
                 getLogger(__name__).error(f"Invalid JSON in file: {absolute_path}, make sure you reference the JSON config file & not the README")
                 exit(1)
+
+            Config.validate_legacy_options(data)
             return Config.from_json(data)
+
+    @staticmethod
+    def validate_legacy_options(_json: str) -> None:
+        options: List[str] = []
+
+        # ex: in v0.5 we used "debugging" but now it is "log_level" in v0.6
+        if _json.get("debugging") is not None:
+            options.append(options, "`debugging` is now `log_level`")
+
+        if len(options) > 0:
+            getLogger(__name__).warning("Your config contains legacy options. Update to the latest config format.")
+            getLogger(__name__).warning("\n".join(options))
+            getLogger(__name__).warning("Please refer to the changelogs for more information.")
 
     @staticmethod
     def load_configuration(cfg_input: str) -> "Config":
