@@ -110,7 +110,7 @@ class Config:
         options: List[str] = []
 
         if _json.get("debugging") is not None:
-            options.append(options, "v0.6: `debugging` is now `log_level`")
+            options.append("v0.6: `debugging` is now `log_level`")
 
         if len(options) > 0:
             getLogger(__name__).warning("Your config contains legacy options. Update to the latest config format.")
