@@ -33,7 +33,6 @@ def execute_command(command: str, is_background: bool = False, **kwargs) -> tupl
     cmd = f'''bash -c "{command}"'''
     timeout = None
 
-
     if not is_background:
         kwargs['withexitstatus'] = True
         env = os.environ.copy()  # Start with a copy of the current env
