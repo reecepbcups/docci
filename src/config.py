@@ -80,7 +80,7 @@ class Config:
     def from_json(cls, json: Dict) -> "Config":
         c = Config(json['paths'], json.get('env_vars', {}), json.get('cleanup_cmds', []), json.get('pre_cmds', []))
         c.working_dir = json.get('working_dir', None)
-        c.log_level = json.get('log_level', "ERROR")
+        c.log_level = json.get('log_level', "INFO")
         return c
 
     def to_json(self):
