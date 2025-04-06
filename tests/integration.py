@@ -3,6 +3,7 @@
 
 import os
 import unittest
+from logging import getLogger
 from typing import Dict, List
 
 from src.models import Tags
@@ -26,8 +27,7 @@ class TestIntegration(unittest.TestCase):
 
             tag_validate = Tags.validate(tags)
             if not tag_validate[0]:
-                print("Invalid tag found in README.md")
-                print(tag_validate[1])
+                getLogger(__name__).error(f"Invalid tag found in README.md: {tag_validate[1]}")
                 exit(1)
 
 

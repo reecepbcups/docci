@@ -188,7 +188,7 @@ Control how your documentation code blocks are executed with no code, just code 
     "NODE_ENV": "test"
   },
   "working_dir": "docs/",
-  "debugging": false,
+  "log_level": "info",
   "pre_cmds": ["npm install"],
   "cleanup_cmds": ["docker-compose down"],
 }

@@ -1,6 +1,7 @@
 
 
 
+import logging
 import os
 import threading
 import time
@@ -14,7 +15,6 @@ from src.models import Endpoint
 from tests.test_server import MyServer
 
 curr_dir = os.path.dirname(os.path.abspath(__file__))
-
 
 class TestSomething(unittest.TestCase):
     def test_process_language_parts(self):

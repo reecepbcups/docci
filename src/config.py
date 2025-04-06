@@ -1,6 +1,8 @@
 import json
+import logging
 import os
 import subprocess
+from logging import getLogger
 from typing import Dict, List
 
  # https://github.com/rouge-ruby/rouge/wiki/List-of-supported-languages-and-lexers
@@ -10,6 +12,7 @@ class Config:
     config_version = "v0.0.1" # future proofing
     paths: List[str] = [] # this will be loaded with the prefix of the absolute path of the repo
     env_vars: Dict[str, str] = {}
+    log_level: str = "INFO"
     pre_cmds: List[str] = []
     cleanup_cmds: List[str] = []
     only_run_bash: bool = True
@@ -17,7 +20,16 @@ class Config:
     supported_file_extensions = ["md", "mdx"]
     followed_languages = ScriptingLanguages
     working_dir: str | None = None
-    debugging = False
+
+    def __setattr__(self, name, value):
+        # Call the parent class's __setattr__ to actually set the attribute
+        super().__setattr__(name, value)
+
+        # when the attr is set, it overrides the global config
+        if name == "log_level":
+            level = value.upper()
+            root_logger = logging.getLogger()
+            root_logger.setLevel(logging.getLevelName(level))
 
     def __init__(self, paths: List[str], env_var: Dict[str, str] = {}, cleanup_cmds: List[str] = [], pre_cmds: List[str] = []):
         self.paths = paths
@@ -68,7 +80,7 @@ class Config:
     def from_json(cls, json: Dict) -> "Config":
         c = Config(json['paths'], json.get('env_vars', {}), json.get('cleanup_cmds', []), json.get('pre_cmds', []))
         c.working_dir = json.get('working_dir', None)
-        c.debugging = json.get('debugging', False)
+        c.log_level = json.get('log_level', "INFO")
         return c
 
     def to_json(self):
@@ -78,6 +90,7 @@ class Config:
             'cleanup_cmds': self.cleanup_cmds,
             'pre_cmds': self.pre_cmds,
             'working_dir': self.working_dir,
+            'log_level': self.log_level,
         }
 
     @staticmethod
@@ -86,9 +99,23 @@ class Config:
             try:
                 data = json.load(f)
             except json.JSONDecodeError:
-                print(f"Invalid JSON in file: {absolute_path}, make sure you reference the JSON config file & not the README")
+                getLogger(__name__).error(f"Invalid JSON in file: {absolute_path}, make sure you reference the JSON config file & not the README")
                 exit(1)
+
+            Config.validate_legacy_options(data)
             return Config.from_json(data)
+
+    @staticmethod
+    def validate_legacy_options(_json: str) -> None:
+        options: List[str] = []
+
+        if _json.get("debugging") is not None:
+            options.append(options, "v0.6: `debugging` is now `log_level`")
+
+        if len(options) > 0:
+            getLogger(__name__).warning("Your config contains legacy options. Update to the latest config format.")
+            getLogger(__name__).warning("\n".join(options))
+            getLogger(__name__).warning("Please refer to the changelogs for more information.")
 
     @staticmethod
     def load_configuration(cfg_input: str) -> "Config":

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from logging import getLogger
 from typing import List, Optional
 
 from src.config import Config
@@ -21,7 +22,7 @@ class CodeBlockCore:
 
     def run_commands(self, config: Config) -> str | None:
         if self.endpoint:
-            print(f"waiting for endpoint: {self.endpoint}")
+            getLogger(__name__).debug(f"Waiting for endpoint: {self.endpoint}")
             lastRes = (False, "")
             for res in self.endpoint.poll(poll_speed=1):
                 lastRes = res

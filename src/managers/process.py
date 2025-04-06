@@ -1,5 +1,6 @@
 import os
 import signal
+from logging import getLogger
 from typing import Dict
 
 from src.managers.streaming import StreamingProcess
@@ -22,7 +23,7 @@ class _ProcessManager:
         if not self.background_processes:
             return
 
-        print(f"\nCleaning up {len(self.background_processes)} background processes...")
+        getLogger(__name__).debug(f"Cleaning up {len(self.background_processes)} background processes...")
         pid: int | StreamingProcess
         for pid, description in self.background_processes.items():
             try:
@@ -34,7 +35,7 @@ class _ProcessManager:
                     unique_pid = pid
                     os.kill(pid, signal.SIGTERM)
 
-                print(f"  [✓] Terminated: {unique_pid=}, {description=}")
+                getLogger(__name__).debug(f"[✓] Terminated: {unique_pid=}, {description=}")
             except OSError:
                 # Process might have already terminated
                 pass

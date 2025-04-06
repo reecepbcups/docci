@@ -1,19 +1,29 @@
 #!/usr/bin/env -S python3 -B
 
+import logging
 import os
 import sys
+from logging import basicConfig as logging_basicConfig
+from logging import getLogger
 from typing import Optional
 
 from src.config import Config
+from src.managers.process import process_manager
 from src.models import Tags
 from src.parsing import parse_markdown_code_blocks
-from src.processes_manager import process_manager
 
+logging_basicConfig(
+    format='DOCCI_%(levelname)s: %(message)s',
+    force=True,  # Ensure logging is set up even if already configured
+    level=logging.INFO  # Set a default level that will be overridden by config
+)
+
+logger = getLogger(__name__)
 
 def main():
     """Main entry point for the application."""
     if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <config_path|config_json_blob> [--tags]")
+        logger.error("Usage: <config_path|config_json_blob> [--tags]")
         sys.exit(1)
 
     if "--tags" in sys.argv:
@@ -25,15 +35,15 @@ def main():
     try:
         config = Config.load_configuration(cfg_input)
     except Exception as e:
-        print(f"Configuration error: {e}")
+        logger.error(f"Configuration: {e}")
         sys.exit(1)
 
     error = run_documentation_processor(config)
     if error:
-        print(f"Error: {error}")
+        logger.error(f"Error: {error}")
         sys.exit(1)
 
-    print("Documentation processing completed successfully.")
+    logger.debug("Documentation processing completed successfully.")
 
 def run_documentation_processor(config: Config) -> Optional[str]:
     """
@@ -69,7 +79,7 @@ def run_documentation_processor(config: Config) -> Optional[str]:
                             return f"Error({parent_path_key},{file_paths})[#{i}]: {error}"
 
             except KeyboardInterrupt:
-                print("\nKeyboardInterrupt: Quitting...")
+                logger.info("KeyboardInterrupt: Quitting...")
                 return "Interrupted by user"
             except Exception as e:
                 return f"Error({parent_path_key},{file_paths}): {e}"

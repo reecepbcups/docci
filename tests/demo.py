@@ -4,18 +4,17 @@
 # Docci testing docci docs
 
 import http.server
-import os
 import platform
 import socketserver
 import sys
 import threading
-import time
+from logging import getLogger
 from urllib.parse import urlparse
 
 
 def main():
     if len(sys.argv) == 0:
-        print("Error: No arguments provided")
+        getLogger(__name__).error("Error: No arguments provided")
         return
 
     if sys.argv[1] == "web-server":

@@ -230,7 +230,6 @@ class Tags(Enum):
         for tag in tags:
             if not tag.startswith(Tags.TAGS_PREFIX()): continue
             if not Tags.is_valid(tag):
-                print(tags, tag)
                 return False, tag
         return True, None
 

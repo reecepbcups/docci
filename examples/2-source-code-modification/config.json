@@ -6,5 +6,5 @@
     "cleanup_cmds": [],
     "env_vars": {},
     "pre_cmds": [],
-    "debugging": false
+    "log_level": "INFO"
   }

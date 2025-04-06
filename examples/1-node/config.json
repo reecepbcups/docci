@@ -5,6 +5,6 @@
     "env_vars": {},
     "pre_cmds": [],
     "working_dir": "examples/1-node",
-    "debugging": false,
+    "log_level": "INFO",
     "cleanup_cmds": []
   }
