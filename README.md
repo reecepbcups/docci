@@ -10,6 +10,17 @@ Find sample workspaces in the [`examples/` directory](./examples/).
 
 ### 📦 Installation
 
+Python `3.12`+ is required. You can also download a pre-built binary from the [release page](https://github.com/Reecepbcups/docci/releases).
+
+```bash docci-ignore
+# setup python env
+python3 -m venv ./py-env
+source ./py-env/bin/activate
+
+# install python requirements
+pip install -r requirements.txt
+```
+
 ```bash docci-ignore
 make install
 ```

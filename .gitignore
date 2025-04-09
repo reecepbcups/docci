@@ -7,3 +7,4 @@ dist/
 node_modules/
 example.html
 _tmp_README.md
+py-env/
