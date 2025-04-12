@@ -121,15 +121,19 @@ echo "Output"
 ```
 ````
 
-and replace a command with an specific override (useful for CI pipelines)
+Set ENV Variables
 
 ````bash
 ```bash
 export SOME_ENV_VAR="abcdef"
 ```
+````
 
-```bash docci-replace-text="xyzMyOutput;SOME_ENV_VAR"
-echo xyzMyOutput
+replace a command with an specific override (useful for CI pipelines)
+
+````bash
+```bash docci-output-contains="abcdef" docci-replace-text="bbbbbb;SOME_ENV_VAR"
+echo bbbbbb
 ```
 ````
 

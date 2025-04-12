@@ -1,12 +1,10 @@
 import os
 import platform
 import shutil
-import subprocess
-import sys
 import time
 from dataclasses import dataclass
 from logging import getLogger
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple
 
 from pexpect import spawn
 
@@ -33,12 +31,14 @@ class CommandExecutor:
         self,
         config: Config,
         background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"], # TODO: remove?
-    ) -> str | None:
+    ) -> str:
         if self._should_skip_codeblock_execution(config):
-            return None
+            return ""  # Return empty string instead of None
 
-        response = None
+        response = ""
         had_error = False
+        last_output = ""
+        all_outputs = []
 
         for command in self.commands:
             if self._should_skip_cmd_execution(config, command):
@@ -60,22 +60,41 @@ class CommandExecutor:
             # Execute command and handle result
             # this passes the os.environ copy due to working with multiple threads
             result = self._execute_command(command, config, cmd_background, env=os.environ.copy())
-            if isinstance(result, str):
-                response = result
-                break
-            elif result is True:  # Had error
+
+            # result is always Tuple[bool, str] where bool=True means success (not error)
+            success, output = result
+            last_output = output if output is not None else ""  # Save the last output
+
+            # Store output for output_contains check
+            if output is not None:
+                all_outputs.append(output)
+
+            if not success:  # Command failed
                 had_error = True
+                if output and "Error:" in output:
+                    response = output
+                    break
 
         if self.delay_manager:
             self.delay_manager.handle_delay("post")
 
         if self.expect_failure:
             if had_error:
-                return None
+                return ""  # Return empty string instead of None
             else:
                 return "Error: expected failure but command succeeded"
 
-        return response
+        # Check output_contains against all command outputs
+        if self.output_contains and all_outputs:
+            combined_output = "\n".join(all_outputs)
+            if self.output_contains not in combined_output:
+                error_msg = f"Error: `{self.output_contains}` is not found in any command output"
+                getLogger(__name__).error(error_msg)
+                return error_msg
+
+        # Return error message if there was one, otherwise return command output
+        # Always return a string, never None
+        return response if response else last_output
 
     def _handle_retry_cmd_delay(self, attempt: int = -1):
         assert attempt >= 0, "Attempt must be a non-negative integer"
@@ -88,26 +107,27 @@ class CommandExecutor:
         getLogger(__name__).debug(f"Sleeping for {delay_second} seconds before retrying...")
         time.sleep(delay_second)
 
-    def _execute_command(self, command: str, config: Config, cmd_background: bool, env: dict) -> Union[str, bool, None]:
+    # returns: Tuple[bool, str] where bool indicates success/failure and str contains output or error message
+    def _execute_command(self, command: str, config: Config, cmd_background: bool, env: dict) -> Tuple[bool, str]:
         """
         Execute a command and handle its output.
         Returns:
-            - str: Error message if command failed
-            - True: If stderr had output (error occurred)
-            - None: If command executed successfully
+            - Tuple[bool, str]: (False, error_message) if command failed
+            - Tuple[bool, str]: (True, output) if command succeeded
+            - Tuple[bool, None]: (True, None) only for background commands
         """
         # Handle text replacement if configured
         if self.replace_text:
             try:
                 parts = self.replace_text.split(';')
                 if len(parts) != 2:
-                    return f"Error: invalid format for docci-replace-text. Expected format: 'text;ENV_VAR', got '{self.replace_text}'"
+                    return False, f"Error: invalid format for docci-replace-text. Expected format: 'text;ENV_VAR', got '{self.replace_text}'"
 
                 text_to_replace, env_var_name = parts
 
                 # Check if the environment variable exists
                 if env_var_name not in env:
-                    return f"Error: environment variable '{env_var_name}' not set. Required by docci-replace-text."
+                    return False, f"Error: environment variable '{env_var_name}' not set. Required by docci-replace-text."
 
                 env_var_value = env[env_var_name]
                 getLogger(__name__).debug(f"Replacing '{text_to_replace}' with env var {env_var_name}='{env_var_value}' in command: {command}")
@@ -116,7 +136,7 @@ class CommandExecutor:
                 command = command.replace(text_to_replace, env_var_value)
                 getLogger(__name__).debug(f"Command after replacement: {command}")
             except Exception as e:
-                return f"Error in text replacement: {str(e)}"
+                return False, f"Error in text replacement: {str(e)}"
 
         # Retry logic
         max_attempts = max(1, self.retry_count + 1)  # At least 1 attempt
@@ -124,7 +144,10 @@ class CommandExecutor:
 
         while attempt < max_attempts:
             attempt += 1
-            getLogger(__name__).debug(f"Executing command (attempt {attempt}/{max_attempts}): {command}")
+            if attempt > 1:
+                getLogger(__name__).info(f"Executing command (attempt {attempt}/{max_attempts}): {command}")
+            else:
+                getLogger(__name__).debug(f"Executing command (attempt {attempt}/{max_attempts}): {command}")
 
             working_dir = config.working_dir if config else os.getcwd()
             tmp = execute_command(command, is_background=cmd_background, cwd=working_dir, env=env)
@@ -132,46 +155,65 @@ class CommandExecutor:
             # already handled in execute_command to run a background process thread
             if cmd_background:
                 # process: spawn = tmp
-                return None
+                return True, None
 
             status: int | None = tmp[0]
             output: str = tmp[1]
+            # Check if command resulted in error (non-zero exit status)
+            error = status != 0 if status is not None else False
+            success = not error
+            
+            # Handle commands that are expected to fail
+            if self.expect_failure:
+                # If we expect failure, we invert our success logic
+                # For expect_failure=True: error=True means success=True (test passed)
+                success = error  # If error occurred, test passes (when expecting failure)
 
-            # For output_contains check
+            # Individual command output_contains check (now moved to run_commands for whole block checks)
             if self.output_contains:
-                # Only check output contains if this is the last non-empty command
-                non_empty_commands = [cmd for cmd in self.commands if cmd.strip() and not cmd.strip().startswith('#')]
-                if non_empty_commands and command == non_empty_commands[-1]:
-                    if self.output_contains not in output:
-                        # If we've reached max attempts, return error
-                        if attempt >= max_attempts:
-                            return f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
-                        getLogger(__name__).debug(f"Retry {attempt}/{max_attempts}: Output missing required text, retrying...")
+                getLogger(__name__).debug(f"\tOutput contains: check for {command=}\n")
 
-                        self._handle_retry_cmd_delay(attempt)
-                        continue  # Try again
+                # Check if output contains the expected string
+                if self.output_contains not in output:
+                    # If we've reached max attempts, return error
+                    if attempt >= max_attempts:
+                        error_msg = f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
+                        getLogger(__name__).error(error_msg)
 
-                    getLogger(__name__).debug(f"\tOutput contains: '{self.output_contains}' for {command=}\n")
-                    return None  # Success
+                        # For expect_failure case, we want to consider this a "success" (since we expected to fail)
+                        if self.expect_failure:
+                            return True, output  # Return success but with output that shows why it failed
+
+                        # Return False and error message to indicate failure
+                        return False, error_msg
+                    getLogger(__name__).info(f"Retry {attempt}/{max_attempts}: Output missing required text, retrying...")
+
+                    self._handle_retry_cmd_delay(attempt)
+                    continue  # Try again
+
+                getLogger(__name__).debug(f"\tOutput contains: '{self.output_contains}' for {command=}\n")
+                return success, output
 
             # For status check
             else:
                 if status is None:
-                    return None
+                    return success, output
 
                 if status != 0:
                     # If we've reached max attempts, return error
                     if attempt >= max_attempts:
-                        return f"Error ({status=}) {command=} failed with output: {output}"
-                    getLogger(__name__).debug(f"Retry {attempt}/{max_attempts}: Command failed with status {status}, retrying...")
+                        error_msg = f"Error ({status=}) {command=} failed with output: {output}"
+                        # Return False and error message to indicate failure
+                        return False, error_msg
+                    getLogger(__name__).info(f"Retry {attempt}/{max_attempts}: Command failed with status {status}, retrying...")
                     self._handle_retry_cmd_delay(attempt)
                     continue  # Try again
 
             # If we get here, the command succeeded
-            return None
+            return success, output
 
         # Should not reach here due to returns in the loop
-        return None
+        return success, output
 
     def _should_skip_codeblock_execution(self, config: Config) -> bool:
         """Check various conditions that would cause us to skip command execution."""

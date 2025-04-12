@@ -59,13 +59,13 @@ class TestSomething(unittest.TestCase):
     #     self.assertEqual(resp, 'Value with \\ backslash')
 
     def test_config_run_1(self):
-        err = run_documentation_processor(Config.load_from_file(os.path.join(curr_dir, "config1.json")))
-        self.assertEqual(err, None, err)
+        output = run_documentation_processor(Config.load_from_file(os.path.join(curr_dir, "config1.json")))
+        self.assertIn('abcMyOutput', output, output)
 
     def test_multiple_paths_same_output(self):
         # if you use multiple paths here, you HAVE to have the same outputs to actually verify. Good for duplicate documentation places that should match up exactly
-        err = run_documentation_processor(Config.from_json({"paths":["tests/README1.md", "tests/README2.md"],"env_vars": {},"pre_cmds": [],"cleanup_cmds": []}))
-        self.assertEqual(err, None, err)
+        output = run_documentation_processor(Config.from_json({"paths":["tests/README1.md", "tests/README2.md"],"env_vars": {},"pre_cmds": [],"cleanup_cmds": []}))
+        self.assertIn('abcMyOutput', output, output)
 
     def test_execute_substitution_commands(self):
         # nothing to exec, leave as is
@@ -182,5 +182,4 @@ class TestSomething(unittest.TestCase):
 
         os.environ["MY_ENV"] = "0.5"
         out = dv.command_executor.run_commands(config=None)
-        # TODO: this requires None, would be nice if echo was logged properly to output
-        self.assertEqual(out, None)
+        self.assertIn("The version is 0.5", out)

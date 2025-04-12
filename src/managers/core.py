@@ -20,7 +20,7 @@ class CodeBlockCore:
     command_executor: Optional[CommandExecutor] = None
     endpoint: Optional[Endpoint] = None
 
-    def run_commands(self, config: Config) -> str | None:
+    def run_commands(self, config: Config) -> str:
         if self.endpoint:
             getLogger(__name__).debug(f"Waiting for endpoint: {self.endpoint}")
             lastRes = (False, "")
@@ -30,17 +30,25 @@ class CodeBlockCore:
                 return f"Error: endpoint not up in timeout period: {self.endpoint.url}"
 
         if self.file_ops and self.file_ops.handle_file_content(config):
-            return None
+            return ""
 
         if self.command_executor:
             response = self.command_executor.run_commands(config)
-            if response and self.command_executor.expect_failure:
-                return None
-            elif not response and self.command_executor.expect_failure:
-                return "Error: expected failure but command succeeded"
+
+            # With our updated cmd.py logic, if the command was supposed to fail:
+            # - When it did fail, success will be True and response will have the failure output
+            # - When it succeeded unexpectedly, success will be False and we'll get an empty response
+
+            # Handle expected failures (docci-assert-failure)
+            if self.command_executor.expect_failure:
+                # If the command successfully failed as expected (status != 0 or command not found),
+                # we don't need to report it as an error
+                return response
+
+            # Normal command (not expecting failure)
             return response
 
-        return None
+        return ""
 
     def __str__(self):
         return f"DocsValue(language={self.language}, tags={self.tags}, ignored={self.ignored}, delay_manager={self.delay_manager})"
