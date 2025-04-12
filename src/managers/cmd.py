@@ -60,20 +60,15 @@ class CommandExecutor:
             # this passes the os.environ copy due to working with multiple threads
             result = self._execute_command(command, config, cmd_background, env=os.environ.copy())
 
-            if isinstance(result, tuple) and isinstance(result[0], bool) and isinstance(result[1], str):
-                was_error, output = result
-                last_output = output  # Save the last output
-                if was_error:
-                    had_error = True
-                    if output and "Error:" in output:
-                        response = output
-                        break
-            elif isinstance(result, str):  # Error message was returned
-                response = result
-                last_output = result  # Save error message as output
-                break
-            elif result is True:  # Had error
+            # result is always Tuple[bool, str]
+            success, output = result
+            last_output = output if output is not None else ""  # Save the last output
+            
+            if not success:  # Command failed
                 had_error = True
+                if output and "Error:" in output:
+                    response = output
+                    break
 
         if self.delay_manager:
             self.delay_manager.handle_delay("post")
@@ -99,15 +94,14 @@ class CommandExecutor:
         getLogger(__name__).debug(f"Sleeping for {delay_second} seconds before retrying...")
         time.sleep(delay_second)
 
-    # returns: success, output or error message
-    def _execute_command(self, command: str, config: Config, cmd_background: bool, env: dict) -> Tuple[bool, str] | str:
+    # returns: Tuple[bool, str] where bool indicates success/failure and str contains output or error message
+    def _execute_command(self, command: str, config: Config, cmd_background: bool, env: dict) -> Tuple[bool, str]:
         """
         Execute a command and handle its output.
         Returns:
-            - str: Error message if command failed
-            - True: If stderr had output (error occurred)
-            - str: Command output if command executed successfully
-            - None: Only for background commands
+            - Tuple[bool, str]: (False, error_message) if command failed
+            - Tuple[bool, str]: (True, output) if command succeeded
+            - Tuple[bool, None]: (True, None) only for background commands
         """
         # Handle text replacement if configured
         if self.replace_text:
@@ -161,8 +155,8 @@ class CommandExecutor:
                     if attempt >= max_attempts:
                         error_msg = f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
                         getLogger(__name__).error(error_msg)
-                        # Return error message as string so it triggers error handling in main.py
-                        return error_msg
+                        # Return False and error message to indicate failure
+                        return False, error_msg
                     getLogger(__name__).debug(f"Retry {attempt}/{max_attempts}: Output missing required text, retrying...")
 
                     self._handle_retry_cmd_delay(attempt)
@@ -179,7 +173,9 @@ class CommandExecutor:
                 if status != 0:
                     # If we've reached max attempts, return error
                     if attempt >= max_attempts:
-                        return f"Error ({status=}) {command=} failed with output: {output}"
+                        error_msg = f"Error ({status=}) {command=} failed with output: {output}"
+                        # Return False and error message to indicate failure
+                        return False, error_msg
                     getLogger(__name__).debug(f"Retry {attempt}/{max_attempts}: Command failed with status {status}, retrying...")
                     self._handle_retry_cmd_delay(attempt)
                     continue  # Try again
