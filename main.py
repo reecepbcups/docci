@@ -38,14 +38,15 @@ def main():
         logger.error(f"Configuration: {e}")
         sys.exit(1)
 
-    error = run_documentation_processor(config)
-    if error:
-        logger.error(f"Error: {error}")
+    result = run_documentation_processor(config)
+    # Check for any kind of error message, not just those starting with "Error:"
+    if result and ("Error:" in result or "`" in result and "is not found in output" in result):
+        logger.error(result)
         sys.exit(1)
 
     logger.debug("Documentation processing completed successfully.")
 
-def run_documentation_processor(config: Config) -> Optional[str]:
+def run_documentation_processor(config: Config) -> str:
     """
     Execute documentation code blocks according to configuration.
 
@@ -53,8 +54,10 @@ def run_documentation_processor(config: Config) -> Optional[str]:
         config: The loaded configuration
 
     Returns:
-        Error message or None if successful
+        Command output or error message
     """
+    outputs = []
+    
     try:
         # Set up environment
         config.run_pre_cmds(hide_output=True)
@@ -74,9 +77,13 @@ def run_documentation_processor(config: Config) -> Optional[str]:
 
                     # Execute commands for each code block
                     for i, block in enumerate(code_blocks):
-                        error = block.run_commands(config=config)
-                        if error:
-                            return f"Error({parent_path_key},{file_paths})[#{i}]: {error}"
+                        result = block.run_commands(config=config)
+                        # Store non-empty results
+                        if result:
+                            outputs.append(result)
+                        # Treat as error if it starts with "Error:" or contains "Error: `" (for output_contains check)
+                        if result and (result.startswith("Error:") or ("Error: `" in result and "` is not found in output" in result)):
+                            return f"Error({parent_path_key},{file_paths})[#{i}]: {result}"
 
             except KeyboardInterrupt:
                 logger.info("KeyboardInterrupt: Quitting...")
@@ -91,7 +98,8 @@ def run_documentation_processor(config: Config) -> Optional[str]:
         process_manager.cleanup()
         config.run_cleanup_cmds(hide_output=True)
 
-    return None
+    # Return combined outputs or empty string if no outputs
+    return "\n".join(outputs) if outputs else ""
 
 
 if __name__ == "__main__":

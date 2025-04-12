@@ -20,7 +20,7 @@ class CodeBlockCore:
     command_executor: Optional[CommandExecutor] = None
     endpoint: Optional[Endpoint] = None
 
-    def run_commands(self, config: Config) -> str | None:
+    def run_commands(self, config: Config) -> str:
         if self.endpoint:
             getLogger(__name__).debug(f"Waiting for endpoint: {self.endpoint}")
             lastRes = (False, "")
@@ -30,17 +30,17 @@ class CodeBlockCore:
                 return f"Error: endpoint not up in timeout period: {self.endpoint.url}"
 
         if self.file_ops and self.file_ops.handle_file_content(config):
-            return None
+            return ""
 
         if self.command_executor:
             response = self.command_executor.run_commands(config)
             if response and self.command_executor.expect_failure:
-                return None
+                return ""
             elif not response and self.command_executor.expect_failure:
                 return "Error: expected failure but command succeeded"
             return response
 
-        return None
+        return ""
 
     def __str__(self):
         return f"DocsValue(language={self.language}, tags={self.tags}, ignored={self.ignored}, delay_manager={self.delay_manager})"

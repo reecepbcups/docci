@@ -31,12 +31,13 @@ class CommandExecutor:
         self,
         config: Config,
         background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"], # TODO: remove?
-    ) -> str | None:
+    ) -> str:
         if self._should_skip_codeblock_execution(config):
-            return None
+            return ""  # Return empty string instead of None
 
-        response = None
+        response = ""
         had_error = False
+        last_output = ""
 
         for command in self.commands:
             if self._should_skip_cmd_execution(config, command):
@@ -58,9 +59,10 @@ class CommandExecutor:
             # Execute command and handle result
             # this passes the os.environ copy due to working with multiple threads
             result = self._execute_command(command, config, cmd_background, env=os.environ.copy())
-            
+
             if isinstance(result, tuple) and isinstance(result[0], bool) and isinstance(result[1], str):
                 was_error, output = result
+                last_output = output  # Save the last output
                 if was_error:
                     had_error = True
                     if output and "Error:" in output:
@@ -68,6 +70,7 @@ class CommandExecutor:
                         break
             elif isinstance(result, str):  # Error message was returned
                 response = result
+                last_output = result  # Save error message as output
                 break
             elif result is True:  # Had error
                 had_error = True
@@ -77,12 +80,13 @@ class CommandExecutor:
 
         if self.expect_failure:
             if had_error:
-                return None
+                return ""  # Return empty string instead of None
             else:
                 return "Error: expected failure but command succeeded"
 
         # Return error message if there was one, otherwise return command output
-        return response
+        # Always return a string, never None
+        return response if response else last_output
 
     def _handle_retry_cmd_delay(self, attempt: int = -1):
         assert attempt >= 0, "Attempt must be a non-negative integer"
@@ -95,8 +99,8 @@ class CommandExecutor:
         getLogger(__name__).debug(f"Sleeping for {delay_second} seconds before retrying...")
         time.sleep(delay_second)
 
-    # returns: success, output
-    def _execute_command(self, command: str, config: Config, cmd_background: bool, env: dict) -> Tuple[bool, str]:
+    # returns: success, output or error message
+    def _execute_command(self, command: str, config: Config, cmd_background: bool, env: dict) -> Tuple[bool, str] | str:
         """
         Execute a command and handle its output.
         Returns:
@@ -157,7 +161,7 @@ class CommandExecutor:
                     if attempt >= max_attempts:
                         error_msg = f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
                         getLogger(__name__).error(error_msg)
-                        # Return a string instead of a tuple to ensure consistent error handling
+                        # Return error message as string so it triggers error handling in main.py
                         return error_msg
                     getLogger(__name__).debug(f"Retry {attempt}/{max_attempts}: Output missing required text, retrying...")
 
@@ -170,7 +174,7 @@ class CommandExecutor:
             # For status check
             else:
                 if status is None:
-                    return was_error, None
+                    return was_error, output
 
                 if status != 0:
                     # If we've reached max attempts, return error
@@ -184,7 +188,7 @@ class CommandExecutor:
             return was_error, output
 
         # Should not reach here due to returns in the loop
-        return was_error, None
+        return was_error, output
 
     def _should_skip_codeblock_execution(self, config: Config) -> bool:
         """Check various conditions that would cause us to skip command execution."""
