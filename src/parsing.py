@@ -1,5 +1,4 @@
 import re
-import sys
 from typing import List, Tuple
 
 from src.config import Config, ScriptingLanguages
@@ -149,6 +148,13 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Code
         # Create command executor if any command-related tags are present
         command_executor = None
         if language in ScriptingLanguages:
+            # Extract retry count from tags (default to 0 if not present)
+            retry_str = Tags.extract_tag_value(tags, Tags.RETRY(), default="0")
+            try:
+                retry_count = int(retry_str)
+            except ValueError:
+                retry_count = 0
+
             command_executor = CommandExecutor(
                 commands=commands,
                 background=Tags.has_tag(tags, Tags.BACKGROUND),
@@ -158,7 +164,8 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Code
                 binary=Tags.extract_tag_value(tags, Tags.IGNORE_IF_INSTALLED(), default=None),
                 ignored=ignored,
                 delay_manager=delay_manager,
-                if_file_not_exists=Tags.extract_tag_value(tags, Tags.IF_FILE_DOES_NOT_EXISTS(), default="") # TODO: remove from the other type?
+                if_file_not_exists=Tags.extract_tag_value(tags, Tags.IF_FILE_DOES_NOT_EXISTS(), default=""), # TODO: remove from the other type?
+                retry_count=retry_count
             )
 
         value = CodeBlockCore(
