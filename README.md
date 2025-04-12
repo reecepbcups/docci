@@ -55,6 +55,7 @@ docci <config_path | config_json> [--tags]
   * 🌐 `docci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready
   * 📜 `docci-output-contains="string"`: Ensure the output contains a string at the end of the block
   * 🚨 `docci-assert-failure`: If it is expected to fail (non 0 exit code)
+  * 🚨 `docci-replace-text="value;ENV_VAR"`: Replace command text with an ENV variable
   * 🖥️ `docci-os=mac|linux`: Run the command only on it's the specified OS
 
 ### 📄 File Tags
@@ -117,6 +118,18 @@ Only run a command if a file does not exist: 📄
 ```bash docci-if-file-not-exists="README.md" docci-contains-output="ThisLineShouldNeverRun"
 # since the file does exist, this line never runs
 echo "Output"
+```
+````
+
+and replace a command with an specific override (useful for CI pipelines)
+
+````bash
+```bash
+export SOME_ENV_VAR="abcdef"
+```
+
+```bash docci-replace-text="xyzMyOutput;SOME_ENV_VAR"
+echo xyzMyOutput
 ```
 ````
 

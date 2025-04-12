@@ -27,6 +27,7 @@ class CommandExecutor:
     delay_manager: Optional[DelayManager] = None
     if_file_not_exists: str = ""
     retry_count: int = 0
+    replace_text: Optional[str] = None
 
     def run_commands(
         self,
@@ -95,6 +96,28 @@ class CommandExecutor:
             - True: If stderr had output (error occurred)
             - None: If command executed successfully
         """
+        # Handle text replacement if configured
+        if self.replace_text:
+            try:
+                parts = self.replace_text.split(';')
+                if len(parts) != 2:
+                    return f"Error: invalid format for docci-replace-text. Expected format: 'text;ENV_VAR', got '{self.replace_text}'"
+
+                text_to_replace, env_var_name = parts
+
+                # Check if the environment variable exists
+                if env_var_name not in env:
+                    return f"Error: environment variable '{env_var_name}' not set. Required by docci-replace-text."
+
+                env_var_value = env[env_var_name]
+                getLogger(__name__).debug(f"Replacing '{text_to_replace}' with env var {env_var_name}='{env_var_value}' in command: {command}")
+
+                # Replace the text in the command
+                command = command.replace(text_to_replace, env_var_value)
+                getLogger(__name__).debug(f"Command after replacement: {command}")
+            except Exception as e:
+                return f"Error in text replacement: {str(e)}"
+
         # Retry logic
         max_attempts = max(1, self.retry_count + 1)  # At least 1 attempt
         attempt = 0
@@ -103,7 +126,8 @@ class CommandExecutor:
             attempt += 1
             getLogger(__name__).debug(f"Executing command (attempt {attempt}/{max_attempts}): {command}")
 
-            tmp = execute_command(command, is_background=cmd_background, cwd=config.working_dir, env=env)
+            working_dir = config.working_dir if config else os.getcwd()
+            tmp = execute_command(command, is_background=cmd_background, cwd=working_dir, env=env)
 
             # already handled in execute_command to run a background process thread
             if cmd_background:
@@ -158,7 +182,8 @@ class CommandExecutor:
 
         # Skip if target file already exists
         if self.if_file_not_exists:
-            file_path = os.path.join(config.working_dir, self.if_file_not_exists) if config.working_dir else self.if_file_not_exists
+            working_dir = config.working_dir if config else os.getcwd()
+            file_path = os.path.join(working_dir, self.if_file_not_exists) if config.working_dir else self.if_file_not_exists
             if os.path.exists(file_path):
                 getLogger(__name__).debug(f"Skipping commands since {file_path} exists")
                 return True
@@ -176,12 +201,12 @@ class CommandExecutor:
 
         return False
 
-    def _should_skip_cmd_execution(self, config:Config, command: str) -> bool:
+    def _should_skip_cmd_execution(self, config: Config, command: str) -> bool:
         # Skip empty commands and comments
         if not command.strip() or command.strip().startswith('#'):
             return True
 
-        if command in config.ignore_commands:
+        if config and command in config.ignore_commands:
             return True
         return False
 

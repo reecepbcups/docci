@@ -165,7 +165,8 @@ def parse_markdown_code_blocks(config: Config | None, content: str) -> List[Code
                 ignored=ignored,
                 delay_manager=delay_manager,
                 if_file_not_exists=Tags.extract_tag_value(tags, Tags.IF_FILE_DOES_NOT_EXISTS(), default=""), # TODO: remove from the other type?
-                retry_count=retry_count
+                retry_count=retry_count,
+                replace_text=Tags.extract_tag_value(tags, Tags.REPLACE_TEXT(), default=None)
             )
 
         value = CodeBlockCore(
