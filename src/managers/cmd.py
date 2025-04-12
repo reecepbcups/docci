@@ -144,7 +144,10 @@ class CommandExecutor:
 
         while attempt < max_attempts:
             attempt += 1
-            getLogger(__name__).debug(f"Executing command (attempt {attempt}/{max_attempts}): {command}")
+            if attempt > 1:
+                getLogger(__name__).info(f"Executing command (attempt {attempt}/{max_attempts}): {command}")
+            else:
+                getLogger(__name__).debug(f"Executing command (attempt {attempt}/{max_attempts}): {command}")
 
             working_dir = config.working_dir if config else os.getcwd()
             tmp = execute_command(command, is_background=cmd_background, cwd=working_dir, env=env)
@@ -186,7 +189,7 @@ class CommandExecutor:
 
                         # Return False and error message to indicate failure
                         return False, error_msg
-                    getLogger(__name__).debug(f"Retry {attempt}/{max_attempts}: Output missing required text, retrying...")
+                    getLogger(__name__).info(f"Retry {attempt}/{max_attempts}: Output missing required text, retrying...")
 
                     self._handle_retry_cmd_delay(attempt)
                     continue  # Try again
@@ -205,7 +208,7 @@ class CommandExecutor:
                         error_msg = f"Error ({status=}) {command=} failed with output: {output}"
                         # Return False and error message to indicate failure
                         return False, error_msg
-                    getLogger(__name__).debug(f"Retry {attempt}/{max_attempts}: Command failed with status {status}, retrying...")
+                    getLogger(__name__).info(f"Retry {attempt}/{max_attempts}: Command failed with status {status}, retrying...")
                     self._handle_retry_cmd_delay(attempt)
                     continue  # Try again
 
