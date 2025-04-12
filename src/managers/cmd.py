@@ -58,7 +58,15 @@ class CommandExecutor:
             # Execute command and handle result
             # this passes the os.environ copy due to working with multiple threads
             result = self._execute_command(command, config, cmd_background, env=os.environ.copy())
-            if isinstance(result, str):
+            
+            if isinstance(result, tuple) and isinstance(result[0], bool) and isinstance(result[1], str):
+                was_error, output = result
+                if was_error:
+                    had_error = True
+                    if output and "Error:" in output:
+                        response = output
+                        break
+            elif isinstance(result, str):  # Error message was returned
                 response = result
                 break
             elif result is True:  # Had error
@@ -141,20 +149,23 @@ class CommandExecutor:
 
             # For output_contains check
             if self.output_contains:
-                # Only check output contains if this is the last non-empty command
-                non_empty_commands = [cmd for cmd in self.commands if cmd.strip() and not cmd.strip().startswith('#')]
-                if non_empty_commands and command == non_empty_commands[-1]:
-                    if self.output_contains not in output:
-                        # If we've reached max attempts, return error
-                        if attempt >= max_attempts:
-                            return False, f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
-                        getLogger(__name__).debug(f"Retry {attempt}/{max_attempts}: Output missing required text, retrying...")
+                getLogger(__name__).debug(f"\tOutput contains: check for {command=}\n")
 
-                        self._handle_retry_cmd_delay(attempt)
-                        continue  # Try again
+                # Check if output contains the expected string
+                if self.output_contains not in output:
+                    # If we've reached max attempts, return error
+                    if attempt >= max_attempts:
+                        error_msg = f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
+                        getLogger(__name__).error(error_msg)
+                        # Return a string instead of a tuple to ensure consistent error handling
+                        return error_msg
+                    getLogger(__name__).debug(f"Retry {attempt}/{max_attempts}: Output missing required text, retrying...")
 
-                    getLogger(__name__).debug(f"\tOutput contains: '{self.output_contains}' for {command=}\n")
-                    return was_error, output
+                    self._handle_retry_cmd_delay(attempt)
+                    continue  # Try again
+
+                getLogger(__name__).debug(f"\tOutput contains: '{self.output_contains}' for {command=}\n")
+                return was_error, output
 
             # For status check
             else:
