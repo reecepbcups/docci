@@ -84,7 +84,7 @@ class CommandExecutor:
             else:
                 return "Error: expected failure but command succeeded"
 
-        # Check output_contains against all command outputs
+        # Check output_contains against all outputs, but only after all commands have run
         if self.output_contains and all_outputs:
             combined_output = "\n".join(all_outputs)
             if self.output_contains not in combined_output:
@@ -169,45 +169,27 @@ class CommandExecutor:
                 # For expect_failure=True: error=True means success=True (test passed)
                 success = error  # If error occurred, test passes (when expecting failure)
 
-            # Individual command output_contains check (now moved to run_commands for whole block checks)
-            if self.output_contains:
-                getLogger(__name__).debug(f"\tOutput contains: check for {command=}\n")
-
-                # Check if output contains the expected string
-                if self.output_contains not in output:
-                    # If we've reached max attempts, return error
-                    if attempt >= max_attempts:
-                        error_msg = f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
-                        getLogger(__name__).error(error_msg)
-
-                        # For expect_failure case, we want to consider this a "success" (since we expected to fail)
-                        if self.expect_failure:
-                            return True, output  # Return success but with output that shows why it failed
-
-                        # Return False and error message to indicate failure
-                        return False, error_msg
-                    getLogger(__name__).info(f"Retry {attempt}/{max_attempts}: Output missing required text, retrying...")
-
-                    self._handle_retry_cmd_delay(attempt)
-                    continue  # Try again
-
-                getLogger(__name__).debug(f"\tOutput contains: '{self.output_contains}' for {command=}\n")
+            # We no longer check output_contains for individual commands
+            # It is now handled at the block level in run_commands for the last command only
+            
+            # For logging purposes only
+            if self.output_contains and command == self.commands[-1]:  # Only log for last command
+                getLogger(__name__).debug(f"\tOutput contains check will be performed at block level for last command: {command}")
+            
+            # Status check logic
+            if status is None:
                 return success, output
-
-            # For status check
-            else:
-                if status is None:
-                    return success, output
-
-                if status != 0:
-                    # If we've reached max attempts, return error
-                    if attempt >= max_attempts:
-                        error_msg = f"Error ({status=}) {command=} failed with output: {output}"
-                        # Return False and error message to indicate failure
-                        return False, error_msg
-                    getLogger(__name__).info(f"Retry {attempt}/{max_attempts}: Command failed with status {status}, retrying...")
-                    self._handle_retry_cmd_delay(attempt)
-                    continue  # Try again
+                
+            # Check if command resulted in error (non-zero exit status)
+            if status != 0:
+                # If we've reached max attempts, return error
+                if attempt >= max_attempts:
+                    error_msg = f"Error ({status=}) {command=} failed with output: {output}"
+                    # Return False and error message to indicate failure
+                    return False, error_msg
+                getLogger(__name__).info(f"Retry {attempt}/{max_attempts}: Command failed with status {status}, retrying...")
+                self._handle_retry_cmd_delay(attempt)
+                continue  # Try again
 
             # If we get here, the command succeeded
             return success, output
