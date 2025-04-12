@@ -9,6 +9,6 @@ curl http://localhost:8000/
 ```
 
 <!-- kill python3 -m http.server -->
-```bash docci-assert-failure
-kill -9 `ps -ef | grep "python3 -m http.server 8000" | awk '{print $2}'`
+```bash
+kill -9 $(ps aux | grep "[p]ython3 -m http.server 8000" | awk '{print $2}')
 ```

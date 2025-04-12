@@ -60,10 +60,10 @@ class CommandExecutor:
             # this passes the os.environ copy due to working with multiple threads
             result = self._execute_command(command, config, cmd_background, env=os.environ.copy())
 
-            # result is always Tuple[bool, str]
+            # result is always Tuple[bool, str] where bool=True means success (not error)
             success, output = result
             last_output = output if output is not None else ""  # Save the last output
-            
+
             if not success:  # Command failed
                 had_error = True
                 if output and "Error:" in output:
@@ -143,7 +143,18 @@ class CommandExecutor:
 
             status: int | None = tmp[0]
             output: str = tmp[1]
-            was_error = True if status and status != 0 else False
+            # Command is successful if status is 0 (not an error)
+            success = False if status and status != 0 else True
+
+            # Special case for commands that are expected to fail
+            if self.expect_failure:
+                # If we expect failure, we invert our success logic
+                # When the command fails (command not found, non-zero exit code), we treat it as "success"
+                # When the command succeeds, we treat it as a "failure" (because we wanted it to fail)
+                if "command not found" in output or status != 0:
+                    success = True  # Successfully failed as expected
+                else:
+                    success = False  # Failed to fail (command succeeded but we expected failure)
 
             # For output_contains check
             if self.output_contains:
@@ -155,6 +166,11 @@ class CommandExecutor:
                     if attempt >= max_attempts:
                         error_msg = f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
                         getLogger(__name__).error(error_msg)
+
+                        # For expect_failure case, we want to consider this a "success" (since we expected to fail)
+                        if self.expect_failure:
+                            return True, output  # Return success but with output that shows why it failed
+
                         # Return False and error message to indicate failure
                         return False, error_msg
                     getLogger(__name__).debug(f"Retry {attempt}/{max_attempts}: Output missing required text, retrying...")
@@ -163,12 +179,12 @@ class CommandExecutor:
                     continue  # Try again
 
                 getLogger(__name__).debug(f"\tOutput contains: '{self.output_contains}' for {command=}\n")
-                return was_error, output
+                return success, output
 
             # For status check
             else:
                 if status is None:
-                    return was_error, output
+                    return success, output
 
                 if status != 0:
                     # If we've reached max attempts, return error
@@ -181,10 +197,10 @@ class CommandExecutor:
                     continue  # Try again
 
             # If we get here, the command succeeded
-            return was_error, output
+            return success, output
 
         # Should not reach here due to returns in the loop
-        return was_error, output
+        return success, output
 
     def _should_skip_codeblock_execution(self, config: Config) -> bool:
         """Check various conditions that would cause us to skip command execution."""

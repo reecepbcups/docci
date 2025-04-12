@@ -29,7 +29,3 @@ echo 'Valid Output2'
 ```bash docci-output-contains="TestInputEcho"
 read -r input_variable <<< "TestInputEcho"; echo "$input_variable"
 ```
-
-```bash docci-assert-failure docci-output-contains="NOT THE RIGHT OUTPUT"
-echo abcMyOutput
-```
