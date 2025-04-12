@@ -20,6 +20,11 @@ def execute_command(command: str, is_background: bool = False, **kwargs) -> tupl
     if not os.path.exists(kwargs['cwd']):
         raise ValueError(f"cwd {kwargs['cwd']} does not exist")
 
+    # If using docci-background and command ends with " &", remove the trailing " &"
+    if is_background and command.strip().endswith(" &"):
+        command = command.strip()[:-2]
+        getLogger(__name__).debug(f"\tRemoved trailing ' &' from background command")
+
     # TODO: process if it is an env var and pass through `` and $()
 
     getLogger(__name__).debug(f"\tExecuting: {command=} in {kwargs['cwd']}")

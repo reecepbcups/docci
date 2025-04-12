@@ -34,7 +34,7 @@ export SOME_ENV_VAR_PATH="hidden_path"
 ```
 
 ```bash docci-background docci-delay-after=1
-EXAMPLE_PORT=3001 node dist/app.js
+EXAMPLE_PORT=3001 node dist/app.js &
 ```
 
 ## Test the server output matches expected
