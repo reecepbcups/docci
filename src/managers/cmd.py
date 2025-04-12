@@ -38,6 +38,7 @@ class CommandExecutor:
         response = ""
         had_error = False
         last_output = ""
+        all_outputs = []
 
         for command in self.commands:
             if self._should_skip_cmd_execution(config, command):
@@ -64,6 +65,10 @@ class CommandExecutor:
             success, output = result
             last_output = output if output is not None else ""  # Save the last output
 
+            # Store output for output_contains check
+            if output is not None:
+                all_outputs.append(output)
+
             if not success:  # Command failed
                 had_error = True
                 if output and "Error:" in output:
@@ -78,6 +83,14 @@ class CommandExecutor:
                 return ""  # Return empty string instead of None
             else:
                 return "Error: expected failure but command succeeded"
+
+        # Check output_contains against all command outputs
+        if self.output_contains and all_outputs:
+            combined_output = "\n".join(all_outputs)
+            if self.output_contains not in combined_output:
+                error_msg = f"Error: `{self.output_contains}` is not found in any command output"
+                getLogger(__name__).error(error_msg)
+                return error_msg
 
         # Return error message if there was one, otherwise return command output
         # Always return a string, never None
@@ -156,8 +169,8 @@ class CommandExecutor:
                 else:
                     success = False  # Failed to fail (command succeeded but we expected failure)
 
-            # For output_contains check
-            if self.output_contains:
+            # Individual command output_contains check (now moved to run_commands for whole block checks)
+            if self.output_contains and False:  # Disabled for single command check
                 getLogger(__name__).debug(f"\tOutput contains: check for {command=}\n")
 
                 # Check if output contains the expected string
