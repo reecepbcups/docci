@@ -168,3 +168,19 @@ class TestSomething(unittest.TestCase):
         elapsed = time.time() - start_time
         # Allow for small timing variations but ensure it's close to the delay
         self.assertTrue(delay - 0.1 <= elapsed <= delay + 0.1, f"Expected delay around {delay}s, got {elapsed}s")
+
+    def test_replace_text(self):
+        # Test text replacement functionality
+        c = '''```bash docci-replace-text="0.4;MY_ENV"
+        echo 'The version is 0.4'
+        ```'''
+        dv = parse_markdown_code_blocks(config=None, content=c)[0]
+        self.assertEqual(dv.command_executor.replace_text, "0.4;MY_ENV")
+
+        out = dv.command_executor.run_commands(config=None)
+        self.assertIn("Error: environment variable 'MY_ENV' not set. Required by docci-replace-text.", out)
+
+        os.environ["MY_ENV"] = "0.5"
+        out = dv.command_executor.run_commands(config=None)
+        # TODO: this requires None, would be nice if echo was logged properly to output
+        self.assertEqual(out, None)
