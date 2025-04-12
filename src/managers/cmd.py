@@ -3,6 +3,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from logging import getLogger
 from typing import List, Optional, Union
@@ -25,6 +26,7 @@ class CommandExecutor:
     ignored: bool = False
     delay_manager: Optional[DelayManager] = None
     if_file_not_exists: str = ""
+    retry_count: int = 0
 
     def run_commands(
         self,
@@ -74,6 +76,17 @@ class CommandExecutor:
 
         return response
 
+    def _handle_retry_cmd_delay(self, attempt: int = -1):
+        assert attempt >= 0, "Attempt must be a non-negative integer"
+        if attempt == 1: return
+
+        delay_second = 2
+        if self.delay_manager:
+            if self.delay_manager.cmd_delay > 0:
+                delay_second = self.delay_manager.cmd_delay
+        getLogger(__name__).debug(f"Sleeping for {delay_second} seconds before retrying...")
+        time.sleep(delay_second)
+
     def _execute_command(self, command: str, config: Config, cmd_background: bool, env: dict) -> Union[str, bool, None]:
         """
         Execute a command and handle its output.
@@ -82,33 +95,58 @@ class CommandExecutor:
             - True: If stderr had output (error occurred)
             - None: If command executed successfully
         """
-        tmp = execute_command(command, is_background=cmd_background, cwd=config.working_dir, env=env)
+        # Retry logic
+        max_attempts = max(1, self.retry_count + 1)  # At least 1 attempt
+        attempt = 0
 
-        # already handled in execute_command to run a background process thread
-        if cmd_background:
-            # process: spawn = tmp
-            return None
+        while attempt < max_attempts:
+            attempt += 1
+            getLogger(__name__).debug(f"Executing command (attempt {attempt}/{max_attempts}): {command}")
 
-        status: int | None = tmp[0]
-        output: str = tmp[1]
+            tmp = execute_command(command, is_background=cmd_background, cwd=config.working_dir, env=env)
 
-
-        if self.output_contains:
-            # Only check output contains if this is the last non-empty command
-            non_empty_commands = [cmd for cmd in self.commands if cmd.strip() and not cmd.strip().startswith('#')]
-            if non_empty_commands and command == non_empty_commands[-1]:
-                if self.output_contains not in output:
-                    return f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
-
-                getLogger(__name__).debug(f"\tOutput contains: '{self.output_contains}' for {command=}\n")
-
-        else:
-            if status is None:
+            # already handled in execute_command to run a background process thread
+            if cmd_background:
+                # process: spawn = tmp
                 return None
 
-            if status != 0:
-                return f"Error ({status=}) {command=} failed with output: {output}"
+            status: int | None = tmp[0]
+            output: str = tmp[1]
 
+            # For output_contains check
+            if self.output_contains:
+                # Only check output contains if this is the last non-empty command
+                non_empty_commands = [cmd for cmd in self.commands if cmd.strip() and not cmd.strip().startswith('#')]
+                if non_empty_commands and command == non_empty_commands[-1]:
+                    if self.output_contains not in output:
+                        # If we've reached max attempts, return error
+                        if attempt >= max_attempts:
+                            return f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
+                        getLogger(__name__).debug(f"Retry {attempt}/{max_attempts}: Output missing required text, retrying...")
+
+                        self._handle_retry_cmd_delay(attempt)
+                        continue  # Try again
+
+                    getLogger(__name__).debug(f"\tOutput contains: '{self.output_contains}' for {command=}\n")
+                    return None  # Success
+
+            # For status check
+            else:
+                if status is None:
+                    return None
+
+                if status != 0:
+                    # If we've reached max attempts, return error
+                    if attempt >= max_attempts:
+                        return f"Error ({status=}) {command=} failed with output: {output}"
+                    getLogger(__name__).debug(f"Retry {attempt}/{max_attempts}: Command failed with status {status}, retrying...")
+                    self._handle_retry_cmd_delay(attempt)
+                    continue  # Try again
+
+            # If we get here, the command succeeded
+            return None
+
+        # Should not reach here due to returns in the loop
         return None
 
     def _should_skip_codeblock_execution(self, config: Config) -> bool:

@@ -57,6 +57,7 @@ class Tags(Enum):
     OUTPUT_CONTAINS = 'docci-output-contains'
     ASSERT_FAILURE = 'docci-assert-failure'
     MACHINE_OS = "docci-os"
+    RETRY = 'docci-retry'
 
     # file related
     IF_FILE_DOES_NOT_EXISTS = "docci-if-file-not-exists"
@@ -83,6 +84,7 @@ class Tags(Enum):
             'docci-should-fail': Tags.ASSERT_FAILURE,
             'docci-machine': Tags.MACHINE_OS,
             'docci-bg': Tags.BACKGROUND,
+            'docci-retry-attempts': Tags.RETRY,
             # file related
             'docci-file-name': Tags.FILE_NAME,
             'docci-insert-at-line': Tags.INSERT_AT_LINE,

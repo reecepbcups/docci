@@ -1,7 +1,8 @@
 {
   "paths": [
     "tests/README1.md",
-    "tests/README2.md"
+    "tests/README2.md",
+    "tests/README3.md"
   ],
   "env_vars": {},
   "pre_cmds": [],
