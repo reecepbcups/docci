@@ -159,21 +159,18 @@ class CommandExecutor:
 
             status: int | None = tmp[0]
             output: str = tmp[1]
-            # Command is successful if status is 0 (not an error)
-            success = False if status and status != 0 else True
-
-            # Special case for commands that are expected to fail
+            # Check if command resulted in error (non-zero exit status)
+            error = status != 0 if status is not None else False
+            success = not error
+            
+            # Handle commands that are expected to fail
             if self.expect_failure:
                 # If we expect failure, we invert our success logic
-                # When the command fails (command not found, non-zero exit code), we treat it as "success"
-                # When the command succeeds, we treat it as a "failure" (because we wanted it to fail)
-                if "command not found" in output or status != 0:
-                    success = True  # Successfully failed as expected
-                else:
-                    success = False  # Failed to fail (command succeeded but we expected failure)
+                # For expect_failure=True: error=True means success=True (test passed)
+                success = error  # If error occurred, test passes (when expecting failure)
 
             # Individual command output_contains check (now moved to run_commands for whole block checks)
-            if self.output_contains and False:  # Disabled for single command check
+            if self.output_contains:
                 getLogger(__name__).debug(f"\tOutput contains: check for {command=}\n")
 
                 # Check if output contains the expected string
