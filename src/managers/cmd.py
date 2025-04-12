@@ -1,12 +1,10 @@
 import os
 import platform
 import shutil
-import subprocess
-import sys
 import time
 from dataclasses import dataclass
 from logging import getLogger
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple
 
 from pexpect import spawn
 
@@ -75,6 +73,7 @@ class CommandExecutor:
             else:
                 return "Error: expected failure but command succeeded"
 
+        # Return error message if there was one, otherwise return command output
         return response
 
     def _handle_retry_cmd_delay(self, attempt: int = -1):
@@ -88,26 +87,28 @@ class CommandExecutor:
         getLogger(__name__).debug(f"Sleeping for {delay_second} seconds before retrying...")
         time.sleep(delay_second)
 
-    def _execute_command(self, command: str, config: Config, cmd_background: bool, env: dict) -> Union[str, bool, None]:
+    # returns: success, output
+    def _execute_command(self, command: str, config: Config, cmd_background: bool, env: dict) -> Tuple[bool, str]:
         """
         Execute a command and handle its output.
         Returns:
             - str: Error message if command failed
             - True: If stderr had output (error occurred)
-            - None: If command executed successfully
+            - str: Command output if command executed successfully
+            - None: Only for background commands
         """
         # Handle text replacement if configured
         if self.replace_text:
             try:
                 parts = self.replace_text.split(';')
                 if len(parts) != 2:
-                    return f"Error: invalid format for docci-replace-text. Expected format: 'text;ENV_VAR', got '{self.replace_text}'"
+                    return False, f"Error: invalid format for docci-replace-text. Expected format: 'text;ENV_VAR', got '{self.replace_text}'"
 
                 text_to_replace, env_var_name = parts
 
                 # Check if the environment variable exists
                 if env_var_name not in env:
-                    return f"Error: environment variable '{env_var_name}' not set. Required by docci-replace-text."
+                    return False, f"Error: environment variable '{env_var_name}' not set. Required by docci-replace-text."
 
                 env_var_value = env[env_var_name]
                 getLogger(__name__).debug(f"Replacing '{text_to_replace}' with env var {env_var_name}='{env_var_value}' in command: {command}")
@@ -116,7 +117,7 @@ class CommandExecutor:
                 command = command.replace(text_to_replace, env_var_value)
                 getLogger(__name__).debug(f"Command after replacement: {command}")
             except Exception as e:
-                return f"Error in text replacement: {str(e)}"
+                return False, f"Error in text replacement: {str(e)}"
 
         # Retry logic
         max_attempts = max(1, self.retry_count + 1)  # At least 1 attempt
@@ -132,10 +133,11 @@ class CommandExecutor:
             # already handled in execute_command to run a background process thread
             if cmd_background:
                 # process: spawn = tmp
-                return None
+                return True, None
 
             status: int | None = tmp[0]
             output: str = tmp[1]
+            was_error = True if status and status != 0 else False
 
             # For output_contains check
             if self.output_contains:
@@ -145,19 +147,19 @@ class CommandExecutor:
                     if self.output_contains not in output:
                         # If we've reached max attempts, return error
                         if attempt >= max_attempts:
-                            return f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
+                            return False, f"Error: `{self.output_contains}` is not found in output, output: {output} for {command}"
                         getLogger(__name__).debug(f"Retry {attempt}/{max_attempts}: Output missing required text, retrying...")
 
                         self._handle_retry_cmd_delay(attempt)
                         continue  # Try again
 
                     getLogger(__name__).debug(f"\tOutput contains: '{self.output_contains}' for {command=}\n")
-                    return None  # Success
+                    return was_error, output
 
             # For status check
             else:
                 if status is None:
-                    return None
+                    return was_error, None
 
                 if status != 0:
                     # If we've reached max attempts, return error
@@ -168,10 +170,10 @@ class CommandExecutor:
                     continue  # Try again
 
             # If we get here, the command succeeded
-            return None
+            return was_error, output
 
         # Should not reach here due to returns in the loop
-        return None
+        return was_error, None
 
     def _should_skip_codeblock_execution(self, config: Config) -> bool:
         """Check various conditions that would cause us to skip command execution."""

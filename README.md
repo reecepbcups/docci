@@ -88,6 +88,8 @@ echo xyzMyOutput
 ```
 ````
 
+
+
 Run blocking commands in the background: 🌐
 
 ````bash
@@ -121,14 +123,18 @@ echo "Output"
 ```
 ````
 
-and replace a command with an specific override (useful for CI pipelines)
+Set ENV Variables
 
 ````bash
 ```bash
 export SOME_ENV_VAR="abcdef"
 ```
+````
 
-```bash docci-replace-text="xyzMyOutput;SOME_ENV_VAR"
+replace a command with an specific override (useful for CI pipelines)
+
+````bash
+```bash docci-output-contains="AAAAAA" docci-replace-text="xyzMyOutput;SOME_ENV_VAR"
 echo xyzMyOutput
 ```
 ````
