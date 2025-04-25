@@ -116,6 +116,10 @@ class CommandExecutor:
             - Tuple[bool, str]: (True, output) if command succeeded
             - Tuple[bool, None]: (True, None) only for background commands
         """
+        # Update our env dictionary with the current OS environment
+        # This ensures we have the most up-to-date env vars
+        env = os.environ.copy()
+        
         # Handle text replacement if configured
         if self.replace_text:
             try:

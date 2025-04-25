@@ -25,7 +25,16 @@ def execute_command(command: str, is_background: bool = False, **kwargs) -> tupl
         command = command.strip()[:-2]
         getLogger(__name__).debug(f"\tRemoved trailing ' &' from background command")
 
-    # TODO: process if it is an env var and pass through `` and $()
+    # Special handling for export commands - execute them separately and update env
+    if command.strip().startswith('export '):
+        envs = parse_env(command)
+        if envs:
+            # Update our environment with the exported variables
+            os.environ.update(envs)
+            # Log for debugging
+            getLogger(__name__).debug(f"\tEnvironment updated with exported variables: {envs}")
+            # For export commands, return success with empty output
+            return 0, ""
 
     getLogger(__name__).debug(f"\tExecuting: {command=} in {kwargs['cwd']}")
 
@@ -75,6 +84,7 @@ def execute_substitution_commands(value: str) -> str:
         String with commands replaced by their output
     """
     result = value
+    getLogger(__name__).debug(f"Executing substitution in: {value}")
 
     # Process all commands
     patterns = [
@@ -90,9 +100,19 @@ def execute_substitution_commands(value: str) -> str:
                 break
 
             full_match = match.group(0)
-            replacement = handler(match)
-            result = result.replace(full_match, replacement[1]) # returns tuple[int, str] from the execute_command
+            cmd_to_run = match.group(1)
+            getLogger(__name__).debug(f"Found command substitution: {cmd_to_run}")
+            
+            # Execute the command and get its output
+            status, output = execute_command(cmd_to_run, env=os.environ.copy())
+            if status != 0:
+                getLogger(__name__).warning(f"Command substitution failed: {cmd_to_run}, status: {status}")
+                
+            # Replace the entire command (including backticks/$()), with the command's output
+            result = result.replace(full_match, output.strip())
+            getLogger(__name__).debug(f"Substituted {full_match} with: '{output.strip()}'")
 
+    getLogger(__name__).debug(f"After substitution: {result}")
     return result
 
 def parse_env(command: str) -> Dict[str, str]:
@@ -114,7 +134,19 @@ def parse_env(command: str) -> Dict[str, str]:
     export_match = re.match(r'^export\s+([A-Za-z_][A-Za-z0-9_]*)=(.*)$', command.strip())
     if export_match:
         key = export_match.group(1)
-        value = execute_substitution_commands(export_match.group(2))
+        value = export_match.group(2).strip()
+        
+        # Handle backtick command execution for export
+        if '`' in value or '$(' in value:
+            # Remove outer quotes if present
+            if (value.startswith('"') and value.endswith('"')) or \
+               (value.startswith("'") and value.endswith("'")):
+                value = value[1:-1]
+                
+            # Execute the substitution command and use its output as the value
+            value = execute_substitution_commands(value)
+            getLogger(__name__).debug(f"Executed substitution for {key}={value}")
+        
         return {key: value}
 
     # Check for inline environment variables (KEY=VALUE command args)
@@ -127,7 +159,9 @@ def parse_env(command: str) -> Dict[str, str]:
         for pair in env_part.split():
             if '=' in pair:
                 key, value = pair.split('=', 1)
-                env_vars[key] = execute_substitution_commands(value)
+                if '`' in value or '$(' in value:
+                    value = execute_substitution_commands(value)
+                env_vars[key] = value
 
         return env_vars
 
@@ -135,7 +169,12 @@ def parse_env(command: str) -> Dict[str, str]:
     standalone_match = re.match(r'^([A-Za-z_][A-Za-z0-9_]*)=(.*)$', command.strip())
     if standalone_match:
         key = standalone_match.group(1)
-        value = execute_substitution_commands(standalone_match.group(2))
+        value = standalone_match.group(2).strip()
+        
+        # Handle backtick command execution for standalone assignment
+        if '`' in value or '$(' in value:
+            value = execute_substitution_commands(value)
+            
         return {key: value}
 
     # If we get here, there were no environment variables we could parse
