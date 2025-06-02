@@ -1,0 +1,1 @@
+export MY_SECRET_VAR=123
