@@ -60,8 +60,8 @@ def execute_command(command: str, is_background: bool = False, **kwargs) -> tupl
         )  # Update with any env vars passed in kwargs
         result, status = pexpect.run(cmd, env=env, timeout=timeout, **kwargs)
 
+        new_vars = {}
         if isSource:
-            new_vars = {}
 
             # parse the output to get the special delimter values after since this is a source command. Then update the env
             output = result.decode('utf-8').strip()
