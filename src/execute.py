@@ -27,7 +27,7 @@ def execute_command(command: str, is_background: bool = False, **kwargs) -> tupl
 
     # Handle source commands
     isSource = False
-    SPECIAL_DELIM = "__DOCCHI_ENV_VAR_DELIM__"
+    SPECIAL_DELIM = "__DOCCI_ENV_VAR_DELIM__"
     if command.strip().lower().startswith("source "):
         isSource = True
         # 1. Get the current env from the system
