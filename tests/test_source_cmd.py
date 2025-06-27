@@ -16,13 +16,14 @@ class TestSourceCommand(unittest.TestCase):
         status, _ = execute_command("source tests/test_source_file.sh")
         self.assertEqual(status, 0)
 
-    #     # Test with a source command with spaces
+        # Test with a source command with spaces
         status, _ = execute_command("  source  tests/test_source_file.sh  ")
         self.assertEqual(status, 0)
 
     def test_execute_source_command_update(self):
         """Test the execute_source_command function directly"""
 
+        # Set an env and ensure the execute_command source overrides to the new value from the script
         os.environ["MY_SECRET_VAR"] = "890"
         status, _ = execute_command("source tests/test_source_file.sh")
         self.assertEqual(status, 0)
