@@ -25,6 +25,21 @@ def execute_command(command: str, is_background: bool = False, **kwargs) -> tupl
         command = command.strip()[:-2]
         getLogger(__name__).debug(f"\tRemoved trailing ' &' from background command")
 
+    # Handle source commands
+    isSource = False
+    SPECIAL_DELIM = "__DOCCI_ENV_VAR_DELIM__"
+    if command.strip().lower().startswith("source "):
+        isSource = True
+        # 1. Get the current env from the system
+        # 2. Run the command & print out the output from the command
+        # 3. `diff / comm` the output and set those new values as an env for all future execution
+
+        # append '&& env' to the command to print out the env variables after sourcing
+        # use a specific delim to make it easier to parse the output for env
+        command += f" && echo {SPECIAL_DELIM} && env"
+        getLogger(__name__).debug(f"\tSourcing command: {command}")
+
+
     # TODO: process if it is an env var and pass through `` and $()
 
     getLogger(__name__).debug(f"\tExecuting: {command=} in {kwargs['cwd']}")
@@ -44,6 +59,40 @@ def execute_command(command: str, is_background: bool = False, **kwargs) -> tupl
             kwargs.pop("env", {})
         )  # Update with any env vars passed in kwargs
         result, status = pexpect.run(cmd, env=env, timeout=timeout, **kwargs)
+
+        new_vars = {}
+        if isSource:
+
+            # parse the output to get the special delimter values after since this is a source command. Then update the env
+            output = result.decode('utf-8').strip()
+            if SPECIAL_DELIM in output:
+                # print(output)
+
+                # Split the output into lines
+                lines = output.splitlines()
+                # Find the index of the special delimiter
+                delim_index = lines.index(SPECIAL_DELIM)
+                # The new env vars are everything after the delimiter
+                new_env_vars = lines[delim_index + 1:]
+
+                # Update the environment with the new variables
+                for var in new_env_vars:
+                    if '=' in var:
+                        key, value = var.split('=', 1)
+                        new_vars[key] = value.strip()
+                        # os.environ[key] = value.strip()
+                        getLogger(__name__).debug(f"\tUpdated env var: {key=} {value.strip()}")
+
+        # update the global env with the diff values from new_vars
+        diff = dict_diff(os.environ, new_vars)
+        if diff:
+            getLogger(__name__).debug(f"\tUpdating global env with: {diff=}")
+            os.environ.update(dict(diff))
+
+        # if isSource, we should not print out anythiung
+        if isSource:
+            # return 0, "Sourced successfully"
+            return 0, ""
 
         # (cosmetic) sometimes color is not set so a previous end of command color is used.
         # if the result has a proper color code then that will be used instead.
@@ -148,3 +197,9 @@ def validate_command(cmd: str) -> Optional[str]:
         return "Please use single quotes for forge script `--sig`, not double quotes"
 
     return None
+
+def dict_diff(before, after) -> dict[str, str]:
+    added = {k: v for k, v in after.items() if k not in before}
+    changed = {k: after[k] for k in before if k in after and before[k] != after[k] and isinstance(after[k], str)}
+
+    return {**added, **changed} if added or changed else {}
