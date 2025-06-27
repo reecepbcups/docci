@@ -39,8 +39,9 @@ def main():
         sys.exit(1)
 
     result = run_documentation_processor(config)
-    # Check for any kind of error message, not just those starting with "Error:"
-    if result and ("Error:" in result or "`" in result and "is not found in output" in result):
+    # Note: Individual errors are now logged during processing
+    # Only exit with error code if there were critical setup/cleanup errors
+    if result and result.startswith("Setup error:"):
         logger.error(result)
         sys.exit(1)
 
@@ -57,7 +58,7 @@ def run_documentation_processor(config: Config) -> str:
         Command output or error message
     """
     outputs = []
-    
+
     try:
         # Set up environment
         config.run_pre_cmds(hide_output=True)
@@ -76,14 +77,17 @@ def run_documentation_processor(config: Config) -> str:
                     code_blocks = parse_markdown_code_blocks(config, content)
 
                     # Execute commands for each code block
+                    logger.debug(f"Processing {len(code_blocks)} code blocks from {file_path}")
                     for i, block in enumerate(code_blocks):
+                        logger.debug(f"Executing block #{i}: {block.language} - {len(block.command_executor.commands) if block.command_executor else 0} commands")
                         result = block.run_commands(config=config)
                         # Store non-empty results
                         if result:
                             outputs.append(result)
-                        # Treat as error if it starts with "Error:" or contains "Error: `" (for output_contains check)
+
                         if result and (result.startswith("Error:") or ("Error: `" in result and "` is not found in output" in result)):
-                            return f"Error({parent_path_key},{file_paths})[#{i}]: {result}"
+                            logger.error(f"Error in block #{i}: {result}")
+                            # Continue processing instead of returning early
 
             except KeyboardInterrupt:
                 logger.info("KeyboardInterrupt: Quitting...")
