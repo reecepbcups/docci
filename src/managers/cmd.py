@@ -30,7 +30,9 @@ class CommandExecutor:
     def run_commands(
         self,
         config: Config,
-        background_exclude_commands: List[str] = ["cp", "export", "cd", "mkdir", "echo", "cat"], # TODO: remove?
+        background_exclude_commands: List[str] = [
+            "cp", "export", "cd", "mkdir", "echo", "cat"
+        ],
     ) -> str:
         if self._should_skip_codeblock_execution(config):
             return ""  # Return empty string instead of None
@@ -98,7 +100,8 @@ class CommandExecutor:
 
     def _handle_retry_cmd_delay(self, attempt: int = -1):
         assert attempt >= 0, "Attempt must be a non-negative integer"
-        if attempt == 1: return
+        if attempt == 1:
+            return
 
         delay_second = 2
         if self.delay_manager:
@@ -114,7 +117,7 @@ class CommandExecutor:
         Returns:
             - Tuple[bool, str]: (False, error_message) if command failed
             - Tuple[bool, str]: (True, output) if command succeeded
-            - Tuple[bool, None]: (True, None) only for background commands
+            - Tuple[bool, str]: (True, "") for background commands
         """
         # Handle text replacement if configured
         if self.replace_text:
@@ -155,14 +158,15 @@ class CommandExecutor:
             # already handled in execute_command to run a background process thread
             if cmd_background:
                 # process: spawn = tmp
-                return True, None
+                getLogger(__name__).debug(f"Command '{command}' is running in background, no output to check.")
+                return True, ""
 
-            status: int | None = tmp[0]
+            status: Optional[int] = tmp[0]
             output: str = tmp[1]
             # Check if command resulted in error (non-zero exit status)
             error = status != 0 if status is not None else False
             success = not error
-            
+
             # Handle commands that are expected to fail
             if self.expect_failure:
                 # If we expect failure, we invert our success logic
@@ -171,15 +175,15 @@ class CommandExecutor:
 
             # We no longer check output_contains for individual commands
             # It is now handled at the block level in run_commands for the last command only
-            
+
             # For logging purposes only
             if self.output_contains and command == self.commands[-1]:  # Only log for last command
                 getLogger(__name__).debug(f"\tOutput contains check will be performed at block level for last command: {command}")
-            
+
             # Status check logic
             if status is None:
                 return success, output
-                
+
             # Check if command resulted in error (non-zero exit status)
             if status != 0:
                 # If we've reached max attempts, return error
@@ -195,7 +199,7 @@ class CommandExecutor:
             return success, output
 
         # Should not reach here due to returns in the loop
-        return success, output
+        return False, "Command execution failed"
 
     def _should_skip_codeblock_execution(self, config: Config) -> bool:
         """Check various conditions that would cause us to skip command execution."""
@@ -207,7 +211,7 @@ class CommandExecutor:
         # Skip if target file already exists
         if self.if_file_not_exists:
             working_dir = config.working_dir if config else os.getcwd()
-            file_path = os.path.join(working_dir, self.if_file_not_exists) if config.working_dir else self.if_file_not_exists
+            file_path = os.path.join(working_dir, self.if_file_not_exists) if working_dir else self.if_file_not_exists
             if os.path.exists(file_path):
                 getLogger(__name__).debug(f"Skipping commands since {file_path} exists")
                 return True
