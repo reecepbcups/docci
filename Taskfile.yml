@@ -1,0 +1,34 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Build the docci binary
+    cmds:
+      - mkdir -p out
+      - go build -o out/docci ./*.go
+    sources:
+      - '**/*.go'
+      - go.mod
+      - go.sum
+    generates:
+      - out/docci
+
+  install:
+    desc: Install docci binary to $GOPATH/bin
+    cmds:
+      - mkdir -p $GOPATH/bin
+      - task build
+      - cp out/docci $GOPATH/bin/docci
+    generates:
+      - out/docci
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf out
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./... -v -parallel 4
+
