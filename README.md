@@ -1,4 +1,4 @@
-# Docci | Readme Runner 🚀 &middot; [![GitHub license](https://img.shields.io/badge/license-apache-blue.svg)](https://github.com/Reecepbcups/docci/blob/main/LICENSE) [![Tests](https://github.com/Reecepbcups/docci/actions/workflows/test.yml/badge.svg)](https://github.com/Reecepbcups/docci/actions/workflows/test.yml) [![Compatible](https://img.shields.io/badge/compatible%20-macOS_&_linux-8A2BE2.svg)](https://github.com/Reecepbcups/docci)
+# Docci | Readme Test 🚀 &middot; [![GitHub license](https://img.shields.io/badge/license-apache-blue.svg)](https://github.com/Reecepbcups/docci/blob/main/LICENSE) [![Tests](https://github.com/Reecepbcups/docci/actions/workflows/go-unit-test.yml/badge.svg)](https://github.com/Reecepbcups/docci/actions/workflows/test.yml) [![Compatible](https://img.shields.io/badge/compatible%20-macOS_&_linux-8A2BE2.svg)](https://github.com/Reecepbcups/docci)
 
 Your documentation is now your test suite! 🎯 *(pronounced "doc-ee", short for documentation CI)*
 
@@ -10,39 +10,44 @@ Find sample workspaces in the [`examples/` directory](./examples/).
 
 ### 📦 Installation
 
-Python `3.12`+ is required. You can also download a pre-built binary from the [release page](https://github.com/Reecepbcups/docci/releases).
+[Go `1.23`+](https://go.dev/doc/install) is required. You can also download a pre-built binary from the [release page](https://github.com/Reecepbcups/docci/releases).
 
 ```bash docci-ignore
-# setup python env
-python3 -m venv ./py-env
-source ./py-env/bin/activate
-
-# install python requirements
-pip install -r requirements.txt
+go install github.com/reecepbcups/docci
 ```
 
 ```bash docci-ignore
-make install
+git clone git@github.com:Reecepbcups/docci.git --depth 1
+cd docci
+go mod tidy
+task install
 ```
 
 ### 🤖 Github Actions Integration
 ````yaml
-# update the version in the URL
-# update the config path argument
-- name: Docci Readme Runner
+  # docci_Linux_x86_64, docci_Linux_arm64, docci_Darwin_x86_64, docci_Darwin_arm64
+  - name: Install Docci Readme Test Tool
     run: |
-    RELEASE=https://github.com/Reecepbcups/docci/releases/download/v0.7.1/docci
-    sudo wget -O /usr/local/bin/docci ${RELEASE}
-    sudo chmod +x /usr/local/bin/docci
-    docci .github/workflows/config.json
+      VERSION=v0.9.0-alpha.1
+      BINARY=docci_Linux_x86_64.tar.gz
+      curl -fsSL "https://github.com/Reecepbcups/docci/releases/download/${VERSION}/${BINARY}" | sudo tar -xzC /usr/local/bin
+      sudo chmod +x /usr/local/bin/docci
+
+  - run: docci run YOUR_MARKDOWN_FILE.md --hide-background-logs
 ````
 
 ### 🎮 Usage
 
 ```bash docci-ignore
-docci <config_path | config_json> [--tags]
-# e.g. docci .github/workflows/config.json
-# e.g. docci '{"paths": ["docs/README.md"],"working_dir": "docs/","cleanup_cmds": ["kill -9 $(lsof -t -i:3000)"]}'
+docci run <markdown_file.md> [options]
+
+docci run nested/README.md --hide-background-logs
+docci run A.md --cleanup-commands "docker-compose down" --cleanup-commands "rm -rf /tmp/test"
+docci run A.md --pre-commands "npm install"
+
+docci tags
+
+docci version
 ```
 
 ### 🎨 Operation tags
@@ -55,16 +60,8 @@ docci <config_path | config_json> [--tags]
   * 🌐 `docci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready
   * 📜 `docci-output-contains="string"`: Ensure the output contains a string at the end of the block
   * 🚨 `docci-assert-failure`: If it is expected to fail (non 0 exit code)
-  * 🚨 `docci-replace-text="value;ENV_VAR"`: Replace command text with an ENV variable
   * 🖥️ `docci-os=mac|linux`: Run the command only on it's the specified OS
 
-### 📄 File Tags
-  * `docci-file`: The file name to operate on
-  * `docci-reset-file`: Reset the file to its original content
-  * `docci-if-file-not-exists`: Only run if a file does not exist
-  * `docci-line-insert=N`: Insert content at line N
-  * `docci-line-replace=N`: Replace content at line N
-  * `docci-line-replace=N-M`: Replace content from line N to M
 
 ### 💡 Code Block Tag Examples (Operations)
 
@@ -91,18 +88,20 @@ echo xyzMyOutput
 Run blocking commands in the background: 🌐
 
 ````bash
-```bash docci-background
-python3 tests/demo.py web-server --port 3000
+```bash docci-background docci-delay-after=2
+go run examples/server_endpoint/test_server.go 3000
 ```
 ````
 
 Add delays between commands for stability after the endpoint from a previous command is up: ⏱️
 
 ````bash
-```bash docci-output-contains="GOOD" docci-wait-for-endpoint=http://localhost:3000|30
-curl http://localhost:3000/health
+```bash docci-output-contains="GOOD" docci-wait-for-endpoint=http://localhost:3000/health|30
+VALUE=$(curl http://localhost:3000/health)
+echo "Got value: $VALUE"
 ```
 ````
+
 
 Assert that a command fails: 🚨
 
@@ -112,117 +111,20 @@ notinstalledbin --version
 ```
 ````
 
-Only run a command if a file does not exist: 📄
-
-````bash
-```bash docci-if-file-not-exists="README.md" docci-contains-output="ThisLineShouldNeverRun"
-# since the file does exist, this line never runs
-echo "Output"
-```
-````
-
 Set ENV Variables
 
 ````bash
 ```bash
 export SOME_ENV_VAR="abcdef"
-```
-````
-
-replace a command with an specific override (useful for CI pipelines)
-
-````bash
-```bash docci-output-contains="abcdef" docci-replace-text="bbbbbb;SOME_ENV_VAR"
-echo bbbbbb
+OTHER_ENV_VAR="ghijkl"
+echo "SOME_ENV_VAR is $SOME_ENV_VAR and OTHER_ENV_VAR is $OTHER_ENV_VAR"
 ```
 ````
 
 And cleanup demo server if running in the background:
 
 ````bash
-```bash docci-output-contains="Server shutting down..."
+```bash
 curl http://localhost:3000/kill
 ```
 ````
-
-### 💡 Code Block Tag Examples (Files)
-
-Create a new file from content: 📝
-
-<!-- yes, the typo is meant to be here -->
-````html
-```html docci-file=example.html docci-reset-file
-<html>
-    <head>
-        <title>My Titlee</title>
-    </head>
-</html>
-```
-````
-
-Replace the typo'ed line:
-
-````html
-```html docci-file=example.html docci-line-replace=3
-        <title>My Title</title>
-```
-````
-
-Add new content
-
-````html
-```html docci-file=example.html docci-line-insert=4
-    <body>
-        <h1>My Header</h1>
-        <p>1 paragraph</p>
-        <p>2 paragraph</p>
-    </body>
-```
-````
-
-Replace multiple lines
-
-````html
-```html docci-file=example.html docci-line-replace=7-9
-        <p>First paragraph</p>
-        <p>Second paragraph</p>
-```
-````
-
-## 🛠️ How It Works
-
-The tool processes markdown files and executes code blocks based on configuration settings. The core workflow is handled by several key components:
-
-1. 📋 **Configuration Loading** (`config_types.py`): Loads and validates the JSON configuration file
-2. 📝 **Markdown Processing** (`main.py`): Parses markdown files and processes code blocks
-3. ⚡ **Command Execution** (`execute.py`): Handles command execution and env vars
-4. 🎯 **Tag Processing** (`models.py`): Manages execution control tags
-
-Control how your documentation code blocks are executed with no code, just code block tags. 🏷️
-
-## ⚙️ JSON Configuration Options
-
-- 📂 `paths`: List of markdown files or directories to process (required)
-- 🔐 `env_vars`: Environment variables to set during execution
-- 🎬 `pre_cmds`: Commands to run before processing markdown
-- 🧹 `cleanup_cmds`: Commands to run after processing
-- 📂 `working_dir`: Working directory for command execution
-
-### 📝 Config Example
-
-```json
-{
-  "paths": ["docs/README.md"],
-  "env_vars": {
-    "NODE_ENV": "test"
-  },
-  "working_dir": "docs/",
-  "log_level": "info",
-  "pre_cmds": ["npm install"],
-  "cleanup_cmds": ["docker-compose down"],
-}
-```
-
-## 🚧 Limitations
-
-- Multi-line commands in docs are not supported yet
