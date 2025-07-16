@@ -1,10 +1,10 @@
 # Working Directory Non-existent Path Test
 
-This example demonstrates the `--working-directory` flag with a non-existent path.
+This example demonstrates the `--working-dir` flag with a non-existent path.
 
 To test this, run:
 ```bash docci-ignore
-go run . run --working-directory /nonexistent/path examples/working-directory-nonexistent-test.md
+go run . run --working-dir /nonexistent/path examples/working-directory-nonexistent-test.md
 ```
 
 Expected behavior: The command should fail with "run directory not found: /nonexistent/path" before any code blocks are executed.

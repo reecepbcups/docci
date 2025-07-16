@@ -1,10 +1,10 @@
 # Working Directory Relative Path Test
 
-This example demonstrates the `--working-directory` flag with a relative path.
+This example demonstrates the `--working-dir` flag with a relative path.
 
 To run this test properly, use the following command from the docci root directory:
 ```bash docci-ignore
-go run . run --working-directory examples $(pwd)/examples/working-directory-relative-test.md
+go run . run --working-dir examples $(pwd)/examples/working-directory-relative-test.md
 ```
 
 ## Test working directory functionality
@@ -16,7 +16,7 @@ echo "Current working directory: $(pwd)"
 ```
 
 ```bash
-# Show the current directory name  
+# Show the current directory name
 basename $(pwd)
 ```
 

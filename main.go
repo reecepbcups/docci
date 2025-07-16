@@ -266,7 +266,7 @@ func init() {
 	runCmd.Flags().StringSliceVar(&preCommands, "pre-commands", []string{}, "commands to run before execution starts (useful for environment setup)")
 	runCmd.Flags().StringSliceVar(&cleanupCommands, "cleanup-commands", []string{}, "commands to run after execution completes")
 	runCmd.Flags().BoolVar(&hideBackgroundLogs, "hide-background-logs", false, "hide background process logs from output")
-	runCmd.Flags().StringVar(&workingDir, "working-directory", "", "change working directory before running commands")
+	runCmd.Flags().StringVar(&workingDir, "working-dir", "", "change working directory before running commands")
 }
 
 func runPreCommands(commands []string) error {
