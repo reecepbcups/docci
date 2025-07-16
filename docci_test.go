@@ -213,7 +213,7 @@ func TestDocciResultStruct(t *testing.T) {
 		Success:  true,
 		ExitCode: 0,
 		Stdout:   "test output",
-		Stderr:   "",
+		Stderr:   "test stderr",
 	}
 
 	if !result.Success {
@@ -224,6 +224,9 @@ func TestDocciResultStruct(t *testing.T) {
 	}
 	if result.Stdout != "test output" {
 		t.Error("Expected stdout to match")
+	}
+	if result.Stderr != "test stderr" {
+		t.Error("Expected stderr to match")
 	}
 }
 
