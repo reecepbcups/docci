@@ -88,18 +88,20 @@ echo xyzMyOutput
 Run blocking commands in the background: 🌐
 
 ````bash
-```bash docci-background
-python3 tests/demo.py web-server --port 3000
+```bash docci-background docci-delay-after=2
+go run examples/server_endpoint/test_server.go 3000
 ```
 ````
 
 Add delays between commands for stability after the endpoint from a previous command is up: ⏱️
 
 ````bash
-```bash docci-output-contains="GOOD" docci-wait-for-endpoint=http://localhost:3000|30
-curl http://localhost:3000/health
+```bash docci-output-contains="GOOD" docci-wait-for-endpoint=http://localhost:3000/health|30
+VALUE=$(curl http://localhost:3000/health)
+echo "Got value: $VALUE"
 ```
 ````
+
 
 Assert that a command fails: 🚨
 
@@ -109,31 +111,20 @@ notinstalledbin --version
 ```
 ````
 
-Only run a command if a file does not exist: 📄
-
-````bash
-```bash docci-if-file-not-exists="README.md" docci-contains-output="ThisLineShouldNeverRun"
-# since the file does exist, this line never runs
-echo "Output"
-```
-````
-
 Set ENV Variables
 
 ````bash
 ```bash
 export SOME_ENV_VAR="abcdef"
 OTHER_ENV_VAR="ghijkl"
+echo "SOME_ENV_VAR is $SOME_ENV_VAR and OTHER_ENV_VAR is $OTHER_ENV_VAR"
 ```
 ````
-
-
 
 And cleanup demo server if running in the background:
 
 ````bash
-```bash docci-output-contains="Server shutting down..."
+```bash
 curl http://localhost:3000/kill
 ```
 ````
-
