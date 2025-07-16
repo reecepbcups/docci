@@ -30,7 +30,6 @@ var rootCmd = &cobra.Command{
 in markdown files and validates their outputs.
 
 It helps ensure your documentation examples are always accurate and working.`,
-	Version: version,
 }
 
 var runCmd = &cobra.Command{
@@ -211,6 +210,36 @@ var validateCmd = &cobra.Command{
 	},
 }
 
+var tagsCmd = &cobra.Command{
+	Use:   "tags",
+	Short: "Display all available tags and their aliases",
+	Long:  `Show a comprehensive list of all docci tags, their aliases, descriptions, and usage examples.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		tags := parser.GetAllTagsInfo()
+
+		fmt.Println("Available Docci Tags")
+		fmt.Println("====================")
+		fmt.Println()
+
+		for _, tag := range tags {
+			fmt.Printf("Tag: %s\n", tag.Name)
+			if len(tag.Aliases) > 0 {
+				fmt.Printf("Aliases: %s\n", strings.Join(tag.Aliases, ", "))
+			}
+			fmt.Printf("Description: %s\n", tag.Description)
+			fmt.Printf("Example: %s\n", tag.Example)
+			fmt.Println()
+		}
+
+		fmt.Println("Tag Compatibility Notes:")
+		fmt.Println("- Cannot use 'docci-output-contains' with 'docci-background'")
+		fmt.Println("- Cannot use 'docci-assert-failure' with 'docci-background'")
+		fmt.Println("- Cannot use 'docci-assert-failure' with 'docci-output-contains'")
+		fmt.Println("- Cannot use 'docci-wait-for-endpoint' with 'docci-background'")
+		fmt.Println("- Cannot use 'docci-retry' with 'docci-background'")
+	},
+}
+
 func init() {
 	// Add persistent flags
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "", "set log level (debug, info, warn, error, fatal, panic, off)")
@@ -219,6 +248,7 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(tagsCmd)
 
 	// Add flags to run command
 	runCmd.Flags().StringSliceVar(&preCommands, "pre-commands", []string{}, "commands to run before execution starts (useful for environment setup)")

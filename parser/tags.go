@@ -15,17 +15,17 @@ type MetaTag struct {
 	Language string
 	Ignore   bool
 
-	OutputContains   string
-	Background       bool
-	AssertFailure    bool
-	OS               string
-	WaitForEndpoint  string
-	WaitTimeoutSecs  int
-	RetryCount       int
-	DelayAfterSecs   int
-	DelayPerCmdSecs  float64
-	IfFileNotExists  string
-	IfNotInstalled   string
+	OutputContains  string
+	Background      bool
+	AssertFailure   bool
+	OS              string
+	WaitForEndpoint string
+	WaitTimeoutSecs int
+	RetryCount      int
+	DelayAfterSecs  int
+	DelayPerCmdSecs float64
+	IfFileNotExists string
+	IfNotInstalled  string
 }
 
 var tags string
@@ -44,35 +44,106 @@ const (
 	TagIfNotInstalled  = "docci-if-not-installed"
 )
 
+// TagInfo holds information about a tag and its aliases
+type TagInfo struct {
+	Name        string
+	Aliases     []string
+	Description string
+	Example     string
+}
+
+// tagDefinitions is the single source of truth for all tag information
+var tagDefinitions = []TagInfo{
+	{
+		Name:        TagIgnore,
+		Aliases:     []string{"docci-exclude"},
+		Description: "Skip execution of this code block",
+		Example:     "```bash docci-ignore",
+	},
+	{
+		Name:        TagOutputContains,
+		Aliases:     []string{"docci-contains"},
+		Description: "Validate that the output contains specific text",
+		Example:     "```bash docci-output-contains=\"Expected output\"",
+	},
+	{
+		Name:        TagBackground,
+		Aliases:     []string{"docci-bg"},
+		Description: "Run the code block in the background",
+		Example:     "```bash docci-background",
+	},
+	{
+		Name:        TagAssertFailure,
+		Aliases:     []string{"docci-fail", "docci-should-fail", "docci-expect-failure"},
+		Description: "Expect the code block to fail (non-zero exit code)",
+		Example:     "```bash docci-assert-failure",
+	},
+	{
+		Name:        TagOS,
+		Aliases:     []string{"docci-machine"},
+		Description: "Only run on specific operating systems (linux, macos, windows)",
+		Example:     "```bash docci-os=\"linux\"",
+	},
+	{
+		Name:        TagWaitForEndpoint,
+		Aliases:     []string{"docci-wait"},
+		Description: "Wait for HTTP endpoint before executing",
+		Example:     "```bash docci-wait-for-endpoint=\"http://localhost:8080/health|30\"",
+	},
+	{
+		Name:        TagRetry,
+		Aliases:     []string{"docci-repeat"},
+		Description: "Retry the code block on failure",
+		Example:     "```bash docci-retry=\"3\"",
+	},
+	{
+		Name:        TagDelayAfter,
+		Aliases:     []string{"docci-after-delay"},
+		Description: "Add delay after block execution",
+		Example:     "```bash docci-delay-after=\"5\"",
+	},
+	{
+		Name:        TagDelayPerCmd,
+		Aliases:     []string{"docci-cmd-delay"},
+		Description: "Add delay between each command in the block",
+		Example:     "```bash docci-delay-per-cmd=\"0.5\"",
+	},
+	{
+		Name:        TagIfFileNotExists,
+		Aliases:     []string{"docci-if-not-exists"},
+		Description: "Only run if the specified file does not exist",
+		Example:     "```bash docci-if-file-not-exists=\"/path/to/file\"",
+	},
+	{
+		Name:        TagIfNotInstalled,
+		Aliases:     []string{},
+		Description: "Only run if the specified command is not installed",
+		Example:     "```bash docci-if-not-installed=\"docker\"",
+	},
+}
+
+// tagAliasMap is built from tagDefinitions for fast lookup
+var tagAliasMap map[string]string
+
+// init builds the tagAliasMap from tagDefinitions
+func init() {
+	tagAliasMap = make(map[string]string)
+	for _, tagInfo := range tagDefinitions {
+		// Map the tag name to itself
+		tagAliasMap[tagInfo.Name] = tagInfo.Name
+		// Map all aliases to the tag name
+		for _, alias := range tagInfo.Aliases {
+			tagAliasMap[alias] = tagInfo.Name
+		}
+	}
+}
+
 // TagAlias returns the real tag name for a given alias.
 func TagAlias(tag string) (string, error) {
-	// TODO: other alises as well
-	switch tag {
-	case string(TagIgnore), "docci-exclude":
-		return string(TagIgnore), nil
-	case string(TagOutputContains), "docci-contains":
-		return string(TagOutputContains), nil
-	case string(TagBackground), "docci-bg":
-		return string(TagBackground), nil
-	case string(TagAssertFailure), "docci-fail", "docci-should-fail", "docci-expect-failure":
-		return string(TagAssertFailure), nil
-	case string(TagOS), "docci-machine":
-		return string(TagOS), nil
-	case string(TagWaitForEndpoint), "docci-wait":
-		return string(TagWaitForEndpoint), nil
-	case string(TagRetry), "docci-repeat":
-		return string(TagRetry), nil
-	case string(TagDelayAfter), "docci-after-delay":
-		return string(TagDelayAfter), nil
-	case string(TagDelayPerCmd), "docci-cmd-delay":
-		return string(TagDelayPerCmd), nil
-	case string(TagIfFileNotExists), "docci-if-not-exists":
-		return string(TagIfFileNotExists), nil
-	case string(TagIfNotInstalled):
-		return string(TagIfNotInstalled), nil
-	default:
-		return "", fmt.Errorf("unknown tag / alias: %s", tag)
+	if canonicalTag, exists := tagAliasMap[tag]; exists {
+		return canonicalTag, nil
 	}
+	return "", fmt.Errorf("unknown tag / alias: %s", tag)
 }
 
 // example input:
@@ -296,4 +367,9 @@ func ShouldRunBasedOnCommandInstallation(ifNotInstalledCommand string) bool {
 		logger.GetLogger().Debugf("Including code block: command '%s' is not installed", ifNotInstalledCommand)
 	}
 	return !isInstalled
+}
+
+// GetAllTagsInfo returns information about all available tags and their aliases
+func GetAllTagsInfo() []TagInfo {
+	return tagDefinitions
 }
