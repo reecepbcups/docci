@@ -99,7 +99,7 @@ func TestDelayAfterSecs(t *testing.T) {
 	blocks, err := ParseCodeBlocks(markdown)
 	require.NoError(t, err)
 	require.Len(t, blocks, 1)
-	require.Equal(t, 5, blocks[0].DelayAfterSecs)
+	require.Equal(t, 5.0, blocks[0].DelayAfterSecs)
 
 	// Test that the script includes the sleep command
 	script, _, _ := BuildExecutableScript(blocks)

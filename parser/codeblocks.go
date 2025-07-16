@@ -24,7 +24,7 @@ type CodeBlock struct {
 	WaitForEndpoint string
 	WaitTimeoutSecs int
 	RetryCount      int
-	DelayAfterSecs  int
+	DelayAfterSecs  float64
 	DelayPerCmdSecs float64
 	IfFileNotExists string
 	LineNumber      int
@@ -66,7 +66,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 	currentWaitForEndpoint := ""
 	currentWaitTimeoutSecs := 0
 	currentRetryCount := 0
-	currentDelayAfterSecs := 0
+	currentDelayAfterSecs := 0.0
 	currentDelayPerCmdSecs := 0.0
 	currentIfFileNotExists := ""
 	currentIfNotInstalled := ""
@@ -109,8 +109,8 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 					currentWaitForEndpoint = ""
 					currentWaitTimeoutSecs = 0
 					currentRetryCount = 0
-					currentDelayAfterSecs = 0
-					currentDelayPerCmdSecs = 0
+					currentDelayAfterSecs = 0.0
+					currentDelayPerCmdSecs = 0.0
 					currentIfFileNotExists = ""
 					currentIfNotInstalled = ""
 				}
@@ -374,8 +374,8 @@ trap - DEBUG
 
 			// Add delay after block if specified
 			if block.DelayAfterSecs > 0 {
-				script.WriteString(fmt.Sprintf("# Delay after block %d for %d seconds\n", block.Index, block.DelayAfterSecs))
-				script.WriteString(fmt.Sprintf("sleep %d\n", block.DelayAfterSecs))
+				script.WriteString(fmt.Sprintf("# Delay after block %d for %g seconds\n", block.Index, block.DelayAfterSecs))
+				script.WriteString(fmt.Sprintf("sleep %g\n", block.DelayAfterSecs))
 			}
 
 			// Add a marker after the block

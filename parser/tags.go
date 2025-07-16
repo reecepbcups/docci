@@ -22,7 +22,7 @@ type MetaTag struct {
 	WaitForEndpoint string
 	WaitTimeoutSecs int
 	RetryCount      int
-	DelayAfterSecs  int
+	DelayAfterSecs  float64
 	DelayPerCmdSecs float64
 	IfFileNotExists string
 	IfNotInstalled  string
@@ -62,7 +62,7 @@ var tagDefinitions = []TagInfo{
 	},
 	{
 		Name:        TagOutputContains,
-		Aliases:     []string{"docci-contains"},
+		Aliases:     []string{"docci-contains", "docci-contains-output"},
 		Description: "Validate that the output contains specific text",
 		Example:     "```bash docci-output-contains=\"Expected output\"",
 	},
@@ -99,8 +99,8 @@ var tagDefinitions = []TagInfo{
 	{
 		Name:        TagDelayAfter,
 		Aliases:     []string{"docci-after-delay"},
-		Description: "Add delay after block execution",
-		Example:     "```bash docci-delay-after=\"5\"",
+		Description: "Add delay after block execution (supports decimal seconds)",
+		Example:     "```bash docci-delay-after=\"1.5\"",
 	},
 	{
 		Name:        TagDelayPerCmd,
@@ -263,15 +263,15 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 			if content == "" {
 				return MetaTag{}, fmt.Errorf("docci-delay-after requires a value (delay in seconds)")
 			}
-			delayAfter, err := strconv.Atoi(content)
+			delayAfter, err := strconv.ParseFloat(content, 64)
 			if err != nil {
 				return MetaTag{}, fmt.Errorf("invalid delay seconds in docci-delay-after: %s", content)
 			}
 			if delayAfter <= 0 {
-				return MetaTag{}, fmt.Errorf("delay seconds must be positive in docci-delay-after, got: %d", delayAfter)
+				return MetaTag{}, fmt.Errorf("delay seconds must be positive in docci-delay-after, got: %g", delayAfter)
 			}
 			mt.DelayAfterSecs = delayAfter
-			logger.GetLogger().Debugf("Delay after tag found with seconds: %d", delayAfter)
+			logger.GetLogger().Debugf("Delay after tag found with seconds: %g", delayAfter)
 		case TagDelayPerCmd:
 			if content == "" {
 				return MetaTag{}, fmt.Errorf("docci-delay-per-cmd requires a value (delay in seconds)")
