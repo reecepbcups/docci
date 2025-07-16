@@ -21,6 +21,7 @@ var (
 	preCommands        []string
 	cleanupCommands    []string
 	hideBackgroundLogs bool
+	runDir             string
 )
 
 var rootCmd = &cobra.Command{
@@ -57,6 +58,17 @@ Multiple files can be specified separated by commas.`,
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
 				return fmt.Errorf("file not found: %s", filePath)
 			}
+		}
+
+		// Validate and change working directory if runDir is specified
+		if runDir != "" {
+			if _, err := os.Stat(runDir); os.IsNotExist(err) {
+				return fmt.Errorf("run directory not found: %s", runDir)
+			}
+			if err := os.Chdir(runDir); err != nil {
+				return fmt.Errorf("failed to change to run directory %s: %w", runDir, err)
+			}
+			log.Infof("Changed working directory to: %s", runDir)
 		}
 
 		if len(filePaths) == 1 {
@@ -224,6 +236,7 @@ func init() {
 	runCmd.Flags().StringSliceVar(&preCommands, "pre-commands", []string{}, "commands to run before execution starts (useful for environment setup)")
 	runCmd.Flags().StringSliceVar(&cleanupCommands, "cleanup-commands", []string{}, "commands to run after execution completes")
 	runCmd.Flags().BoolVar(&hideBackgroundLogs, "hide-background-logs", false, "hide background process logs from output")
+	runCmd.Flags().StringVar(&runDir, "working-directory", "", "change working directory before running commands")
 }
 
 func runPreCommands(commands []string) error {
