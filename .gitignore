@@ -1,10 +1,4 @@
-__pycache__/
-tests/__pycache__/
-*.pyc
-build/
+.task/
+out/
+docci
 dist/
-*.spec
-node_modules/
-example.html
-_tmp_README.md
-py-env/
