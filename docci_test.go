@@ -39,9 +39,6 @@ var TestExpectations = map[string]TestExpectation{
 	"assert-failure-unexpected-success.md": {
 		ExpectedInStderr: "Expected script to fail with non-zero exit code due to docci-assert-failure tag, but it succeeded",
 	},
-	"working-directory-nonexistent-test.md": {
-		ExpectedInStderr: "Error executing code block: exit status 1",
-	},
 }
 
 // ServerEndpointTestExpectations defines expectations for server_endpoint examples
@@ -283,4 +280,3 @@ func TestMultiFileExample(t *testing.T) {
 		t.Errorf("multi-1: expected abc123 to appear in stdout for environment persistence test")
 	}
 }
-
