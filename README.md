@@ -1,4 +1,4 @@
-# Docci | Readme Runner 🚀 &middot; [![GitHub license](https://img.shields.io/badge/license-apache-blue.svg)](https://github.com/Reecepbcups/docci/blob/main/LICENSE) [![Tests](https://github.com/Reecepbcups/docci/actions/workflows/go-unit-test.yml/badge.svg)](https://github.com/Reecepbcups/docci/actions/workflows/test.yml) [![Compatible](https://img.shields.io/badge/compatible%20-macOS_&_linux-8A2BE2.svg)](https://github.com/Reecepbcups/docci)
+# Docci | Readme Test 🚀 &middot; [![GitHub license](https://img.shields.io/badge/license-apache-blue.svg)](https://github.com/Reecepbcups/docci/blob/main/LICENSE) [![Tests](https://github.com/Reecepbcups/docci/actions/workflows/go-unit-test.yml/badge.svg)](https://github.com/Reecepbcups/docci/actions/workflows/test.yml) [![Compatible](https://img.shields.io/badge/compatible%20-macOS_&_linux-8A2BE2.svg)](https://github.com/Reecepbcups/docci)
 
 Your documentation is now your test suite! 🎯 *(pronounced "doc-ee", short for documentation CI)*
 
@@ -17,13 +17,16 @@ go install github.com/reecepbcups/docci
 ```
 
 ```bash docci-ignore
+git clone git@github.com:Reecepbcups/docci.git --depth 1
+cd docci
+go mod tidy
 task install
 ```
 
 ### 🤖 Github Actions Integration
 ````yaml
   # docci_Linux_x86_64, docci_Linux_arm64, docci_Darwin_x86_64, docci_Darwin_arm64
-  - name: Install Docci Readme Runner (linux)
+  - name: Install Docci Readme Test Tool
     run: |
       VERSION=v0.9.0-alpha.1
       BINARY=docci_Linux_x86_64.tar.gz
@@ -39,8 +42,8 @@ task install
 docci run <markdown_file.md> [options]
 
 docci run nested/README.md --hide-background-logs
-docci run README.md --cleanup-commands "docker-compose down" --cleanup-commands "rm -rf /tmp/test"
-docci run README.md --pre-commands "npm install"
+docci run A.md --cleanup-commands "docker-compose down" --cleanup-commands "rm -rf /tmp/test"
+docci run A.md --pre-commands "npm install"
 
 docci tags
 
@@ -57,7 +60,6 @@ docci version
   * 🌐 `docci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready
   * 📜 `docci-output-contains="string"`: Ensure the output contains a string at the end of the block
   * 🚨 `docci-assert-failure`: If it is expected to fail (non 0 exit code)
-  * 🚨 `docci-replace-text="value;ENV_VAR"`: Replace command text with an ENV variable
   * 🖥️ `docci-os=mac|linux`: Run the command only on it's the specified OS
 
 
