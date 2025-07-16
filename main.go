@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,6 +14,9 @@ import (
 
 var (
 	version            = "dev"
+	commit             = "none"
+	date               = "unknown"
+	builtBy            = "unknown"
 	logLevel           string
 	preCommands        []string
 	cleanupCommands    []string
@@ -136,6 +140,28 @@ Multiple files can be specified separated by commas.`,
 	},
 }
 
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Display version information",
+	Run: func(cmd *cobra.Command, args []string) {
+		// Full version info as JSON
+		versionInfo := map[string]string{
+			"version":  version,
+			"commit":   commit,
+			"built_at": date,
+			"built_by": builtBy,
+			"source":   "https://github.com/reecepbcups/docci",
+		}
+
+		jsonOutput, err := json.MarshalIndent(versionInfo, "", "  ")
+		if err != nil {
+			fmt.Printf("Error marshaling JSON: %v\n", err)
+			return
+		}
+		fmt.Println(string(jsonOutput))
+	},
+}
+
 var validateCmd = &cobra.Command{
 	Use:   "validate <markdown-file>",
 	Short: "Validate markdown file without executing",
@@ -192,6 +218,7 @@ func init() {
 	// Add commands
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(validateCmd)
+	rootCmd.AddCommand(versionCmd)
 
 	// Add flags to run command
 	runCmd.Flags().StringSliceVar(&preCommands, "pre-commands", []string{}, "commands to run before execution starts (useful for environment setup)")
