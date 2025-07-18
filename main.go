@@ -9,6 +9,7 @@ import (
 
 	"github.com/reecepbcups/docci/logger"
 	"github.com/reecepbcups/docci/parser"
+	"github.com/reecepbcups/docci/types"
 	"github.com/spf13/cobra"
 )
 
@@ -22,6 +23,7 @@ var (
 	cleanupCommands    []string
 	hideBackgroundLogs bool
 	workingDir         string
+	keepRunning        bool
 )
 
 var rootCmd = &cobra.Command{
@@ -85,11 +87,17 @@ Multiple files can be specified separated by commas.`,
 		}
 
 		// Run the docci command with merged files or single file
+
+		opts := types.DocciOpts{
+			HideBackgroundLogs: hideBackgroundLogs,
+			KeepRunning:        keepRunning,
+		}
+
 		var result DocciResult
 		if len(filePaths) == 1 {
-			result = RunDocciFileWithOptions(filePaths[0], hideBackgroundLogs)
+			result = RunDocciFileWithOptions(filePaths[0], opts)
 		} else {
-			result = RunDocciFilesWithOptions(filePaths, hideBackgroundLogs)
+			result = RunDocciFilesWithOptions(filePaths, opts)
 		}
 
 		// Command output is already printed by executor in real-time with filtering
@@ -267,6 +275,7 @@ func init() {
 	runCmd.Flags().StringSliceVar(&cleanupCommands, "cleanup-commands", []string{}, "commands to run after execution completes")
 	runCmd.Flags().BoolVar(&hideBackgroundLogs, "hide-background-logs", false, "hide background process logs from output")
 	runCmd.Flags().StringVar(&workingDir, "working-dir", "", "change working directory before running commands")
+	runCmd.Flags().BoolVar(&keepRunning, "keep-running", false, "keep containers running after execution with infinite sleep")
 }
 
 func runPreCommands(commands []string) error {
