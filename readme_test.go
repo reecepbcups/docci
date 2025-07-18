@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/reecepbcups/docci/types"
 )
 
 func TestReadme(t *testing.T) {
@@ -28,7 +30,10 @@ func TestReadme(t *testing.T) {
 	defer os.Remove(tempFile)
 
 	// Run docci on the processed README
-	result := RunDocciFileWithOptions(tempFile, true) // hide background logs for cleaner test output
+	result := RunDocciFileWithOptions(tempFile, types.DocciOpts{
+		HideBackgroundLogs: true,
+		KeepRunning:        false,
+	}) // hide background logs for cleaner test output
 
 	// Check if the execution was successful
 	if !result.Success {

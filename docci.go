@@ -9,6 +9,7 @@ import (
 	"github.com/reecepbcups/docci/executor"
 	"github.com/reecepbcups/docci/logger"
 	"github.com/reecepbcups/docci/parser"
+	"github.com/reecepbcups/docci/types"
 )
 
 // DocciResult contains the complete result of running a docci file
@@ -23,11 +24,14 @@ type DocciResult struct {
 // RunDocciFile executes all the logic for processing a docci markdown file
 // This function encapsulates the complete workflow: parse -> build -> execute -> validate
 func RunDocciFile(filePath string) DocciResult {
-	return RunDocciFileWithOptions(filePath, false)
+	return RunDocciFileWithOptions(filePath, types.DocciOpts{
+		HideBackgroundLogs: false,
+		KeepRunning:        false,
+	})
 }
 
 // RunDocciFileWithOptions executes all the logic for processing a docci markdown file with options
-func RunDocciFileWithOptions(filePath string, hideBackgroundLogs bool) DocciResult {
+func RunDocciFileWithOptions(filePath string, opts types.DocciOpts) DocciResult {
 	log := logger.GetLogger()
 
 	// Read the file into a string
@@ -58,7 +62,10 @@ func RunDocciFileWithOptions(filePath string, hideBackgroundLogs bool) DocciResu
 
 	// Build executable script with validation markers
 	log.Debug("Building executable script")
-	script, validationMap, assertFailureMap := parser.BuildExecutableScriptWithOptions(blocks, hideBackgroundLogs)
+	script, validationMap, assertFailureMap := parser.BuildExecutableScriptWithOptions(blocks, types.DocciOpts{
+		HideBackgroundLogs: hideBackgroundLogs,
+		KeepRunning:        keepRunning,
+	})
 
 	// Execute the script
 	log.Debug("Executing script")
@@ -160,11 +167,14 @@ func RunDocciCommand(filePath string) {
 
 // RunDocciFiles merges multiple markdown files and executes them as one
 func RunDocciFiles(filePaths []string) DocciResult {
-	return RunDocciFilesWithOptions(filePaths, false)
+	return RunDocciFilesWithOptions(filePaths, types.DocciOpts{
+		HideBackgroundLogs: false,
+		KeepRunning:        false,
+	})
 }
 
 // RunDocciFilesWithOptions merges multiple markdown files and executes them as one with options
-func RunDocciFilesWithOptions(filePaths []string, hideBackgroundLogs bool) DocciResult {
+func RunDocciFilesWithOptions(filePaths []string, opts types.DocciOpts) DocciResult {
 	log := logger.GetLogger()
 
 	log.Debugf("Merging %d markdown files", len(filePaths))
@@ -212,7 +222,10 @@ func RunDocciFilesWithOptions(filePaths []string, hideBackgroundLogs bool) Docci
 
 	// Build executable script with validation markers
 	log.Debug("Building executable script from merged blocks")
-	script, validationMap, assertFailureMap := parser.BuildExecutableScriptWithOptions(allBlocks, hideBackgroundLogs)
+	script, validationMap, assertFailureMap := parser.BuildExecutableScriptWithOptions(allBlocks, types.DocciOpts{
+		HideBackgroundLogs: hideBackgroundLogs,
+		KeepRunning:        keepRunning,
+	})
 
 	// Execute the script
 	log.Debug("Executing merged script")

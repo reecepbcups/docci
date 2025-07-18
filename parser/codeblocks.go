@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/reecepbcups/docci/logger"
+	"github.com/reecepbcups/docci/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -223,11 +224,14 @@ func WaitForEndpoint(url string, timeoutSecs int) error {
 
 // BuildExecutableScript creates a single script with validation markers
 func BuildExecutableScript(blocks []CodeBlock) (string, map[int]string, map[int]bool) {
-	return BuildExecutableScriptWithOptions(blocks, false)
+	return BuildExecutableScriptWithOptions(blocks, types.DocciOpts{
+		HideBackgroundLogs: false,
+		KeepRunning:        false,
+	})
 }
 
 // BuildExecutableScriptWithOptions creates a single script with validation markers and options
-func BuildExecutableScriptWithOptions(blocks []CodeBlock, hideBackgroundLogs bool) (string, map[int]string, map[int]bool) {
+func BuildExecutableScriptWithOptions(blocks []CodeBlock, opts types.DocciOpts) (string, map[int]string, map[int]bool) {
 	log := logger.GetLogger()
 	var script strings.Builder
 	validationMap := make(map[int]string)  // maps block index to expected output
@@ -237,15 +241,18 @@ func BuildExecutableScriptWithOptions(blocks []CodeBlock, hideBackgroundLogs boo
 	// Always generate markers for parsing, visibility controlled in executor
 
 	// Add trap at the beginning to clean up background processes
-	script.WriteString("# Cleanup function for background processes\n")
-	script.WriteString("cleanup_background_processes() {\n")
-	// higher numbers are actually more verbose in the logrus library
-	if log.Level >= logrus.DebugLevel {
-		script.WriteString("  echo 'Cleaning up background processes...'\n")
+	// Only set the trap if keepRunning is false
+	if !opts.KeepRunning {
+		script.WriteString("# Cleanup function for background processes\n")
+		script.WriteString("cleanup_background_processes() {\n")
+		// higher numbers are actually more verbose in the logrus library
+		if log.Level >= logrus.DebugLevel {
+			script.WriteString("  echo 'Cleaning up background processes...'\n")
+		}
+		script.WriteString("  jobs -p | xargs -r kill 2>/dev/null\n")
+		script.WriteString("}\n")
+		script.WriteString("trap cleanup_background_processes EXIT\n\n")
 	}
-	script.WriteString("  jobs -p | xargs -r kill 2>/dev/null\n")
-	script.WriteString("}\n")
-	script.WriteString("trap cleanup_background_processes EXIT\n\n")
 
 	var backgroundIndexes []int
 
@@ -394,7 +401,7 @@ trap - DEBUG
 	}
 
 	// Add section to display background logs at the end (unless hidden)
-	if len(backgroundIndexes) > 0 && !hideBackgroundLogs {
+	if len(backgroundIndexes) > 0 && !opts.HideBackgroundLogs {
 		script.WriteString("\n# Display background process logs\n")
 		script.WriteString("echo -e '\\n=== Background Process Logs ==='\n")
 		for _, bgIndex := range backgroundIndexes {
@@ -406,12 +413,32 @@ trap - DEBUG
 			script.WriteString(fmt.Sprintf("  echo 'No output file found for background block %d'\n", bgIndex))
 			script.WriteString("fi\n")
 		}
-	} else if len(backgroundIndexes) > 0 && hideBackgroundLogs {
+	} else if len(backgroundIndexes) > 0 && opts.HideBackgroundLogs {
 		// Still clean up the background output files even if we're not displaying them
 		script.WriteString("\n# Clean up background process logs (hidden)\n")
 		for _, bgIndex := range backgroundIndexes {
 			script.WriteString(fmt.Sprintf("rm -f /tmp/docci_bg_%d.out\n", bgIndex))
 		}
+	}
+
+	// Add infinite sleep if keepRunning is true (as a final block)
+	if opts.KeepRunning {
+		script.WriteString("\n# Keep containers running with infinite sleep\n")
+		script.WriteString("echo '\\n🔄 Keeping containers running. Press Ctrl+C to stop...'\n")
+		
+		// Add trap for cleanup when keepRunning is true
+		script.WriteString("\n# Cleanup function for background processes (on interrupt)\n")
+		script.WriteString("cleanup_on_interrupt() {\n")
+		// higher numbers are actually more verbose in the logrus library
+		if log.Level >= logrus.DebugLevel {
+			script.WriteString("  echo 'Cleaning up background processes...'\n")
+		}
+		script.WriteString("  jobs -p | xargs -r kill 2>/dev/null\n")
+		script.WriteString("  exit 0\n")
+		script.WriteString("}\n")
+		script.WriteString("trap cleanup_on_interrupt INT TERM\n\n")
+		
+		script.WriteString("sleep infinity\n")
 	}
 
 	return script.String(), validationMap, assertFailureMap
