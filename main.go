@@ -81,9 +81,7 @@ Multiple files can be specified separated by commas.`,
 		// Run pre-commands if provided
 		if len(preCommands) > 0 {
 			log.Debug("Running pre-commands")
-			if err := runPreCommands(preCommands); err != nil {
-				return fmt.Errorf("pre-command failed: %w", err)
-			}
+			runPreCommands(preCommands)
 		}
 
 		// Run the docci command with merged files or single file
@@ -291,11 +289,11 @@ func runPreCommands(commands []string) error {
 
 		// Run the command
 		if err := cmd.Run(); err != nil {
-			log.Errorf("Error running pre-command '%s': %v", command, err)
-			return fmt.Errorf("pre-command '%s' failed: %w", command, err)
+			log.Warnf("Pre-command '%s' failed (ignoring): %v", command, err)
+			// Continue with other pre-commands even if one fails
 		}
 	}
-	log.Info("Pre-commands completed successfully")
+	log.Info("Pre-commands completed")
 	return nil
 }
 
