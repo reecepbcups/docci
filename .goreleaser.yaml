@@ -8,6 +8,8 @@ release:
 
 before:
   hooks:
+    # Clean any cached build artifacts
+    - go clean -cache
     # You may remove this if you don't use go modules.
     - go mod tidy
     # you may remove this if you don't need go generate
@@ -19,7 +21,7 @@ builds:
       - linux
       - windows
       - darwin
-    dir: .
+    main: .
     binary: docci
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser
@@ -56,6 +58,15 @@ changelog:
 # Feel free to remove those if you don't want/use them.
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 # vim: set ts=2 sw=2 tw=0 fo=cnqoj
+source:
+  enabled: true
+  name_template: '{{ .ProjectName }}-{{ .Version }}-source'
+  format: tar.gz
+  files:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+    - 'LICENSE*'
 git:
   tag_sort: -version:refname
 github_urls:
