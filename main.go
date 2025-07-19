@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/reecepbcups/docci/logger"
@@ -54,6 +55,15 @@ Multiple files can be specified separated by commas.`,
 		// Parse multiple files if provided
 		filePaths := parseFileList(input)
 
+		// Convert relative paths to absolute paths
+		for i, filePath := range filePaths {
+			absPath, err := filepath.Abs(filePath)
+			if err != nil {
+				return fmt.Errorf("failed to resolve absolute path for %s: %w", filePath, err)
+			}
+			filePaths[i] = absPath
+		}
+
 		// Check if all files exist
 		for _, filePath := range filePaths {
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
@@ -81,9 +91,7 @@ Multiple files can be specified separated by commas.`,
 		// Run pre-commands if provided
 		if len(preCommands) > 0 {
 			log.Debug("Running pre-commands")
-			if err := runPreCommands(preCommands); err != nil {
-				return fmt.Errorf("pre-command failed: %w", err)
-			}
+			runPreCommands(preCommands)
 		}
 
 		// Run the docci command with merged files or single file
@@ -291,11 +299,11 @@ func runPreCommands(commands []string) error {
 
 		// Run the command
 		if err := cmd.Run(); err != nil {
-			log.Errorf("Error running pre-command '%s': %v", command, err)
-			return fmt.Errorf("pre-command '%s' failed: %w", command, err)
+			log.Warnf("Pre-command '%s' failed (ignoring): %v", command, err)
+			// Continue with other pre-commands even if one fails
 		}
 	}
-	log.Info("Pre-commands completed successfully")
+	log.Info("Pre-commands completed")
 	return nil
 }
 
