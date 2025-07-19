@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/reecepbcups/docci/logger"
@@ -53,6 +54,15 @@ Multiple files can be specified separated by commas.`,
 
 		// Parse multiple files if provided
 		filePaths := parseFileList(input)
+
+		// Convert relative paths to absolute paths
+		for i, filePath := range filePaths {
+			absPath, err := filepath.Abs(filePath)
+			if err != nil {
+				return fmt.Errorf("failed to resolve absolute path for %s: %w", filePath, err)
+			}
+			filePaths[i] = absPath
+		}
 
 		// Check if all files exist
 		for _, filePath := range filePaths {
