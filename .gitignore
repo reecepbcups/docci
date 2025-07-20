@@ -2,3 +2,5 @@
 out/
 docci
 dist/
+.goreleaser/
+build/

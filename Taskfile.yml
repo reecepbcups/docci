@@ -31,4 +31,3 @@ tasks:
     desc: Run tests
     cmds:
       - go test ./... -v -parallel 4
-
