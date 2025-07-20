@@ -61,6 +61,7 @@ docci version
   * 📜 `docci-output-contains="string"`: Ensure the output contains a string at the end of the block
   * 🚨 `docci-assert-failure`: If it is expected to fail (non 0 exit code)
   * 🖥️ `docci-os=mac|linux`: Run the command only on it's the specified OS
+  * 🔄 `docci-replace-text="old;new"`: Replace text in the code block before execution (including env variables!)
 
 
 ### 💡 Code Block Tag Examples (Operations)
@@ -118,6 +119,14 @@ Set ENV Variables
 export SOME_ENV_VAR="abcdef"
 OTHER_ENV_VAR="ghijkl"
 echo "SOME_ENV_VAR is $SOME_ENV_VAR and OTHER_ENV_VAR is $OTHER_ENV_VAR"
+```
+````
+
+Replace text before execution (useful for CI/CD): 🔄
+
+````bash
+```bash docci-replace-text="API_KEY;$SOME_ENV_VAR"
+echo "Imagine a cURL request with API_KEY here"
 ```
 ````
 

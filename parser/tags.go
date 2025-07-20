@@ -26,6 +26,7 @@ type MetaTag struct {
 	DelayPerCmdSecs float64
 	IfFileNotExists string
 	IfNotInstalled  string
+	ReplaceText     string
 }
 
 var tags string
@@ -42,6 +43,7 @@ const (
 	TagDelayPerCmd     = "docci-delay-per-cmd"
 	TagIfFileNotExists = "docci-if-file-not-exists"
 	TagIfNotInstalled  = "docci-if-not-installed"
+	TagReplaceText     = "docci-replace-text"
 )
 
 // TagInfo holds information about a tag and its aliases
@@ -119,6 +121,12 @@ var tagDefinitions = []TagInfo{
 		Aliases:     []string{},
 		Description: "Only run if the specified command is not installed",
 		Example:     "```bash docci-if-not-installed=\"docker\"",
+	},
+	{
+		Name:        TagReplaceText,
+		Aliases:     []string{"docci-replace"},
+		Description: "Replace text in the code block before execution (format: 'old;new')",
+		Example:     "```bash docci-replace-text=\"bbbbbb;$SOME_ENV_VAR\"",
 	},
 }
 
@@ -303,6 +311,20 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 			}
 			mt.IfNotInstalled = content
 			logger.GetLogger().Debugf("If not installed tag found with command: %s", content)
+		case TagReplaceText:
+			if content == "" {
+				return MetaTag{}, fmt.Errorf("docci-replace-text requires a value in format 'old;new'")
+			}
+			// Validate format: old;new
+			parts := strings.SplitN(content, ";", 2)
+			if len(parts) != 2 {
+				return MetaTag{}, fmt.Errorf("docci-replace-text format should be 'old;new', got: %s", content)
+			}
+			if parts[0] == "" || parts[1] == "" {
+				return MetaTag{}, fmt.Errorf("docci-replace-text both old and new text must be non-empty, got: %s", content)
+			}
+			mt.ReplaceText = content
+			logger.GetLogger().Debugf("Replace text tag found: %s", content)
 		default:
 			return MetaTag{}, fmt.Errorf("unknown tag found: %s", tag)
 		}

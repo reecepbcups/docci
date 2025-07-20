@@ -6,6 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Docci is a documentation-as-code tool that executes code blocks in markdown files and validates their outputs. It helps ensure documentation examples are always accurate and working.
 
+## Running
+
+Always run the docci binary with `docci run` followed by the markdown file path. For example:
+
+```bash
+docci run examples/test-replace-text.md
+```
+
+This works for `task install`ed as well as the built binary in `out/docci` with `task build`.
+
 ## Architecture
 
 The codebase is structured as follows:
