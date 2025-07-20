@@ -24,3 +24,11 @@ MY_SECRET_ENV_VAR="secret123"
 ```bash docci-output-contains="secret123" docci-replace-text="SECRET_HERE;$MY_SECRET_ENV_VAR"
 echo "SECRET_HERE"
 ```
+
+## Replacement with the ; in the command
+
+Complex replacement that puts multiple commands in 1 command, keeping the original
+
+```bash docci-output-contains="xyz" docci-replace-text="abc;echo abc;echo xyz"
+echo "abc"
+```
