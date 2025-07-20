@@ -30,6 +30,7 @@ type CodeBlock struct {
 	IfFileNotExists string
 	LineNumber      int
 	FileName        string // Added for debugging multiple files
+	ReplaceText     string
 }
 
 // given a markdown file, parse out all the code blocks within it.
@@ -71,6 +72,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 	currentDelayPerCmdSecs := 0.0
 	currentIfFileNotExists := ""
 	currentIfNotInstalled := ""
+	currentReplaceText := ""
 	currentLineNumber := 0
 	tmpCodeblock := ""
 	for idx, line := range lines {
@@ -98,6 +100,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 							IfFileNotExists: currentIfFileNotExists,
 							LineNumber:      currentLineNumber,
 							FileName:        fileName,
+							ReplaceText:     currentReplaceText,
 						})
 					} else {
 						logger.GetLogger().Debugf("Skipping code block due to OS restriction: block requires '%s', current OS is '%s'", currentOS, GetCurrentOS())
@@ -114,6 +117,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 					currentDelayPerCmdSecs = 0.0
 					currentIfFileNotExists = ""
 					currentIfNotInstalled = ""
+					currentReplaceText = ""
 				}
 				startParsing = false
 				continue
@@ -179,6 +183,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 				currentDelayPerCmdSecs = tags.DelayPerCmdSecs
 				currentIfFileNotExists = tags.IfFileNotExists
 				currentIfNotInstalled = tags.IfNotInstalled
+				currentReplaceText = tags.ReplaceText
 				currentLineNumber = lineNumber
 				tmpCodeblock = ""
 				continue
@@ -326,6 +331,18 @@ done
 				script.WriteString(fmt.Sprintf("if [ ! -f \"%s\" ]; then\n", block.IfFileNotExists))
 			}
 
+			// Apply text replacement if needed
+			blockContent := block.Content
+			if block.ReplaceText != "" {
+				parts := strings.SplitN(block.ReplaceText, ";", 2)
+				if len(parts) == 2 {
+					oldText := parts[0]
+					newText := parts[1]
+					blockContent = strings.ReplaceAll(blockContent, oldText, newText)
+					log.Debugf("Applied text replacement in block %d: '%s' -> '%s'", block.Index, oldText, newText)
+				}
+			}
+
 			// Prepare the code content with per-command delay and command display
 			delaySeconds := block.DelayPerCmdSecs
 			bashFlags := "-eT"
@@ -340,7 +357,7 @@ trap 'echo -e "\n     Executing CMD: $BASH_COMMAND" >&2; sleep %g' DEBUG
 
 # Disable trap
 trap - DEBUG
-`, delaySeconds, bashFlags, delaySeconds, block.Content)
+`, delaySeconds, bashFlags, delaySeconds, blockContent)
 
 			// Add the actual code with retry logic if needed
 			if block.RetryCount > 0 {
