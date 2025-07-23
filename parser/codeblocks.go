@@ -49,7 +49,6 @@ func newCodeBlock(index int, language string) *CodeBlock {
 	}
 }
 
-
 // applyTags applies parsed tags to the CodeBlock
 func (c *CodeBlock) applyTags(tags MetaTag, lineNumber int, fileName string) {
 	c.OutputContains = tags.OutputContains
@@ -131,7 +130,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 			tags, err := ParseTags(line)
 			if err != nil {
 				logger.GetLogger().Errorf("Error parsing tags on line %d: %v", lineNumber, err)
-				continue
+				panic(err) // bad parses should STOP the program so the user can fix. (i.e. bad tags)
 			}
 
 			if tags.Ignore {

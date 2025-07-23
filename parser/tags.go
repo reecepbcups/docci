@@ -350,7 +350,7 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 			mt.ReplaceText = content
 			logger.GetLogger().Debugf("Replace text tag found: %s", content)
 		default:
-			panic(fmt.Sprintf("unknown tag /alias found: %s", tag))
+			return MetaTag{}, fmt.Errorf("unknown tag: %s", normalizedTag)
 		}
 	}
 
