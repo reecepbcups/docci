@@ -145,3 +145,45 @@ func TestDelayPerCmd(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "requires a value")
 }
+
+func TestDelayBefore(t *testing.T) {
+	// Test valid delay-before tag
+	pt, err := ParseTags("```bash docci-delay-before=2")
+	require.NoError(t, err)
+	require.Equal(t, 2.0, pt.DelayBeforeSecs)
+
+	// Test quoted value
+	pt, err = ParseTags("```bash docci-delay-before=\"3.5\"")
+	require.NoError(t, err)
+	require.Equal(t, 3.5, pt.DelayBeforeSecs)
+
+	// Test alias
+	pt, err = ParseTags("```bash docci-before-delay=1.5")
+	require.NoError(t, err)
+	require.Equal(t, 1.5, pt.DelayBeforeSecs)
+
+	// Test decimal values
+	pt, err = ParseTags("```bash docci-delay-before=0.5")
+	require.NoError(t, err)
+	require.Equal(t, 0.5, pt.DelayBeforeSecs)
+
+	// Test invalid value - not a number
+	_, err = ParseTags("```bash docci-delay-before=abc")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid delay seconds")
+
+	// Test invalid value - negative number
+	_, err = ParseTags("```bash docci-delay-before=-1")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "delay seconds must be positive")
+
+	// Test invalid value - zero
+	_, err = ParseTags("```bash docci-delay-before=0")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "delay seconds must be positive")
+
+	// Test empty value
+	_, err = ParseTags("```bash docci-delay-before")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "requires a value")
+}

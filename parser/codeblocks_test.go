@@ -2,6 +2,7 @@ package parser
 
 import (
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -105,6 +106,42 @@ func TestDelayAfterSecs(t *testing.T) {
 	script, _, _ := BuildExecutableScript(blocks)
 	require.Contains(t, script, "sleep 5")
 	require.Contains(t, script, "# Delay after block 1 for 5 seconds")
+}
+
+func TestDelayBeforeSecs(t *testing.T) {
+	markdown := `
+# Test Delay Before
+
+` + "```bash docci-delay-before=3\necho \"test\"\n```" + `
+	`
+
+	blocks, err := ParseCodeBlocks(markdown)
+	require.NoError(t, err)
+	require.Len(t, blocks, 1)
+	require.Equal(t, 3.0, blocks[0].DelayBeforeSecs)
+
+	// Test that the script includes the sleep command before the block
+	script, _, _ := BuildExecutableScript(blocks)
+	require.Contains(t, script, "sleep 3")
+	require.Contains(t, script, "# Delay before block 1 for 3 seconds")
+	
+	// Verify the delay comes before the actual command
+	scriptLines := strings.Split(script, "\n")
+	var foundDelay, foundEcho bool
+	var delayIndex, echoIndex int
+	for i, line := range scriptLines {
+		if strings.Contains(line, "sleep 3") {
+			foundDelay = true
+			delayIndex = i
+		}
+		if strings.Contains(line, "echo \"test\"") {
+			foundEcho = true
+			echoIndex = i
+		}
+	}
+	require.True(t, foundDelay, "Should find sleep command")
+	require.True(t, foundEcho, "Should find echo command")
+	require.Less(t, delayIndex, echoIndex, "Sleep should come before echo")
 }
 
 func TestDelayPerCmdParsing(t *testing.T) {

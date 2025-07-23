@@ -25,6 +25,7 @@ type CodeBlock struct {
 	WaitForEndpoint string
 	WaitTimeoutSecs int
 	RetryCount      int
+	DelayBeforeSecs float64
 	DelayAfterSecs  float64
 	DelayPerCmdSecs float64
 	IfFileNotExists string
@@ -68,6 +69,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 	currentWaitForEndpoint := ""
 	currentWaitTimeoutSecs := 0
 	currentRetryCount := 0
+	currentDelayBeforeSecs := 0.0
 	currentDelayAfterSecs := 0.0
 	currentDelayPerCmdSecs := 0.0
 	currentIfFileNotExists := ""
@@ -95,6 +97,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 							WaitForEndpoint: currentWaitForEndpoint,
 							WaitTimeoutSecs: currentWaitTimeoutSecs,
 							RetryCount:      currentRetryCount,
+							DelayBeforeSecs: currentDelayBeforeSecs,
 							DelayAfterSecs:  currentDelayAfterSecs,
 							DelayPerCmdSecs: currentDelayPerCmdSecs,
 							IfFileNotExists: currentIfFileNotExists,
@@ -113,6 +116,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 					currentWaitForEndpoint = ""
 					currentWaitTimeoutSecs = 0
 					currentRetryCount = 0
+					currentDelayBeforeSecs = 0.0
 					currentDelayAfterSecs = 0.0
 					currentDelayPerCmdSecs = 0.0
 					currentIfFileNotExists = ""
@@ -179,6 +183,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 				currentWaitForEndpoint = tags.WaitForEndpoint
 				currentWaitTimeoutSecs = tags.WaitTimeoutSecs
 				currentRetryCount = tags.RetryCount
+				currentDelayBeforeSecs = tags.DelayBeforeSecs
 				currentDelayAfterSecs = tags.DelayAfterSecs
 				currentDelayPerCmdSecs = tags.DelayPerCmdSecs
 				currentIfFileNotExists = tags.IfFileNotExists
@@ -288,6 +293,12 @@ func BuildExecutableScriptWithOptions(blocks []CodeBlock, opts types.DocciOpts) 
 					fileInfo = fmt.Sprintf(" from %s", block.FileName)
 				}
 				script.WriteString(fmt.Sprintf("### === Code Block %d (%s)%s ===\n", block.Index, block.Language, fileInfo))
+			}
+
+			// Add delay before block if specified
+			if block.DelayBeforeSecs > 0 {
+				script.WriteString(fmt.Sprintf("# Delay before block %d for %g seconds\n", block.Index, block.DelayBeforeSecs))
+				script.WriteString(fmt.Sprintf("sleep %g\n", block.DelayBeforeSecs))
 			}
 
 			// Add wait-for-endpoint logic if needed
