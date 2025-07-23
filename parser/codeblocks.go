@@ -60,7 +60,6 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 	state := newCodeBlockState()
 	lines := splitIntoLines(markdown)
 	startParsing := false
-
 	for idx, line := range lines {
 		lineNumber := idx + 1 // 1-based index for line numbers
 
