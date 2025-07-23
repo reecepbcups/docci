@@ -54,6 +54,7 @@ docci version
   * 🛑 `docci-ignore`: Skip executing this code block
   * 🔄 `docci-background`: Run the command in the background
   * 🚫 `docci-if-not-installed=BINARY`: Skip execution if some binary is installed (e.g. node)
+  * ⏲️ `docci-delay-before=N`: Wait N seconds before running any commands in the block
   * ⏲️ `docci-delay-after=N`: Wait N seconds after running all commands in the block
   * ⌛ `docci-delay-per-cmd=N`: Wait N seconds before each command
   * ⏲️ `docci-retry=N`: Retry command N times *(pair with docci-delay-per-cmd)*
