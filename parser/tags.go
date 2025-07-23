@@ -159,6 +159,7 @@ func TagAlias(tag string) (string, error) {
 	if canonicalTag, exists := tagAliasMap[tag]; exists {
 		return canonicalTag, nil
 	}
+
 	return "", fmt.Errorf("unknown tag / alias: %s", tag)
 }
 
@@ -186,8 +187,9 @@ func ParseTags(line string) (MetaTag, error) {
 	// This pattern matches:
 	// - docci-tagname (no value)
 	// - docci-tagname=value (unquoted value, no spaces)
-	// - docci-tagname="value with spaces" (quoted value)
-	pattern := `docci-[a-zA-Z0-9-]+(?:=(?:"[^"]*"|[^\s]+))?`
+	// - docci-tagname="value with spaces" (double quoted value)
+	// - docci-tagname='value with spaces' (single quoted value)
+	pattern := `docci-[a-zA-Z0-9-]+(?:=(?:"[^"]*"|'[^']*'|[^\s]+))?`
 
 	re := regexp.MustCompile(pattern)
 	matches := re.FindAllString(line, -1)
@@ -213,8 +215,9 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 			tag = s[0]     // take only the tag part before the =
 			content = s[1] // take the content part after the =
 
-			// Remove quotes if present
-			if strings.HasPrefix(content, "\"") && strings.HasSuffix(content, "\"") {
+			// Remove quotes if present (both single and double quotes)
+			if (strings.HasPrefix(content, "\"") && strings.HasSuffix(content, "\"")) ||
+				(strings.HasPrefix(content, "'") && strings.HasSuffix(content, "'")) {
 				content = content[1 : len(content)-1] // Remove first and last character (quotes)
 			}
 
@@ -347,7 +350,7 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 			mt.ReplaceText = content
 			logger.GetLogger().Debugf("Replace text tag found: %s", content)
 		default:
-			return MetaTag{}, fmt.Errorf("unknown tag found: %s", tag)
+			return MetaTag{}, fmt.Errorf("unknown tag: %s", normalizedTag)
 		}
 	}
 

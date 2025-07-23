@@ -29,15 +29,50 @@ type CodeBlock struct {
 	DelayAfterSecs  float64
 	DelayPerCmdSecs float64
 	IfFileNotExists string
+	IfNotInstalled  string
 	LineNumber      int
 	FileName        string // Added for debugging multiple files
 	ReplaceText     string
+	content         strings.Builder // Used during parsing to build content
 }
 
 // given a markdown file, parse out all the code blocks within it.
 // Codeblocks are provided as ``` and closed with ```.
 
 var ValidLangs = []string{"bash", "shell", "sh"}
+
+// newCodeBlock creates a new CodeBlock with default values
+func newCodeBlock(index int, language string) *CodeBlock {
+	return &CodeBlock{
+		Index:    index,
+		Language: language,
+	}
+}
+
+// applyTags applies parsed tags to the CodeBlock
+func (c *CodeBlock) applyTags(tags MetaTag, lineNumber int, fileName string) {
+	c.OutputContains = tags.OutputContains
+	c.Background = tags.Background
+	c.AssertFailure = tags.AssertFailure
+	c.OS = tags.OS
+	c.WaitForEndpoint = tags.WaitForEndpoint
+	c.WaitTimeoutSecs = tags.WaitTimeoutSecs
+	c.RetryCount = tags.RetryCount
+	c.DelayBeforeSecs = tags.DelayBeforeSecs
+	c.DelayAfterSecs = tags.DelayAfterSecs
+	c.DelayPerCmdSecs = tags.DelayPerCmdSecs
+	c.IfFileNotExists = tags.IfFileNotExists
+	c.IfNotInstalled = tags.IfNotInstalled
+	c.ReplaceText = tags.ReplaceText
+	c.LineNumber = lineNumber
+	c.FileName = fileName
+	c.content.Reset()
+}
+
+// finalize converts the accumulated content from the builder to the Content field
+func (c *CodeBlock) finalize() {
+	c.Content = c.content.String()
+}
 
 // GetRetryDelay returns the retry delay in seconds from environment variable or default
 func GetRetryDelay() int {
@@ -57,79 +92,35 @@ func ParseCodeBlocks(markdown string) ([]CodeBlock, error) {
 // ParseCodeBlocksWithFileName returns structured code blocks with metadata and filename
 func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock, error) {
 	var codeBlocks []CodeBlock
-
+	var currentBlock *CodeBlock
 	lines := splitIntoLines(markdown)
-
 	startParsing := false
-	currentLang := ""
-	currentOutputContains := ""
-	currentBackground := false
-	currentAssertFailure := false
-	currentOS := ""
-	currentWaitForEndpoint := ""
-	currentWaitTimeoutSecs := 0
-	currentRetryCount := 0
-	currentDelayBeforeSecs := 0.0
-	currentDelayAfterSecs := 0.0
-	currentDelayPerCmdSecs := 0.0
-	currentIfFileNotExists := ""
-	currentIfNotInstalled := ""
-	currentReplaceText := ""
-	currentLineNumber := 0
-	tmpCodeblock := ""
 	for idx, line := range lines {
 		lineNumber := idx + 1 // 1-based index for line numbers
 
 		// stop the parsing when the codeblock ends
 		if startParsing {
 			if strings.Trim(line, " ") == "```" {
-				if tmpCodeblock != "" {
+				if currentBlock != nil && currentBlock.content.Len() > 0 {
 					// Only add the block if it should run on current OS and command conditions are met
-					if ShouldRunOnCurrentOS(currentOS) && ShouldRunBasedOnCommandInstallation(currentIfNotInstalled) {
-						codeBlocks = append(codeBlocks, CodeBlock{
-							Index:           len(codeBlocks) + 1,
-							Language:        currentLang,
-							Content:         tmpCodeblock,
-							OutputContains:  currentOutputContains,
-							Background:      currentBackground,
-							AssertFailure:   currentAssertFailure,
-							OS:              currentOS,
-							WaitForEndpoint: currentWaitForEndpoint,
-							WaitTimeoutSecs: currentWaitTimeoutSecs,
-							RetryCount:      currentRetryCount,
-							DelayBeforeSecs: currentDelayBeforeSecs,
-							DelayAfterSecs:  currentDelayAfterSecs,
-							DelayPerCmdSecs: currentDelayPerCmdSecs,
-							IfFileNotExists: currentIfFileNotExists,
-							LineNumber:      currentLineNumber,
-							FileName:        fileName,
-							ReplaceText:     currentReplaceText,
-						})
+					if ShouldRunOnCurrentOS(currentBlock.OS) && ShouldRunBasedOnCommandInstallation(currentBlock.IfNotInstalled) {
+						currentBlock.finalize()
+						codeBlocks = append(codeBlocks, *currentBlock)
 					} else {
-						logger.GetLogger().Debugf("Skipping code block due to OS restriction: block requires '%s', current OS is '%s'", currentOS, GetCurrentOS())
+						logger.GetLogger().Debugf("Skipping code block due to OS restriction: block requires '%s', current OS is '%s'", currentBlock.OS, GetCurrentOS())
 					}
-					tmpCodeblock = ""
-					currentOutputContains = ""
-					currentBackground = false
-					currentAssertFailure = false
-					currentOS = ""
-					currentWaitForEndpoint = ""
-					currentWaitTimeoutSecs = 0
-					currentRetryCount = 0
-					currentDelayBeforeSecs = 0.0
-					currentDelayAfterSecs = 0.0
-					currentDelayPerCmdSecs = 0.0
-					currentIfFileNotExists = ""
-					currentIfNotInstalled = ""
-					currentReplaceText = ""
+					currentBlock = nil
 				}
 				startParsing = false
 				continue
 			}
 
 			// if not, then we add the text to the codeblock
-			tmpCodeblock += line + "\n"
-			logger.GetLogger().Debugf("Adding line %d to code block: %s", lineNumber, line)
+			if currentBlock != nil {
+				currentBlock.content.WriteString(line)
+				currentBlock.content.WriteString("\n")
+				logger.GetLogger().Debugf("Adding line %d to code block: %s", lineNumber, line)
+			}
 		}
 
 		// we only start parsing if the line contains ```bash, ```shell, or ```sh
@@ -139,7 +130,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 			tags, err := ParseTags(line)
 			if err != nil {
 				logger.GetLogger().Errorf("Error parsing tags on line %d: %v", lineNumber, err)
-				continue
+				panic(err) // bad parses should STOP the program so the user can fix. (i.e. bad tags)
 			}
 
 			if tags.Ignore {
@@ -175,22 +166,8 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 				}
 
 				startParsing = true
-				currentLang = lang
-				currentOutputContains = tags.OutputContains
-				currentBackground = tags.Background
-				currentAssertFailure = tags.AssertFailure
-				currentOS = tags.OS
-				currentWaitForEndpoint = tags.WaitForEndpoint
-				currentWaitTimeoutSecs = tags.WaitTimeoutSecs
-				currentRetryCount = tags.RetryCount
-				currentDelayBeforeSecs = tags.DelayBeforeSecs
-				currentDelayAfterSecs = tags.DelayAfterSecs
-				currentDelayPerCmdSecs = tags.DelayPerCmdSecs
-				currentIfFileNotExists = tags.IfFileNotExists
-				currentIfNotInstalled = tags.IfNotInstalled
-				currentReplaceText = tags.ReplaceText
-				currentLineNumber = lineNumber
-				tmpCodeblock = ""
+				currentBlock = newCodeBlock(len(codeBlocks)+1, lang)
+				currentBlock.applyTags(tags, lineNumber, fileName)
 				continue
 			}
 			continue
@@ -453,7 +430,7 @@ trap - DEBUG
 	if opts.KeepRunning {
 		script.WriteString("\n# Keep containers running with infinite sleep\n")
 		script.WriteString("echo '\\n🔄 Keeping containers running. Press Ctrl+C to stop...'\n")
-		
+
 		// Add trap for cleanup when keepRunning is true
 		script.WriteString("\n# Cleanup function for background processes (on interrupt)\n")
 		script.WriteString("cleanup_on_interrupt() {\n")
@@ -465,7 +442,7 @@ trap - DEBUG
 		script.WriteString("  exit 0\n")
 		script.WriteString("}\n")
 		script.WriteString("trap cleanup_on_interrupt INT TERM\n\n")
-		
+
 		script.WriteString("sleep infinity\n")
 	}
 
