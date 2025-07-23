@@ -29,15 +29,51 @@ type CodeBlock struct {
 	DelayAfterSecs  float64
 	DelayPerCmdSecs float64
 	IfFileNotExists string
+	IfNotInstalled  string
 	LineNumber      int
 	FileName        string // Added for debugging multiple files
 	ReplaceText     string
+	content         strings.Builder // Used during parsing to build content
 }
 
 // given a markdown file, parse out all the code blocks within it.
 // Codeblocks are provided as ``` and closed with ```.
 
 var ValidLangs = []string{"bash", "shell", "sh"}
+
+// newCodeBlock creates a new CodeBlock with default values
+func newCodeBlock(index int, language string) *CodeBlock {
+	return &CodeBlock{
+		Index:    index,
+		Language: language,
+	}
+}
+
+
+// applyTags applies parsed tags to the CodeBlock
+func (c *CodeBlock) applyTags(tags MetaTag, lineNumber int, fileName string) {
+	c.OutputContains = tags.OutputContains
+	c.Background = tags.Background
+	c.AssertFailure = tags.AssertFailure
+	c.OS = tags.OS
+	c.WaitForEndpoint = tags.WaitForEndpoint
+	c.WaitTimeoutSecs = tags.WaitTimeoutSecs
+	c.RetryCount = tags.RetryCount
+	c.DelayBeforeSecs = tags.DelayBeforeSecs
+	c.DelayAfterSecs = tags.DelayAfterSecs
+	c.DelayPerCmdSecs = tags.DelayPerCmdSecs
+	c.IfFileNotExists = tags.IfFileNotExists
+	c.IfNotInstalled = tags.IfNotInstalled
+	c.ReplaceText = tags.ReplaceText
+	c.LineNumber = lineNumber
+	c.FileName = fileName
+	c.content.Reset()
+}
+
+// finalize converts the accumulated content from the builder to the Content field
+func (c *CodeBlock) finalize() {
+	c.Content = c.content.String()
+}
 
 // GetRetryDelay returns the retry delay in seconds from environment variable or default
 func GetRetryDelay() int {
@@ -57,7 +93,7 @@ func ParseCodeBlocks(markdown string) ([]CodeBlock, error) {
 // ParseCodeBlocksWithFileName returns structured code blocks with metadata and filename
 func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock, error) {
 	var codeBlocks []CodeBlock
-	state := newCodeBlockState()
+	var currentBlock *CodeBlock
 	lines := splitIntoLines(markdown)
 	startParsing := false
 	for idx, line := range lines {
@@ -66,23 +102,26 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 		// stop the parsing when the codeblock ends
 		if startParsing {
 			if strings.Trim(line, " ") == "```" {
-				if state.content.Len() > 0 {
+				if currentBlock != nil && currentBlock.content.Len() > 0 {
 					// Only add the block if it should run on current OS and command conditions are met
-					if ShouldRunOnCurrentOS(state.os) && ShouldRunBasedOnCommandInstallation(state.ifNotInstalled) {
-						codeBlocks = append(codeBlocks, state.toCodeBlock(len(codeBlocks)+1, fileName))
+					if ShouldRunOnCurrentOS(currentBlock.OS) && ShouldRunBasedOnCommandInstallation(currentBlock.IfNotInstalled) {
+						currentBlock.finalize()
+						codeBlocks = append(codeBlocks, *currentBlock)
 					} else {
-						logger.GetLogger().Debugf("Skipping code block due to OS restriction: block requires '%s', current OS is '%s'", state.os, GetCurrentOS())
+						logger.GetLogger().Debugf("Skipping code block due to OS restriction: block requires '%s', current OS is '%s'", currentBlock.OS, GetCurrentOS())
 					}
-					state.reset()
+					currentBlock = nil
 				}
 				startParsing = false
 				continue
 			}
 
 			// if not, then we add the text to the codeblock
-			state.content.WriteString(line)
-			state.content.WriteString("\n")
-			logger.GetLogger().Debugf("Adding line %d to code block: %s", lineNumber, line)
+			if currentBlock != nil {
+				currentBlock.content.WriteString(line)
+				currentBlock.content.WriteString("\n")
+				logger.GetLogger().Debugf("Adding line %d to code block: %s", lineNumber, line)
+			}
 		}
 
 		// we only start parsing if the line contains ```bash, ```shell, or ```sh
@@ -128,7 +167,8 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 				}
 
 				startParsing = true
-				state.applyTags(tags, lang, lineNumber)
+				currentBlock = newCodeBlock(len(codeBlocks)+1, lang)
+				currentBlock.applyTags(tags, lineNumber, fileName)
 				continue
 			}
 			continue
