@@ -59,7 +59,7 @@ docci version
   * ⌛ `docci-delay-per-cmd=N`: Wait N seconds before each command
   * ⏲️ `docci-retry=N`: Retry command N times *(pair with docci-delay-per-cmd)*
   * 🌐 `docci-wait-for-endpoint=http://localhost:8080/health|N`: Wait up to N seconds for the endpoint to be ready
-  * 📜 `docci-output-contains="string"`: Ensure the output contains a string at the end of the block
+  * 📜 `docci-output-contains="string"`: Ensure the output contains a string at the end of the block (also use `=''`)
   * 🚨 `docci-assert-failure`: If it is expected to fail (non 0 exit code)
   * 🖥️ `docci-os=mac|linux`: Run the command only on it's the specified OS
   * 🔄 `docci-replace-text="old;new"`: Replace text in the code block before execution (including env variables!)
