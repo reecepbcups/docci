@@ -20,7 +20,7 @@ go install github.com/reecepbcups/docci
 git clone git@github.com:Reecepbcups/docci.git --depth 1
 cd docci
 go mod tidy
-task install
+task install # go install ./*.go
 ```
 
 ### 🤖 Github Actions Integration
@@ -28,7 +28,7 @@ task install
   # docci_Linux_x86_64, docci_Linux_arm64, docci_Darwin_x86_64, docci_Darwin_arm64
   - name: Install Docci Readme Test Tool
     run: |
-      VERSION=v0.9.0-alpha.1
+      VERSION=v0.9.0-alpha.3
       BINARY=docci_Linux_x86_64.tar.gz
       curl -fsSL "https://github.com/Reecepbcups/docci/releases/download/${VERSION}/${BINARY}" | sudo tar -xzC /usr/local/bin
       sudo chmod +x /usr/local/bin/docci
