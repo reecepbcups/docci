@@ -39,6 +39,9 @@ var TestExpectations = map[string]TestExpectation{
 	"assert-failure-unexpected-success.md": {
 		ExpectedInStderr: "Expected script to fail with non-zero exit code due to docci-assert-failure tag, but it succeeded",
 	},
+	"test-background-kill-invalid.md": {
+		ExpectedInStderr: "references a non-existent background process. Available background process indexes: [2]",
+	},
 }
 
 // ServerEndpointTestExpectations defines expectations for server_endpoint examples
