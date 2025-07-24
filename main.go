@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,9 +15,6 @@ import (
 
 var (
 	version            = "dev"
-	commit             = "none"
-	date               = "unknown"
-	builtBy            = "unknown"
 	logLevel           string
 	preCommands        []string
 	cleanupCommands    []string
@@ -171,21 +167,37 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Display version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Full version info as JSON
-		versionInfo := map[string]string{
-			"version":  version,
-			"commit":   commit,
-			"built_at": date,
-			"built_by": builtBy,
-			"source":   "https://github.com/reecepbcups/docci",
-		}
+		fmt.Println(version)
+	},
+}
 
-		jsonOutput, err := json.MarshalIndent(versionInfo, "", "  ")
+var latestCmd = &cobra.Command{
+	Use:   "latest",
+	Short: "Display the latest information",
+	Run: func(cmd *cobra.Command, args []string) {
+		logger := logger.GetLogger()
+
+		releases, err := GetLatestGithubReleases(BinaryToGHApi)
 		if err != nil {
-			fmt.Printf("Error marshaling JSON: %v\n", err)
+			logger.Error("Error getting latest docci releases", "err", err)
 			return
 		}
-		fmt.Println(string(jsonOutput))
+
+		// latest := releases[0].TagName
+		pre, latest := GetRealLatestReleases(releases)
+
+		text := "Docci is up to date!"
+		if OutOfDateCheckLog(logger, "docci", version, latest) {
+			var t strings.Builder
+			t.WriteString(fmt.Sprintf("\nNew version available @ %s\n", BinaryToGHApi))
+			t.WriteString(fmt.Sprintf("current: %s\n", version))
+			t.WriteString(fmt.Sprintf("latest: %s or %s\n", latest, pre))
+			t.WriteString(fmt.Sprintf("install: `%s`", GetInstallMsg(howToInstallBinary, latest)))
+			text = t.String()
+
+		}
+
+		fmt.Println(text)
 	},
 }
 
@@ -276,6 +288,7 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(latestCmd)
 	rootCmd.AddCommand(tagsCmd)
 
 	// Add flags to run command
