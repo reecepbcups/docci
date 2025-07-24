@@ -1,12 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/reecepbcups/docci/logger"
 	"github.com/reecepbcups/docci/parser"
@@ -16,15 +16,13 @@ import (
 
 var (
 	version            = "dev"
-	commit             = "none"
-	date               = "unknown"
-	builtBy            = "unknown"
 	logLevel           string
 	preCommands        []string
 	cleanupCommands    []string
 	hideBackgroundLogs bool
 	workingDir         string
 	keepRunning        bool
+	LogLevelFlag       = "log-level"
 )
 
 var rootCmd = &cobra.Command{
@@ -171,21 +169,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Display version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Full version info as JSON
-		versionInfo := map[string]string{
-			"version":  version,
-			"commit":   commit,
-			"built_at": date,
-			"built_by": builtBy,
-			"source":   "https://github.com/reecepbcups/docci",
-		}
-
-		jsonOutput, err := json.MarshalIndent(versionInfo, "", "  ")
-		if err != nil {
-			fmt.Printf("Error marshaling JSON: %v\n", err)
-			return
-		}
-		fmt.Println(string(jsonOutput))
+		fmt.Println(string(version))
 	},
 }
 
@@ -347,8 +331,52 @@ func parseFileList(input string) []string {
 }
 
 func main() {
+	outOfDateChecker()
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, "\nRuntime errors that occurred:", err)
 		os.Exit(1)
+	}
+}
+
+// outOfDateChecker checks if binaries are up to date and logs if they are not.
+// if not, it will prompt the user every command they run with spawn until they update.
+// else, it will wait 24h+ before checking again.
+func outOfDateChecker() {
+	logger := logger.GetLogger()
+
+	if !DoOutdatedNotificationRunCheck(logger) {
+		return
+	}
+
+	program := "docci"
+	releases, err := GetLatestGithubReleases(BinaryToGHApi)
+	if err != nil {
+		logger.Error("Error getting latest ", program, " releases", "err", err)
+		return
+	}
+	latest := releases[0].TagName
+
+	current := GetLocalVersion(logger, program, latest)
+
+	// if current == dev, ignore
+	if current == "dev" {
+		// logger.Debug("Current version is dev, skipping out of date check")
+		return
+	}
+
+	if OutOfDateCheckLog(logger, program, current, latest) {
+		// write check to -24h from now to spam the user until it's resolved.
+		file, err := GetLatestVersionCheckFile(logger)
+		if err != nil {
+			return
+		}
+
+		if err := WriteLastTimeToFile(logger, file, time.Now().Add(-RunCheckInterval)); err != nil {
+			logger.Error("Error writing last check file", "err", err)
+			return
+		}
+
+		return
 	}
 }
