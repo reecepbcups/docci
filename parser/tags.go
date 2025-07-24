@@ -17,6 +17,7 @@ type MetaTag struct {
 
 	OutputContains  string
 	Background      bool
+	BackgroundKill  int // 1-based index of background process to kill
 	AssertFailure   bool
 	OS              string
 	WaitForEndpoint string
@@ -36,6 +37,7 @@ const (
 	TagIgnore          = "docci-ignore"
 	TagOutputContains  = "docci-output-contains"
 	TagBackground      = "docci-background"
+	TagBackgroundKill  = "docci-background-kill"
 	TagAssertFailure   = "docci-assert-failure"
 	TagOS              = "docci-os"
 	TagWaitForEndpoint = "docci-wait-for-endpoint"
@@ -75,6 +77,12 @@ var tagDefinitions = []TagInfo{
 		Aliases:     []string{"docci-bg"},
 		Description: "Run the code block in the background",
 		Example:     "```bash docci-background",
+	},
+	{
+		Name:        TagBackgroundKill,
+		Aliases:     []string{"docci-bg-kill"},
+		Description: "Kill a previously started background process by index (1-based)",
+		Example:     "```bash docci-background-kill=\"1\"",
 	},
 	{
 		Name:        TagAssertFailure,
@@ -238,6 +246,19 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 			mt.OutputContains = content
 		case TagBackground:
 			mt.Background = true
+		case TagBackgroundKill:
+			if content == "" {
+				return MetaTag{}, fmt.Errorf("docci-background-kill requires a value (1-based index of background process to kill)")
+			}
+			killIndex, err := strconv.Atoi(content)
+			if err != nil {
+				return MetaTag{}, fmt.Errorf("invalid background kill index in docci-background-kill: %s", content)
+			}
+			if killIndex <= 0 {
+				return MetaTag{}, fmt.Errorf("background kill index must be positive (1-based) in docci-background-kill, got: %d", killIndex)
+			}
+			mt.BackgroundKill = killIndex
+			logger.GetLogger().Debugf("Background kill tag found with index: %d", killIndex)
 		case TagAssertFailure:
 			mt.AssertFailure = true
 		case TagOS:

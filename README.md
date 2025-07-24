@@ -53,6 +53,7 @@ docci version
 ### 🎨 Operation tags
   * 🛑 `docci-ignore`: Skip executing this code block
   * 🔄 `docci-background`: Run the command in the background
+  * 💀 `docci-background-kill=N`: Kill a previously started background process by index (1-based)
   * 🚫 `docci-if-not-installed=BINARY`: Skip execution if some binary is installed (e.g. node)
   * ⏲️ `docci-delay-before=N`: Wait N seconds before running any commands in the block
   * ⏲️ `docci-delay-after=N`: Wait N seconds after running all commands in the block
@@ -131,7 +132,7 @@ echo "Imagine a cURL request with API_KEY here"
 ```
 ````
 
-And cleanup demo server if running in the background:
+Cleanup demo server if running in the background:
 
 ````bash
 ```bash

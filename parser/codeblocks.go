@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -20,6 +21,7 @@ type CodeBlock struct {
 	Content         string
 	OutputContains  string
 	Background      bool
+	BackgroundKill  int // 1-based index of background process to kill
 	AssertFailure   bool
 	OS              string
 	WaitForEndpoint string
@@ -53,6 +55,7 @@ func newCodeBlock(index int, language string) *CodeBlock {
 func (c *CodeBlock) applyTags(tags MetaTag, lineNumber int, fileName string) {
 	c.OutputContains = tags.OutputContains
 	c.Background = tags.Background
+	c.BackgroundKill = tags.BackgroundKill
 	c.AssertFailure = tags.AssertFailure
 	c.OS = tags.OS
 	c.WaitForEndpoint = tags.WaitForEndpoint
@@ -174,6 +177,36 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 		}
 	}
 
+	// Validate background-kill references
+	backgroundIndexes := make(map[int]bool)
+	for _, block := range codeBlocks {
+		if block.Background {
+			backgroundIndexes[block.Index] = true
+		}
+	}
+
+	// Check all background-kill references
+	for _, block := range codeBlocks {
+		if block.BackgroundKill > 0 {
+			if !backgroundIndexes[block.BackgroundKill] {
+				// Find all available background indexes for error message
+				var availableIndexes []int
+				for idx := range backgroundIndexes {
+					availableIndexes = append(availableIndexes, idx)
+				}
+				sort.Ints(availableIndexes)
+
+				if len(availableIndexes) == 0 {
+					return nil, fmt.Errorf("block %d (line %d): docci-background-kill=%d references a non-existent background process. No background processes are defined in this file",
+						block.Index, block.LineNumber, block.BackgroundKill)
+				} else {
+					return nil, fmt.Errorf("block %d (line %d): docci-background-kill=%d references a non-existent background process. Available background process indexes: %v",
+						block.Index, block.LineNumber, block.BackgroundKill, availableIndexes)
+				}
+			}
+		}
+	}
+
 	return codeBlocks, nil
 }
 
@@ -244,6 +277,25 @@ func BuildExecutableScriptWithOptions(blocks []CodeBlock, opts types.DocciOpts) 
 	var backgroundIndexes []int
 
 	for _, block := range blocks {
+		// Handle background kill first if specified
+		if block.BackgroundKill > 0 {
+			// Kill a previously started background process
+			fileInfo := ""
+			if block.FileName != "" {
+				fileInfo = fmt.Sprintf(" from %s", block.FileName)
+			}
+			script.WriteString(fmt.Sprintf("# Kill background process at index %d%s\n", block.BackgroundKill, fileInfo))
+			script.WriteString(fmt.Sprintf("if [ -n \"$DOCCI_BG_PID_%d\" ]; then\n", block.BackgroundKill))
+			script.WriteString(fmt.Sprintf("  echo 'Killing background process %d with PID '$DOCCI_BG_PID_%d\n", block.BackgroundKill, block.BackgroundKill))
+			script.WriteString(fmt.Sprintf("  # Kill the entire process group\n"))
+			script.WriteString(fmt.Sprintf("  kill -TERM -$DOCCI_BG_PID_%d 2>/dev/null || kill $DOCCI_BG_PID_%d 2>/dev/null || true\n", block.BackgroundKill, block.BackgroundKill))
+			script.WriteString(fmt.Sprintf("  wait $DOCCI_BG_PID_%d 2>/dev/null || true\n", block.BackgroundKill))
+			script.WriteString(fmt.Sprintf("  unset DOCCI_BG_PID_%d\n", block.BackgroundKill))
+			script.WriteString("else\n")
+			script.WriteString(fmt.Sprintf("  echo 'Warning: No background process found at index %d'\n", block.BackgroundKill))
+			script.WriteString("fi\n\n")
+		}
+
 		if block.Background {
 			// For background blocks, wrap in { } & and redirect output
 			fileInfo := ""
@@ -251,9 +303,9 @@ func BuildExecutableScriptWithOptions(blocks []CodeBlock, opts types.DocciOpts) 
 				fileInfo = fmt.Sprintf(" from %s", block.FileName)
 			}
 			script.WriteString(fmt.Sprintf("# Background block %d%s\n", block.Index, fileInfo))
-			script.WriteString("{\n")
+			script.WriteString("setsid bash -c '{\n")
 			script.WriteString(block.Content)
-			script.WriteString(fmt.Sprintf("} > /tmp/docci_bg_%d.out 2>&1 &\n", block.Index))
+			script.WriteString(fmt.Sprintf("}' > /tmp/docci_bg_%d.out 2>&1 &\n", block.Index))
 			script.WriteString(fmt.Sprintf("DOCCI_BG_PID_%d=$!\n", block.Index))
 			script.WriteString(fmt.Sprintf("echo 'Started background process %d with PID '$DOCCI_BG_PID_%d\n\n", block.Index, block.Index))
 			backgroundPIDs = append(backgroundPIDs, fmt.Sprintf("$DOCCI_BG_PID_%d", block.Index))
