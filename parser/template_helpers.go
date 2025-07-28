@@ -16,7 +16,7 @@ func replaceTemplateVars(template string, vars map[string]string) string {
 	// Check for any remaining unreplaced variables
 	remaining := findUnreplacedVars(result)
 	if len(remaining) > 0 {
-		panic(fmt.Sprintf("Unreplaced template variables found: %v", remaining))
+		panic(fmt.Sprintf("Unreplaced template variables found: %v.\nTemplate:\n%v\n", remaining, result))
 	}
 
 	return result
