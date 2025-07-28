@@ -257,21 +257,16 @@ func BuildExecutableScriptWithOptions(blocks []CodeBlock, opts types.DocciOpts) 
 	validationMap := make(map[int]string)  // maps block index to expected output
 	assertFailureMap := make(map[int]bool) // maps block index to assert-failure flag
 	var backgroundPIDs []string
+	debugEnabled := log.Level >= logrus.DebugLevel
 
 	// Always generate markers for parsing, visibility controlled in executor
 
 	// Add trap at the beginning to clean up background processes
 	// Only set the trap if keepRunning is false
 	if !opts.KeepRunning {
-		script.WriteString("# Cleanup function for background processes\n")
-		script.WriteString("cleanup_background_processes() {\n")
-		// higher numbers are actually more verbose in the logrus library
-		if log.Level >= logrus.DebugLevel {
-			script.WriteString("  echo 'Cleaning up background processes...'\n")
-		}
-		script.WriteString("  jobs -p | xargs -r kill 2>/dev/null\n")
-		script.WriteString("}\n")
-		script.WriteString("trap cleanup_background_processes EXIT\n\n")
+		script.WriteString(replaceTemplateVars(scriptCleanupTemplate, map[string]string{
+			"DEBUG_CLEANUP": formatDebugCleanup(debugEnabled),
+		}))
 	}
 
 	var backgroundIndexes []int
@@ -279,96 +274,58 @@ func BuildExecutableScriptWithOptions(blocks []CodeBlock, opts types.DocciOpts) 
 	for _, block := range blocks {
 		// Handle background kill first if specified
 		if block.BackgroundKill > 0 {
-			// Kill a previously started background process
-			fileInfo := ""
-			if block.FileName != "" {
-				fileInfo = fmt.Sprintf(" from %s", block.FileName)
-			}
-			script.WriteString(fmt.Sprintf("# Kill background process at index %d%s\n", block.BackgroundKill, fileInfo))
-			script.WriteString(fmt.Sprintf("if [ -n \"$DOCCI_BG_PID_%d\" ]; then\n", block.BackgroundKill))
-			script.WriteString(fmt.Sprintf("  echo 'Killing background process %d with PID '$DOCCI_BG_PID_%d\n", block.BackgroundKill, block.BackgroundKill))
-			script.WriteString(fmt.Sprintf("  # Kill the entire process group\n"))
-			script.WriteString(fmt.Sprintf("  kill -TERM -$DOCCI_BG_PID_%d 2>/dev/null || kill $DOCCI_BG_PID_%d 2>/dev/null || true\n", block.BackgroundKill, block.BackgroundKill))
-			script.WriteString(fmt.Sprintf("  wait $DOCCI_BG_PID_%d 2>/dev/null || true\n", block.BackgroundKill))
-			script.WriteString(fmt.Sprintf("  unset DOCCI_BG_PID_%d\n", block.BackgroundKill))
-			script.WriteString("else\n")
-			script.WriteString(fmt.Sprintf("  echo 'Warning: No background process found at index %d'\n", block.BackgroundKill))
-			script.WriteString("fi\n\n")
+			script.WriteString(replaceTemplateVars(backgroundKillTemplate, map[string]string{
+				"KILL_INDEX": strconv.Itoa(block.BackgroundKill),
+				"FILE_INFO":  formatFileInfo(block.FileName),
+			}))
 		}
 
 		if block.Background {
 			// For background blocks, wrap in { } & and redirect output
-			fileInfo := ""
-			if block.FileName != "" {
-				fileInfo = fmt.Sprintf(" from %s", block.FileName)
-			}
-			script.WriteString(fmt.Sprintf("# Background block %d%s\n", block.Index, fileInfo))
-			script.WriteString("setsid bash -c '{\n")
-			script.WriteString(block.Content)
-			script.WriteString(fmt.Sprintf("}' > /tmp/docci_bg_%d.out 2>&1 &\n", block.Index))
-			script.WriteString(fmt.Sprintf("DOCCI_BG_PID_%d=$!\n", block.Index))
-			script.WriteString(fmt.Sprintf("echo 'Started background process %d with PID '$DOCCI_BG_PID_%d\n\n", block.Index, block.Index))
+			script.WriteString(replaceTemplateVars(backgroundBlockTemplate, map[string]string{
+				"INDEX":     strconv.Itoa(block.Index),
+				"FILE_INFO": formatFileInfo(block.FileName),
+				"CONTENT":   block.Content,
+			}))
 			backgroundPIDs = append(backgroundPIDs, fmt.Sprintf("$DOCCI_BG_PID_%d", block.Index))
 			backgroundIndexes = append(backgroundIndexes, block.Index)
 		} else {
 			// Regular blocks with markers (always generated for parsing)
-			marker := fmt.Sprintf("### DOCCI_BLOCK_START_%d ###", block.Index)
-			script.WriteString(fmt.Sprintf("echo '%s'\n", marker))
+			script.WriteString(replaceTemplateVars(blockStartMarkerTemplate, map[string]string{
+				"INDEX": strconv.Itoa(block.Index),
+			}))
 
 			// Add the block header comment only in debug mode
-			if log.Level >= logrus.DebugLevel {
-				fileInfo := ""
-				if block.FileName != "" {
-					fileInfo = fmt.Sprintf(" from %s", block.FileName)
-				}
-				script.WriteString(fmt.Sprintf("### === Code Block %d (%s)%s ===\n", block.Index, block.Language, fileInfo))
+			if debugEnabled {
+				script.WriteString(replaceTemplateVars(blockHeaderTemplate, map[string]string{
+					"INDEX":     strconv.Itoa(block.Index),
+					"LANGUAGE":  block.Language,
+					"FILE_INFO": formatFileInfo(block.FileName),
+				}))
 			}
 
 			// Add delay before block if specified
 			if block.DelayBeforeSecs > 0 {
-				script.WriteString(fmt.Sprintf("# Delay before block %d for %g seconds\n", block.Index, block.DelayBeforeSecs))
-				script.WriteString(fmt.Sprintf("sleep %g\n", block.DelayBeforeSecs))
+				script.WriteString(replaceTemplateVars(delayBeforeTemplate, map[string]string{
+					"INDEX": strconv.Itoa(block.Index),
+					"DELAY": strconv.FormatFloat(block.DelayBeforeSecs, 'g', -1, 64),
+				}))
 			}
 
 			// Add wait-for-endpoint logic if needed
 			if block.WaitForEndpoint != "" {
-				script.WriteString(fmt.Sprintf("# Waiting for endpoint %s (timeout: %d seconds)\n", block.WaitForEndpoint, block.WaitTimeoutSecs))
-				script.WriteString(fmt.Sprintf("echo 'Waiting for endpoint %s to be ready...'\n", block.WaitForEndpoint))
-				script.WriteString(fmt.Sprintf(`
-timeout_secs=%d
-endpoint_url="%s"
-start_time=$(date +%%s)
-
-while true; do
-    current_time=$(date +%%s)
-    elapsed=$((current_time - start_time))
-
-    if [ $elapsed -ge $timeout_secs ]; then
-        echo "Timeout waiting for endpoint $endpoint_url after $timeout_secs seconds"
-        exit 1
-    fi
-
-    if curl -s -f --max-time 5 "$endpoint_url" > /dev/null 2>&1; then
-        echo "Endpoint $endpoint_url is ready"
-        break
-    fi
-
-    echo "Endpoint not ready yet, retrying in 1 second... (elapsed: ${elapsed}s)"
-    sleep 1
-done
-
-`, block.WaitTimeoutSecs, block.WaitForEndpoint))
+				script.WriteString(replaceTemplateVars(waitForEndpointTemplate, map[string]string{
+					"ENDPOINT": block.WaitForEndpoint,
+					"TIMEOUT":  strconv.Itoa(block.WaitTimeoutSecs),
+				}))
 			}
 
 			// Add file existence check as guard clause if needed
 			if block.IfFileNotExists != "" {
-				script.WriteString(fmt.Sprintf("# Guard clause: check if file exists and skip if it does\n"))
-				script.WriteString(fmt.Sprintf("if [ -f \"%s\" ]; then\n", block.IfFileNotExists))
-				script.WriteString(fmt.Sprintf("  echo \"Skipping block %d: file %s already exists\"\n", block.Index, block.IfFileNotExists))
-				script.WriteString("else\n")
-				script.WriteString(fmt.Sprintf("  echo \"File %s does not exist, executing block %d\"\n", block.IfFileNotExists, block.Index))
-				script.WriteString("fi\n")
-				script.WriteString(fmt.Sprintf("if [ ! -f \"%s\" ]; then\n", block.IfFileNotExists))
+				script.WriteString(replaceTemplateVars(fileExistenceGuardStartTemplate, map[string]string{
+					"FILE":  block.IfFileNotExists,
+					"INDEX": strconv.Itoa(block.Index),
+				}))
 			}
 
 			// Apply text replacement if needed
@@ -385,66 +342,45 @@ done
 
 			// Prepare the code content with per-command delay and command display
 			delaySeconds := block.DelayPerCmdSecs
-			bashFlags := "-eT"
-			if block.AssertFailure {
-				bashFlags = "-T" // Don't use -e for assert-failure blocks
-			}
-			codeContent := fmt.Sprintf(`# Enable per-command delay (%g seconds) and command display
-set %s
-trap 'echo -e "\n     Executing CMD: $BASH_COMMAND" >&2; sleep %g' DEBUG
-
-%s
-
-# Disable trap
-trap - DEBUG
-`, delaySeconds, bashFlags, delaySeconds, blockContent)
+			codeContent := replaceTemplateVars(codeExecutionTemplate, map[string]string{
+				"DELAY":      strconv.FormatFloat(delaySeconds, 'g', -1, 64),
+				"BASH_FLAGS": formatBashFlags(block.AssertFailure),
+				"CONTENT":    blockContent,
+			})
 
 			// Add the actual code with retry logic if needed
 			if block.RetryCount > 0 {
 				retryDelay := GetRetryDelay()
-				script.WriteString(fmt.Sprintf("# Retry logic for block %d (max attempts: %d)\n", block.Index, block.RetryCount))
-				script.WriteString("retry_count=0\n")
-				script.WriteString(fmt.Sprintf("max_retries=%d\n", block.RetryCount))
-				script.WriteString("while [ $retry_count -le $max_retries ]; do\n")
-				script.WriteString("  if [ $retry_count -gt 0 ]; then\n")
-				script.WriteString(fmt.Sprintf("    echo \"Retry attempt $retry_count/$max_retries for block %d\"\n", block.Index))
-				if retryDelay > 0 {
-					script.WriteString(fmt.Sprintf("    sleep %d\n", retryDelay))
-				}
-				script.WriteString("  fi\n")
-				script.WriteString("  \n")
-				script.WriteString("  # Execute the block content\n")
-				script.WriteString("  if (\n")
+				script.WriteString(replaceTemplateVars(retryWrapperStartTemplate, map[string]string{
+					"INDEX":       strconv.Itoa(block.Index),
+					"MAX_RETRIES": strconv.Itoa(block.RetryCount),
+					"RETRY_DELAY": strconv.Itoa(retryDelay),
+				}))
 				script.WriteString(codeContent)
-				script.WriteString("  ); then\n")
-				script.WriteString("    break\n")
-				script.WriteString("  else\n")
-				script.WriteString("    exit_code=$?\n")
-				script.WriteString("    retry_count=$((retry_count + 1))\n")
-				script.WriteString("    if [ $retry_count -gt $max_retries ]; then\n")
-				script.WriteString(fmt.Sprintf("      echo \"Block %d failed after $max_retries retry attempts\"\n", block.Index))
-				script.WriteString("      exit $exit_code\n")
-				script.WriteString("    fi\n")
-				script.WriteString("  fi\n")
-				script.WriteString("done\n")
+				script.WriteString(replaceTemplateVars(retryWrapperEndTemplate, map[string]string{
+					"INDEX": strconv.Itoa(block.Index),
+				}))
 			} else {
 				script.WriteString(codeContent)
 			}
 
 			// Close the guard clause if needed
 			if block.IfFileNotExists != "" {
-				script.WriteString("fi\n")
+				script.WriteString(fileExistenceGuardEndTemplate)
 			}
 
 			// Add delay after block if specified
 			if block.DelayAfterSecs > 0 {
-				script.WriteString(fmt.Sprintf("# Delay after block %d for %g seconds\n", block.Index, block.DelayAfterSecs))
-				script.WriteString(fmt.Sprintf("sleep %g\n", block.DelayAfterSecs))
+				script.WriteString(replaceTemplateVars(delayAfterTemplate, map[string]string{
+					"INDEX": strconv.Itoa(block.Index),
+					"DELAY": strconv.FormatFloat(block.DelayAfterSecs, 'g', -1, 64),
+				}))
 			}
 
 			// Add a marker after the block
-			endMarker := fmt.Sprintf("### DOCCI_BLOCK_END_%d ###", block.Index)
-			script.WriteString(fmt.Sprintf("echo '%s'\n", endMarker))
+			script.WriteString(replaceTemplateVars(blockEndMarkerTemplate, map[string]string{
+				"INDEX": strconv.Itoa(block.Index),
+			}))
 
 			// Store validation requirement if present
 			if block.OutputContains != "" {
@@ -459,43 +395,31 @@ trap - DEBUG
 
 	// Add section to display background logs at the end (unless hidden)
 	if len(backgroundIndexes) > 0 && !opts.HideBackgroundLogs {
-		script.WriteString("\n# Display background process logs\n")
-		script.WriteString("echo -e '\\n=== Background Process Logs ==='\n")
+		var logEntries strings.Builder
 		for _, bgIndex := range backgroundIndexes {
-			script.WriteString(fmt.Sprintf("if [ -f /tmp/docci_bg_%d.out ]; then\n", bgIndex))
-			script.WriteString(fmt.Sprintf("  echo -e '\\n--- Background Block %d Output ---'\n", bgIndex))
-			script.WriteString(fmt.Sprintf("  cat /tmp/docci_bg_%d.out\n", bgIndex))
-			script.WriteString(fmt.Sprintf("  rm -f /tmp/docci_bg_%d.out\n", bgIndex))
-			script.WriteString("else\n")
-			script.WriteString(fmt.Sprintf("  echo 'No output file found for background block %d'\n", bgIndex))
-			script.WriteString("fi\n")
+			logEntries.WriteString(replaceTemplateVars(backgroundLogEntryTemplate, map[string]string{
+				"INDEX": strconv.Itoa(bgIndex),
+			}))
 		}
+		script.WriteString(replaceTemplateVars(backgroundLogsDisplayTemplate, map[string]string{
+			"LOG_ENTRIES": logEntries.String(),
+		}))
 	} else if len(backgroundIndexes) > 0 && opts.HideBackgroundLogs {
 		// Still clean up the background output files even if we're not displaying them
-		script.WriteString("\n# Clean up background process logs (hidden)\n")
+		var cleanupCommands strings.Builder
 		for _, bgIndex := range backgroundIndexes {
-			script.WriteString(fmt.Sprintf("rm -f /tmp/docci_bg_%d.out\n", bgIndex))
+			cleanupCommands.WriteString(fmt.Sprintf("rm -f /tmp/docci_bg_%d.out\n", bgIndex))
 		}
+		script.WriteString(replaceTemplateVars(backgroundLogsCleanupTemplate, map[string]string{
+			"CLEANUP_COMMANDS": cleanupCommands.String(),
+		}))
 	}
 
 	// Add infinite sleep if keepRunning is true (as a final block)
 	if opts.KeepRunning {
-		script.WriteString("\n# Keep containers running with infinite sleep\n")
-		script.WriteString("echo '\\n🔄 Keeping containers running. Press Ctrl+C to stop...'\n")
-
-		// Add trap for cleanup when keepRunning is true
-		script.WriteString("\n# Cleanup function for background processes (on interrupt)\n")
-		script.WriteString("cleanup_on_interrupt() {\n")
-		// higher numbers are actually more verbose in the logrus library
-		if log.Level >= logrus.DebugLevel {
-			script.WriteString("  echo 'Cleaning up background processes...'\n")
-		}
-		script.WriteString("  jobs -p | xargs -r kill 2>/dev/null\n")
-		script.WriteString("  exit 0\n")
-		script.WriteString("}\n")
-		script.WriteString("trap cleanup_on_interrupt INT TERM\n\n")
-
-		script.WriteString("sleep infinity\n")
+		script.WriteString(replaceTemplateVars(keepRunningTemplate, map[string]string{
+			"DEBUG_CLEANUP": formatDebugCleanup(debugEnabled),
+		}))
 	}
 
 	return script.String(), validationMap, assertFailureMap
