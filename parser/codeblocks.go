@@ -366,7 +366,7 @@ func BuildExecutableScriptWithOptions(blocks []CodeBlock, opts types.DocciOpts) 
 
 			// Close the guard clause if needed
 			if block.IfFileNotExists != "" {
-				script.WriteString(fileExistenceGuardEndTemplate)
+				script.WriteString("fi\n")
 			}
 
 			// Add delay after block if specified

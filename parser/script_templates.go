@@ -5,7 +5,7 @@ const (
 	// Main script template with cleanup trap
 	scriptCleanupTemplate = `# Cleanup function for background processes
 cleanup_background_processes() {
-{{DEBUG_CLEANUP}}  jobs -p | xargs -r kill 2>/dev/null
+{{DEBUG_CLEANUP}} jobs -p | xargs -r kill 2>/dev/null
 }
 trap cleanup_background_processes EXIT
 
@@ -83,9 +83,6 @@ else
   echo "File {{FILE}} does not exist, executing block {{INDEX}}"
 fi
 if [ ! -f "{{FILE}}" ]; then
-`
-
-	fileExistenceGuardEndTemplate = `fi
 `
 
 	// Code execution with per-command delay template
