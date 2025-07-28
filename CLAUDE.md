@@ -55,14 +55,7 @@ Tests use actual markdown files with docci tags:
 ### Key Design Patterns
 
 1. **Result Aggregation**: `DocciResult` struct contains success status, exit codes, and output
-2. **Tag-based Execution**: Code blocks use docci tags for advanced behavior:
-   - `docci-exec` - Execute the block
-   - `docci-background` - Run in background
-   - `docci-output-contains` - Validate output
-   - `docci-assert-failure` - Expect failure
-   - `docci-retry` - Retry on failure
-   - `docci-delay` - Wait before execution
-   - `docci-wait-for-endpoint` - Wait for service availability
+2. **Tag-based Execution**: Code blocks use docci tags for advanced behavior. You can run the `docci tags` command to see all information on them and some more context.
 
 3. **Multi-file Processing**: Blocks from multiple files are merged with global indexing
 4. **Real-time Streaming**: Executor streams output in real-time while capturing for validation
