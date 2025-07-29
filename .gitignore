@@ -4,3 +4,6 @@ docci
 dist/
 .goreleaser/
 build/
+
+# used in the readme.md for testing
+example.html

@@ -29,6 +29,12 @@ type MetaTag struct {
 	IfFileNotExists string
 	IfNotInstalled  string
 	ReplaceText     string
+
+	// File operation tags
+	File        string // docci-file: The file name to operate on
+	ResetFile   bool   // docci-reset-file: Reset the file to its original content
+	LineInsert  int    // docci-line-insert: Insert content at line N (1-based)
+	LineReplace string // docci-line-replace: Replace content at line N or N-M (e.g., "3" or "7-9")
 }
 
 var tags string
@@ -48,6 +54,10 @@ const (
 	TagIfFileNotExists = "docci-if-file-not-exists"
 	TagIfNotInstalled  = "docci-if-not-installed"
 	TagReplaceText     = "docci-replace-text"
+	TagFile            = "docci-file"
+	TagResetFile       = "docci-reset-file"
+	TagLineInsert      = "docci-line-insert"
+	TagLineReplace     = "docci-line-replace"
 )
 
 // TagInfo holds information about a tag and its aliases
@@ -144,6 +154,30 @@ var tagDefinitions = []TagInfo{
 		Description: "Replace text in the code block before execution (format: 'old;new')",
 		Example:     "```bash docci-replace-text=\"bbbbbb;$SOME_ENV_VAR\"",
 	},
+	{
+		Name:        TagFile,
+		Aliases:     []string{},
+		Description: "Specify the file name to operate on",
+		Example:     "```html docci-file=\"example.html\"",
+	},
+	{
+		Name:        TagResetFile,
+		Aliases:     []string{},
+		Description: "Reset the file to its original content (creates or overwrites)",
+		Example:     "```html docci-file=\"example.html\" docci-reset-file",
+	},
+	{
+		Name:        TagLineInsert,
+		Aliases:     []string{},
+		Description: "Insert content at line N (1-based)",
+		Example:     "```html docci-file=\"example.html\" docci-line-insert=\"4\"",
+	},
+	{
+		Name:        TagLineReplace,
+		Aliases:     []string{},
+		Description: "Replace content at line N or lines N-M (1-based)",
+		Example:     "```html docci-file=\"example.html\" docci-line-replace=\"3\" or docci-line-replace=\"7-9\"",
+	},
 }
 
 // tagAliasMap is built from tagDefinitions for fast lookup
@@ -170,24 +204,6 @@ func TagAlias(tag string) (string, error) {
 
 	return "", fmt.Errorf("unknown tag / alias: %s", tag)
 }
-
-// example input:
-// ```bash docci-output-contains="Persist: test"
-// ```bash docci-ignore
-// func ParseTags(line string) MetaTags {
-// 	// given some codeblock, parse out any tags that are present to be used
-// 	// ```bash docci-output-contains="Persist: test"
-// 	// ```bash docci-ignore
-// 	var mt MetaTags
-
-// 	lang := strings.TrimPrefix(line, "```")
-// 	lang = strings.TrimSpace(lang)
-
-// 	mt.Language = lang
-// 	mt.Ignore = strings.Contains(line, "docci-ignore")
-
-// 	return mt
-// }
 
 // given a line, find any docci- tags that are present and parse them out
 func ParseTags(line string) (MetaTag, error) {
@@ -370,6 +386,61 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 			}
 			mt.ReplaceText = content
 			logger.GetLogger().Debugf("Replace text tag found: %s", content)
+		case TagFile:
+			if content == "" {
+				return MetaTag{}, fmt.Errorf("docci-file requires a file name")
+			}
+			mt.File = content
+			logger.GetLogger().Debugf("File tag found with name: %s", content)
+		case TagResetFile:
+			mt.ResetFile = true
+			logger.GetLogger().Debugf("Reset file tag found")
+		case TagLineInsert:
+			if content == "" {
+				return MetaTag{}, fmt.Errorf("docci-line-insert requires a line number")
+			}
+			lineNum, err := strconv.Atoi(content)
+			if err != nil {
+				return MetaTag{}, fmt.Errorf("invalid line number in docci-line-insert: %s", content)
+			}
+			if lineNum <= 0 {
+				return MetaTag{}, fmt.Errorf("line number must be positive (1-based) in docci-line-insert, got: %d", lineNum)
+			}
+			mt.LineInsert = lineNum
+			logger.GetLogger().Debugf("Line insert tag found at line: %d", lineNum)
+		case TagLineReplace:
+			if content == "" {
+				return MetaTag{}, fmt.Errorf("docci-line-replace requires a line number or range (e.g., '3' or '7-9')")
+			}
+			// Validate format: either a single number or N-M
+			if strings.Contains(content, "-") {
+				parts := strings.Split(content, "-")
+				if len(parts) != 2 {
+					return MetaTag{}, fmt.Errorf("invalid line range format in docci-line-replace: %s (expected 'N-M')", content)
+				}
+				startLine, err1 := strconv.Atoi(strings.TrimSpace(parts[0]))
+				endLine, err2 := strconv.Atoi(strings.TrimSpace(parts[1]))
+				if err1 != nil || err2 != nil {
+					return MetaTag{}, fmt.Errorf("invalid line numbers in docci-line-replace: %s", content)
+				}
+				if startLine <= 0 || endLine <= 0 {
+					return MetaTag{}, fmt.Errorf("line numbers must be positive (1-based) in docci-line-replace")
+				}
+				if startLine > endLine {
+					return MetaTag{}, fmt.Errorf("start line must be <= end line in docci-line-replace: %s", content)
+				}
+			} else {
+				// Single line number
+				lineNum, err := strconv.Atoi(content)
+				if err != nil {
+					return MetaTag{}, fmt.Errorf("invalid line number in docci-line-replace: %s", content)
+				}
+				if lineNum <= 0 {
+					return MetaTag{}, fmt.Errorf("line number must be positive (1-based) in docci-line-replace, got: %d", lineNum)
+				}
+			}
+			mt.LineReplace = content
+			logger.GetLogger().Debugf("Line replace tag found: %s", content)
 		default:
 			return MetaTag{}, fmt.Errorf("unknown tag: %s", normalizedTag)
 		}
@@ -439,4 +510,39 @@ func ShouldRunBasedOnCommandInstallation(ifNotInstalledCommand string) bool {
 // GetAllTagsInfo returns information about all available tags and their aliases
 func GetAllTagsInfo() []TagInfo {
 	return tagDefinitions
+}
+
+// Validate checks if the tag combinations are valid
+func (mt *MetaTag) Validate(lineNumber int) error {
+	// Validate tag combinations
+	if mt.OutputContains != "" && mt.Background {
+		return fmt.Errorf("line %d: Cannot use both docci-output-contains and docci-background on the same code block", lineNumber)
+	}
+	if mt.AssertFailure && mt.Background {
+		return fmt.Errorf("line %d: Cannot use both docci-assert-failure and docci-background on the same code block", lineNumber)
+	}
+	// TODO: it is possible we can allow this in the future, but need to think more about it & test (do we output contains stderr or stdout or both or?)
+	if mt.AssertFailure && mt.OutputContains != "" {
+		return fmt.Errorf("line %d: Cannot use both docci-assert-failure and docci-output-contains on the same code block", lineNumber)
+	}
+	if mt.WaitForEndpoint != "" && mt.Background {
+		return fmt.Errorf("line %d: Cannot use both docci-wait-for-endpoint and docci-background on the same code block", lineNumber)
+	}
+	if mt.RetryCount > 0 && mt.Background {
+		return fmt.Errorf("line %d: Cannot use both docci-retry and docci-background on the same code block", lineNumber)
+	}
+
+	// Validate file operations
+	if mt.File != "" {
+		// Can't use file operations with background blocks
+		if mt.Background {
+			return fmt.Errorf("line %d: Cannot use file operations with docci-background", lineNumber)
+		}
+		// Can't have both line-insert and line-replace
+		if mt.LineInsert > 0 && mt.LineReplace != "" {
+			return fmt.Errorf("line %d: Cannot use both docci-line-insert and docci-line-replace on the same code block", lineNumber)
+		}
+	}
+
+	return nil
 }

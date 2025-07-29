@@ -168,4 +168,77 @@ trap cleanup_on_interrupt INT TERM
 
 sleep infinity
 `
+
+	// File operation templates
+	fileCreateOrResetTemplate = `# File operation: {{OPERATION}} {{FILE}}{{FILE_INFO}}
+cat > "{{FILE}}" << 'DOCCI_EOF'
+{{CONTENT}}DOCCI_EOF
+`
+
+	fileLineInsertTemplate = `# File operation: insert at line {{LINE}} in {{FILE}}{{FILE_INFO}}
+if [ -f "{{FILE}}" ]; then
+  # Create a temporary file
+  temp_file=$(mktemp)
+
+  # Read existing content and insert at specified line
+  line_count=0
+  inserted=false
+  while IFS= read -r line || [ -n "$line" ]; do
+    line_count=$((line_count + 1))
+    if [ $line_count -eq {{LINE}} ] && [ "$inserted" = "false" ]; then
+      cat << 'DOCCI_EOF' >> "$temp_file"
+{{CONTENT}}DOCCI_EOF
+      inserted=true
+    fi
+    printf '%s\n' "$line" >> "$temp_file"
+  done < "{{FILE}}"
+
+  # If insert line is beyond EOF, append at the end
+  total_lines=$line_count
+  if [ {{LINE}} -gt $total_lines ] && [ "$inserted" = "false" ]; then
+    cat << 'DOCCI_EOF' >> "$temp_file"
+{{CONTENT}}DOCCI_EOF
+  fi
+
+  # Replace original file
+  mv "$temp_file" "{{FILE}}"
+else
+  echo "Error: File {{FILE}} does not exist for line insert operation"
+  exit 1
+fi
+`
+
+	fileLineReplaceTemplate = `# File operation: replace line(s) {{LINES}} in {{FILE}}{{FILE_INFO}}
+if [ -f "{{FILE}}" ]; then
+  # Create a temporary file
+  temp_file=$(mktemp)
+
+  # Parse line range
+  start_line={{START_LINE}}
+  end_line={{END_LINE}}
+
+  # Read and replace lines
+  line_count=0
+  replaced=false
+  while IFS= read -r line || [ -n "$line" ]; do
+    line_count=$((line_count + 1))
+    if [ $line_count -ge $start_line ] && [ $line_count -le $end_line ]; then
+      if [ "$replaced" = "false" ]; then
+        cat << 'DOCCI_EOF' >> "$temp_file"
+{{CONTENT}}DOCCI_EOF
+        replaced=true
+      fi
+      # Skip the lines being replaced
+    else
+      printf '%s\n' "$line" >> "$temp_file"
+    fi
+  done < "{{FILE}}"
+
+  # Replace original file
+  mv "$temp_file" "{{FILE}}"
+else
+  echo "Error: File {{FILE}} does not exist for line replace operation"
+  exit 1
+fi
+`
 )

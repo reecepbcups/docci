@@ -65,6 +65,14 @@ docci version
   * 🖥️ `docci-os=mac|linux`: Run the command only on it's the specified OS
   * 🔄 `docci-replace-text="old;new"`: Replace text in the code block before execution (including env variables!)
 
+### 📄 File Tags
+  * 📝 `docci-file`: The file name to operate on
+  * 🔄 `docci-reset-file`: Reset the file to its original content
+  * 🚫 `docci-if-file-not-exists`: Only run if a file does not exist
+  * ➕ `docci-line-insert=N`: Insert content at line N
+  * ✏️ `docci-line-replace=N`: Replace content at line N
+  * 📋 `docci-line-replace=N-M`: Replace content from line N to M
+
 
 ### 💡 Code Block Tag Examples (Operations)
 
@@ -137,5 +145,49 @@ Cleanup demo server if running in the background:
 ````bash
 ```bash
 curl http://localhost:3000/kill
+```
+````
+
+### 💡 Files Code Block Tag Examples
+
+Create a new file from content: 📝
+
+<!-- yes, the typo is meant to be here -->
+````html
+```html docci-file=example.html docci-reset-file
+<html>
+    <head>
+        <title>My Titlee</title>
+    </head>
+</html>
+```
+````
+
+Replace the typo'ed line:
+
+````html
+```html docci-file=example.html docci-line-replace=3
+        <title>My Title</title>
+```
+````
+
+Add new content
+
+````html
+```html docci-file=example.html docci-line-insert=4
+    <body>
+        <h1>My Header</h1>
+        <p>1 paragraph</p>
+        <p>2 paragraph</p>
+    </body>
+```
+````
+
+Replace multiple lines
+
+````html
+```html docci-file=example.html docci-line-replace=7-9
+        <p>First paragraph</p>
+        <p>Second paragraph</p>
 ```
 ````
