@@ -99,7 +99,7 @@ go run examples/server_endpoint/test_server.go 3000
 Add delays between commands for stability after the endpoint from a previous command is up: ⏱️
 
 ````bash
-```bash docci-output-contains="GOOD" docci-wait-for-endpoint=http://localhost:3000/health|30
+```bash docci-output-contains="GOOD" docci-wait-for-endpoint=http://localhost:3000/health|5
 VALUE=$(curl http://localhost:3000/health)
 echo "Got value: $VALUE"
 ```

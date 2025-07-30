@@ -27,8 +27,8 @@ fi
 
 	// Background block template
 	backgroundBlockTemplate = `# Background block {{INDEX}}{{FILE_INFO}}
-setsid bash -c '{
-{{CONTENT}}}' > /tmp/docci_bg_{{INDEX}}.out 2>&1 &
+(
+{{CONTENT}}) > /tmp/docci_bg_{{INDEX}}.out 2>&1 &
 DOCCI_BG_PID_{{INDEX}}=$!
 echo 'Started background process {{INDEX}} with PID '$DOCCI_BG_PID_{{INDEX}}
 
@@ -64,7 +64,7 @@ while true; do
         exit 1
     fi
 
-    if curl -s -f --max-time 5 "$endpoint_url" > /dev/null 2>&1; then
+    if wget -q --timeout=5 --tries=1 --spider "$endpoint_url" > /dev/null 2>&1; then
         echo "Endpoint $endpoint_url is ready"
         break
     fi
