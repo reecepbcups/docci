@@ -62,10 +62,7 @@ func RunDocciFileWithOptions(filePath string, opts types.DocciOpts) DocciResult 
 
 	// Build executable script with validation markers
 	log.Debug("Building executable script")
-	script, validationMap, assertFailureMap := parser.BuildExecutableScriptWithOptions(blocks, types.DocciOpts{
-		HideBackgroundLogs: hideBackgroundLogs,
-		KeepRunning:        keepRunning,
-	})
+	script, validationMap, assertFailureMap := parser.BuildExecutableScriptWithOptions(blocks, opts)
 
 	// Execute the script
 	log.Debug("Executing script")
@@ -222,10 +219,7 @@ func RunDocciFilesWithOptions(filePaths []string, opts types.DocciOpts) DocciRes
 
 	// Build executable script with validation markers
 	log.Debug("Building executable script from merged blocks")
-	script, validationMap, assertFailureMap := parser.BuildExecutableScriptWithOptions(allBlocks, types.DocciOpts{
-		HideBackgroundLogs: hideBackgroundLogs,
-		KeepRunning:        keepRunning,
-	})
+	script, validationMap, assertFailureMap := parser.BuildExecutableScriptWithOptions(allBlocks, opts)
 
 	// Execute the script
 	log.Debug("Executing merged script")
