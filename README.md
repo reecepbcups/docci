@@ -4,6 +4,14 @@ Your documentation is now your test suite! 🎯 *(pronounced "doc-ee", short for
 
 A CI tool that brings your markdown docs to life by executing code blocks in sequence. Run processes in the background, handle environment variables, add delays, verify outputs, and modify files - all through simple markdown tags. Perfect for ensuring your docs stay accurate and your examples actually work! 📚
 
+## 🌟 Projects Using Docci
+
+Several projects have adopted Docci to ensure their documentation stays accurate and executable:
+
+- **[Spawn](https://github.com/rollchains/spawn)** - Rapid Cosmos blockchain development framework
+- **[WAVS](https://github.com/Lay3rLabs/wavs-middleware)** - Eigenlayer AVS WebAssembly development
+- **[OndoChain](https://github.com/OndoProtocol/ondochain)** - Institutional RWA Cosmos-EVM blockchain
+
 ## 🏃‍♂️ Quick Start
 
 Find sample workspaces in the [`examples/` directory](./examples/).
