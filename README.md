@@ -10,7 +10,7 @@ Several projects have adopted Docci to ensure their documentation stays accurate
 
 - **[Spawn](https://github.com/rollchains/spawn)** - Rapid Cosmos blockchain development framework
 - **[WAVS](https://github.com/Lay3rLabs/wavs-middleware)** - Eigenlayer AVS WebAssembly development
-- **[OndoChain](https://blog.ondo.finance/introducing-ondo-chain/)** - Institutional RWA Cosmos-EVM blockchain
+- **[OndoChain](https://ondo.finance/ondo-chain/)** - Institutional RWA Cosmos-EVM blockchain
 
 ## 🏃‍♂️ Quick Start
 
