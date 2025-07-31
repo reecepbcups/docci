@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -23,6 +24,11 @@ var (
 	keepRunning        bool
 )
 
+// DocciConfig represents the JSON configuration file format
+type DocciConfig struct {
+	Files []string `json:"files"`
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "docci",
 	Short: "Execute and validate code blocks in markdown files",
@@ -33,11 +39,26 @@ It helps ensure your documentation examples are always accurate and working.`,
 }
 
 var runCmd = &cobra.Command{
-	Use:   "run <markdown-files>",
+	Use:   "run <markdown-files|config.json>",
 	Short: "Execute code blocks in markdown file(s)",
 	Long: `Execute all code blocks marked with 'exec' in markdown file(s).
 The command will run the blocks in sequence and validate any expected outputs.
-Multiple files can be specified separated by commas.`,
+
+You can specify files in three ways:
+1. Single file: docci run file.md
+2. Multiple files (comma-separated): docci run file1.md,file2.md,file3.md
+3. JSON config file: docci run config.json
+
+When using a JSON config file, create a file with this format:
+{
+  "files": [
+    "file1.md",
+    "subdir/file2.md",
+    "file3.md"
+  ]
+}
+
+File paths in the JSON config are resolved relative to the config file's location.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Initialize logging based on flags
@@ -340,9 +361,60 @@ func runCleanupCommands(commands []string) {
 	log.Info("Cleanup complete")
 }
 
-// parseFileList parses comma separated file paths
+// parseFileList parses comma separated file paths or JSON config file
 func parseFileList(input string) []string {
-	// Split by comma
+	// Check if input is a JSON file
+	if strings.HasSuffix(strings.ToLower(input), ".json") {
+		// Try to read and parse as JSON config
+		configData, err := os.ReadFile(input)
+		if err == nil {
+			var config DocciConfig
+			if jsonErr := json.Unmarshal(configData, &config); jsonErr == nil && len(config.Files) > 0 {
+				// Successfully parsed JSON config
+				// Get the directory containing the JSON file
+				configDir := filepath.Dir(input)
+
+				// Get git root for fallback
+				var gitRoot string
+				cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+				if output, err := cmd.Output(); err == nil {
+					gitRoot = strings.TrimSpace(string(output))
+				}
+
+				// Resolve relative file paths
+				var resolvedFiles []string
+				for _, file := range config.Files {
+					// If the file path is absolute, use it as-is
+					if filepath.IsAbs(file) {
+						resolvedFiles = append(resolvedFiles, file)
+					} else {
+						// First try relative to the JSON config directory
+						resolvedPath := filepath.Join(configDir, file)
+						if _, err := os.Stat(resolvedPath); err == nil {
+							resolvedFiles = append(resolvedFiles, resolvedPath)
+						} else if gitRoot != "" {
+							// If not found, try relative to git root
+							rootPath := filepath.Join(gitRoot, file)
+							if _, err := os.Stat(rootPath); err == nil {
+								resolvedFiles = append(resolvedFiles, rootPath)
+							} else {
+								// If still not found, use the original resolved path
+								// (will fail later with proper error message)
+								resolvedFiles = append(resolvedFiles, resolvedPath)
+							}
+						} else {
+							// No git root available, use original resolved path
+							resolvedFiles = append(resolvedFiles, resolvedPath)
+						}
+					}
+				}
+				return resolvedFiles
+			}
+		}
+		// If we can't parse as JSON config, treat it as a regular file
+	}
+
+	// Original comma-separated logic
 	if !strings.Contains(input, ",") {
 		// Single file
 		return []string{strings.TrimSpace(input)}

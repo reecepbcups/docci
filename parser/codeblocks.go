@@ -35,7 +35,14 @@ type CodeBlock struct {
 	LineNumber      int
 	FileName        string // Added for debugging multiple files
 	ReplaceText     string
-	content         strings.Builder // Used during parsing to build content
+
+	// File operation fields
+	File        string // docci-file: The file name to operate on
+	ResetFile   bool   // docci-reset-file: Reset the file to its original content
+	LineInsert  int    // docci-line-insert: Insert content at line N (1-based)
+	LineReplace string // docci-line-replace: Replace content at line N or N-M
+
+	content strings.Builder // Used during parsing to build content
 }
 
 // given a markdown file, parse out all the code blocks within it.
@@ -67,6 +74,10 @@ func (c *CodeBlock) applyTags(tags MetaTag, lineNumber int, fileName string) {
 	c.IfFileNotExists = tags.IfFileNotExists
 	c.IfNotInstalled = tags.IfNotInstalled
 	c.ReplaceText = tags.ReplaceText
+	c.File = tags.File
+	c.ResetFile = tags.ResetFile
+	c.LineInsert = tags.LineInsert
+	c.LineReplace = tags.LineReplace
 	c.LineNumber = lineNumber
 	c.FileName = fileName
 	c.content.Reset()
@@ -150,22 +161,11 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 				lang = langParts[0]
 			}
 
-			if contains(ValidLangs, lang) {
-				// Validate tag combinations
-				if tags.OutputContains != "" && tags.Background {
-					return nil, fmt.Errorf("line %d: Cannot use both docci-output-contains and docci-background on the same code block", lineNumber)
-				}
-				if tags.AssertFailure && tags.Background {
-					return nil, fmt.Errorf("line %d: Cannot use both docci-assert-failure and docci-background on the same code block", lineNumber)
-				}
-				if tags.AssertFailure && tags.OutputContains != "" {
-					return nil, fmt.Errorf("line %d: Cannot use both docci-assert-failure and docci-output-contains on the same code block", lineNumber)
-				}
-				if tags.WaitForEndpoint != "" && tags.Background {
-					return nil, fmt.Errorf("line %d: Cannot use both docci-wait-for-endpoint and docci-background on the same code block", lineNumber)
-				}
-				if tags.RetryCount > 0 && tags.Background {
-					return nil, fmt.Errorf("line %d: Cannot use both docci-retry and docci-background on the same code block", lineNumber)
+			// Allow block if it's a valid language OR if it has file operation tags
+			if contains(ValidLangs, lang) || tags.File != "" {
+				// Validate tag combinations using the centralized validation
+				if err := tags.Validate(lineNumber); err != nil {
+					return nil, err
 				}
 
 				startParsing = true
@@ -340,28 +340,77 @@ func BuildExecutableScriptWithOptions(blocks []CodeBlock, opts types.DocciOpts) 
 				}
 			}
 
-			// Prepare the code content with per-command delay and command display
-			delaySeconds := block.DelayPerCmdSecs
-			codeContent := replaceTemplateVars(codeExecutionTemplate, map[string]string{
-				"DELAY":      strconv.FormatFloat(delaySeconds, 'g', -1, 64),
-				"BASH_FLAGS": formatBashFlags(block.AssertFailure),
-				"CONTENT":    blockContent,
-			})
+			// Check if this is a file operation block
+			if block.File != "" {
+				// Handle file operations
+				if block.ResetFile || block.LineInsert == 0 && block.LineReplace == "" {
+					// Create or reset file
+					operation := "create"
+					if block.ResetFile {
+						operation = "reset"
+					}
+					script.WriteString(replaceTemplateVars(fileCreateOrResetTemplate, map[string]string{
+						"OPERATION": operation,
+						"FILE":      block.File,
+						"FILE_INFO": formatFileInfo(block.FileName),
+						"CONTENT":   blockContent,
+					}))
+				} else if block.LineInsert > 0 {
+					// Insert at line
+					script.WriteString(replaceTemplateVars(fileLineInsertTemplate, map[string]string{
+						"FILE":      block.File,
+						"LINE":      strconv.Itoa(block.LineInsert),
+						"FILE_INFO": formatFileInfo(block.FileName),
+						"CONTENT":   blockContent,
+					}))
+				} else if block.LineReplace != "" {
+					// Replace line(s)
+					startLine := ""
+					endLine := ""
 
-			// Add the actual code with retry logic if needed
-			if block.RetryCount > 0 {
-				retryDelay := GetRetryDelay()
-				script.WriteString(replaceTemplateVars(retryWrapperStartTemplate, map[string]string{
-					"INDEX":       strconv.Itoa(block.Index),
-					"MAX_RETRIES": strconv.Itoa(block.RetryCount),
-					"RETRY_DELAY": strconv.Itoa(retryDelay),
-				}))
-				script.WriteString(codeContent)
-				script.WriteString(replaceTemplateVars(retryWrapperEndTemplate, map[string]string{
-					"INDEX": strconv.Itoa(block.Index),
-				}))
+					if strings.Contains(block.LineReplace, "-") {
+						parts := strings.Split(block.LineReplace, "-")
+						startLine = strings.TrimSpace(parts[0])
+						endLine = strings.TrimSpace(parts[1])
+					} else {
+						startLine = block.LineReplace
+						endLine = block.LineReplace
+					}
+
+					script.WriteString(replaceTemplateVars(fileLineReplaceTemplate, map[string]string{
+						"FILE":       block.File,
+						"LINES":      block.LineReplace,
+						"START_LINE": startLine,
+						"END_LINE":   endLine,
+						"FILE_INFO":  formatFileInfo(block.FileName),
+						"CONTENT":    blockContent,
+					}))
+				}
 			} else {
-				script.WriteString(codeContent)
+				// Regular code execution (not a file operation)
+				// Prepare the code content with per-command delay and command display
+				delaySeconds := block.DelayPerCmdSecs
+				codeContent := replaceTemplateVars(codeExecutionTemplate, map[string]string{
+					"DELAY":      strconv.FormatFloat(delaySeconds, 'g', -1, 64),
+					"BASH_FLAGS": formatBashFlags(block.AssertFailure),
+					"CONTENT":    blockContent,
+				})
+
+				// Add the actual code with retry logic if needed
+				if block.RetryCount > 0 {
+					retryDelay := GetRetryDelay()
+					script.WriteString(replaceTemplateVars(retryWrapperStartTemplate, map[string]string{
+						"INDEX":       strconv.Itoa(block.Index),
+						"MAX_RETRIES": strconv.Itoa(block.RetryCount),
+						"RETRY_DELAY": strconv.Itoa(retryDelay),
+					}))
+					script.WriteString(codeContent)
+					script.WriteString(replaceTemplateVars(retryWrapperEndTemplate, map[string]string{
+						"INDEX": strconv.Itoa(block.Index),
+					}))
+				} else {
+					script.WriteString(codeContent)
+				}
 			}
 
 			// Close the guard clause if needed

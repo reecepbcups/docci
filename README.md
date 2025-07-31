@@ -4,6 +4,14 @@ Your documentation is now your test suite! 🎯 *(pronounced "doc-ee", short for
 
 A CI tool that brings your markdown docs to life by executing code blocks in sequence. Run processes in the background, handle environment variables, add delays, verify outputs, and modify files - all through simple markdown tags. Perfect for ensuring your docs stay accurate and your examples actually work! 📚
 
+## 🌟 Projects Using Docci
+
+Several projects have adopted Docci to ensure their documentation stays accurate and executable:
+
+- **[Spawn](https://github.com/rollchains/spawn)** - Rapid Cosmos blockchain development framework
+- **[WAVS](https://github.com/Lay3rLabs/wavs-middleware)** - Eigenlayer AVS WebAssembly development
+- **[OndoChain](https://ondo.finance/ondo-chain/)** - Institutional RWA Cosmos-EVM blockchain
+
 ## 🏃‍♂️ Quick Start
 
 Find sample workspaces in the [`examples/` directory](./examples/).
@@ -28,7 +36,7 @@ task install # go install ./*.go
   # docci_Linux_x86_64, docci_Linux_arm64, docci_Darwin_x86_64, docci_Darwin_arm64
   - name: Install Docci Readme Test Tool
     run: |
-      VERSION=v0.9.0
+      VERSION=v0.9.2
       BINARY=docci_Linux_x86_64.tar.gz
       curl -fsSL "https://github.com/Reecepbcups/docci/releases/download/${VERSION}/${BINARY}" | sudo tar -xzC /usr/local/bin
       sudo chmod +x /usr/local/bin/docci
@@ -64,6 +72,14 @@ docci version
   * 🚨 `docci-assert-failure`: If it is expected to fail (non 0 exit code)
   * 🖥️ `docci-os=mac|linux`: Run the command only on it's the specified OS
   * 🔄 `docci-replace-text="old;new"`: Replace text in the code block before execution (including env variables!)
+
+### 📄 File Tags
+  * 📝 `docci-file`: The file name to operate on
+  * 🔄 `docci-reset-file`: Reset the file to its original content
+  * 🚫 `docci-if-file-not-exists`: Only run if a file does not exist
+  * ➕ `docci-line-insert=N`: Insert content at line N
+  * ✏️ `docci-line-replace=N`: Replace content at line N
+  * 📋 `docci-line-replace=N-M`: Replace content from line N to M
 
 
 ### 💡 Code Block Tag Examples (Operations)
@@ -137,5 +153,49 @@ Cleanup demo server if running in the background:
 ````bash
 ```bash
 curl http://localhost:3000/kill
+```
+````
+
+### 💡 Files Code Block Tag Examples
+
+Create a new file from content: 📝
+
+<!-- yes, the typo is meant to be here -->
+````html
+```html docci-file=example.html docci-reset-file
+<html>
+    <head>
+        <title>My Titlee</title>
+    </head>
+</html>
+```
+````
+
+Replace the typo'ed line:
+
+````html
+```html docci-file=example.html docci-line-replace=3
+        <title>My Title</title>
+```
+````
+
+Add new content
+
+````html
+```html docci-file=example.html docci-line-insert=4
+    <body>
+        <h1>My Header</h1>
+        <p>1 paragraph</p>
+        <p>2 paragraph</p>
+    </body>
+```
+````
+
+Replace multiple lines
+
+````html
+```html docci-file=example.html docci-line-replace=7-9
+        <p>First paragraph</p>
+        <p>Second paragraph</p>
 ```
 ````
