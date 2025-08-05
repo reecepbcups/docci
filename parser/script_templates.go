@@ -91,9 +91,7 @@ set {{BASH_FLAGS}}
 trap 'echo -e "\n     Executing CMD: $BASH_COMMAND" >&2; sleep {{DELAY}}' DEBUG
 
 {{CONTENT}}
-
-# Disable trap
-trap - DEBUG
+trap - DEBUG # reset trap
 `
 
 	// Retry wrapper start template
@@ -129,8 +127,9 @@ done
 sleep {{DELAY}}
 `
 
-	// Block end marker
+	// Block end marker (there is purposely 2 newlines for readability in output debug)
 	blockEndMarkerTemplate = `echo '### DOCCI_BLOCK_END_{{INDEX}} ###'
+
 `
 
 	// Background logs display template

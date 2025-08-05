@@ -22,6 +22,7 @@ var (
 	hideBackgroundLogs bool
 	workingDir         string
 	keepRunning        bool
+	debugMode          bool
 )
 
 // DocciConfig represents the JSON configuration file format
@@ -116,6 +117,7 @@ File paths in the JSON config are resolved relative to the config file's locatio
 		opts := types.DocciOpts{
 			HideBackgroundLogs: hideBackgroundLogs,
 			KeepRunning:        keepRunning,
+			DebugMode:          debugMode,
 		}
 
 		var result DocciResult
@@ -177,7 +179,7 @@ File paths in the JSON config are resolved relative to the config file's locatio
 		}
 
 		// Print clear success message regardless of log level
-		fmt.Println("\n🎉 All tests completed successfully!")
+		log.Info("\n🎉 All tests completed successfully!")
 		log.Debug("Command completed successfully")
 
 		return nil
@@ -318,6 +320,7 @@ func init() {
 	runCmd.Flags().BoolVar(&hideBackgroundLogs, "hide-background-logs", false, "hide background process logs from output")
 	runCmd.Flags().StringVar(&workingDir, "working-dir", "", "change working directory before running commands")
 	runCmd.Flags().BoolVar(&keepRunning, "keep-running", false, "keep containers running after execution with infinite sleep")
+	runCmd.Flags().BoolVar(&debugMode, "debug", false, "print generated script to stdout without executing")
 }
 
 func runPreCommands(commands []string) error {

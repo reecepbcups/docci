@@ -64,6 +64,16 @@ func RunDocciFileWithOptions(filePath string, opts types.DocciOpts) DocciResult 
 	log.Debug("Building executable script")
 	script, validationMap, assertFailureMap := parser.BuildExecutableScriptWithOptions(blocks, opts)
 
+	// If in debug mode, print script and exit
+	if opts.DebugMode {
+		log.Info("Debug mode: printing script (not executing)")
+		fmt.Print(script)
+		return DocciResult{
+			Success:  true,
+			ExitCode: 0,
+		}
+	}
+
 	// Execute the script
 	log.Debug("Executing script")
 	resp := executor.Exec(script)
@@ -220,6 +230,16 @@ func RunDocciFilesWithOptions(filePaths []string, opts types.DocciOpts) DocciRes
 	// Build executable script with validation markers
 	log.Debug("Building executable script from merged blocks")
 	script, validationMap, assertFailureMap := parser.BuildExecutableScriptWithOptions(allBlocks, opts)
+
+	// If in debug mode, print script and exit
+	if opts.DebugMode {
+		log.Info("Debug mode: printing script (not executing)")
+		fmt.Print(script)
+		return DocciResult{
+			Success:  true,
+			ExitCode: 0,
+		}
+	}
 
 	// Execute the script
 	log.Debug("Executing merged script")
