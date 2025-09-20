@@ -36,6 +36,7 @@ func Exec(commands string) ExecResponse {
 	log.Debug("Executing commands in bash shell")
 
 	cmd := exec.Command("bash", "-c", commands)
+	cmd.Env = append(os.Environ(), "IS_DOCCI_RUN=true")
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

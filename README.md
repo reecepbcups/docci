@@ -140,6 +140,17 @@ echo "SOME_ENV_VAR is $SOME_ENV_VAR and OTHER_ENV_VAR is $OTHER_ENV_VAR"
 ```
 ````
 
+Docci automatically sets `IS_DOCCI_RUN=true` for all executed commands:
+
+````bash
+```bash
+# This environment variable is automatically set by docci
+if [ "$IS_DOCCI_RUN" = "true" ]; then
+    echo "Running inside docci!"
+fi
+```
+````
+
 Replace text before execution (useful for CI/CD): 🔄
 
 ````bash
