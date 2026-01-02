@@ -218,7 +218,7 @@ func ParseTags(line string) (MetaTag, error) {
 	re := regexp.MustCompile(pattern)
 	matches := re.FindAllString(line, -1)
 
-	logger.GetLogger().Debugf("Potential tags found: %+v", matches)
+	logger.GetLogger().Debug("Potential tags found", "matches", matches)
 	return parseTagsFromPotential(matches)
 }
 
@@ -231,10 +231,10 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 		// if there is a = present, we need to extract the value
 		content := ""
 		if strings.Contains(tag, "=") {
-			logger.GetLogger().Debugf("Tag with content found: %s", tag)
+			logger.GetLogger().Debug("Tag with content found", "tag", tag)
 
 			s := strings.SplitN(tag, "=", 2) // Use SplitN to only split on first =
-			logger.GetLogger().Debugf("Split tag into parts: %+v", s)
+			logger.GetLogger().Debug("Split tag into parts", "parts", s)
 
 			tag = s[0]     // take only the tag part before the =
 			content = s[1] // take the content part after the =
@@ -258,7 +258,7 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 		case TagIgnore:
 			mt.Ignore = true
 		case TagOutputContains:
-			logger.GetLogger().Debugf("Output contains tag found: %s with content: %s", tag, content)
+			logger.GetLogger().Debug("Output contains tag found", "tag", tag, "content", content)
 			mt.OutputContains = content
 		case TagBackground:
 			mt.Background = true
@@ -274,7 +274,7 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 				return MetaTag{}, fmt.Errorf("background kill index must be positive (1-based) in docci-background-kill, got: %d", killIndex)
 			}
 			mt.BackgroundKill = killIndex
-			logger.GetLogger().Debugf("Background kill tag found with index: %d", killIndex)
+			logger.GetLogger().Debug("Background kill tag found", "index", killIndex)
 		case TagAssertFailure:
 			mt.AssertFailure = true
 		case TagOS:
@@ -301,7 +301,7 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 
 			mt.WaitForEndpoint = url
 			mt.WaitTimeoutSecs = timeout
-			logger.GetLogger().Debugf("Wait for endpoint tag found: %s with timeout: %d seconds", url, timeout)
+			logger.GetLogger().Debug("Wait for endpoint tag found", "url", url, "timeout_seconds", timeout)
 		case TagRetry:
 			if content == "" {
 				return MetaTag{}, fmt.Errorf("docci-retry requires a value (number of retry attempts)")
@@ -314,7 +314,7 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 				return MetaTag{}, fmt.Errorf("retry count must be positive in docci-retry, got: %d", retryCount)
 			}
 			mt.RetryCount = retryCount
-			logger.GetLogger().Debugf("Retry tag found with count: %d", retryCount)
+			logger.GetLogger().Debug("Retry tag found", "count", retryCount)
 		case TagDelayBefore:
 			if content == "" {
 				return MetaTag{}, fmt.Errorf("docci-delay-before requires a value (delay in seconds)")
@@ -327,7 +327,7 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 				return MetaTag{}, fmt.Errorf("delay seconds must be positive in docci-delay-before, got: %g", delayBefore)
 			}
 			mt.DelayBeforeSecs = delayBefore
-			logger.GetLogger().Debugf("Delay before tag found with seconds: %g", delayBefore)
+			logger.GetLogger().Debug("Delay before tag found", "seconds", delayBefore)
 		case TagDelayAfter:
 			if content == "" {
 				return MetaTag{}, fmt.Errorf("docci-delay-after requires a value (delay in seconds)")
@@ -340,7 +340,7 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 				return MetaTag{}, fmt.Errorf("delay seconds must be positive in docci-delay-after, got: %g", delayAfter)
 			}
 			mt.DelayAfterSecs = delayAfter
-			logger.GetLogger().Debugf("Delay after tag found with seconds: %g", delayAfter)
+			logger.GetLogger().Debug("Delay after tag found", "seconds", delayAfter)
 		case TagDelayPerCmd:
 			if content == "" {
 				return MetaTag{}, fmt.Errorf("docci-delay-per-cmd requires a value (delay in seconds)")
@@ -353,7 +353,7 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 				return MetaTag{}, fmt.Errorf("delay seconds must be positive in docci-delay-per-cmd, got: %g", delayPerCmd)
 			}
 			mt.DelayPerCmdSecs = delayPerCmd
-			logger.GetLogger().Debugf("Delay per command tag found with seconds: %g", delayPerCmd)
+			logger.GetLogger().Debug("Delay per command tag found", "seconds", delayPerCmd)
 		case TagIfFileNotExists:
 			if content == "" {
 				return MetaTag{}, fmt.Errorf("docci-if-file-not-exists requires a file path")
@@ -362,7 +362,7 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 				return MetaTag{}, fmt.Errorf("docci-if-file-not-exists does not support file paths with spaces: %s", content)
 			}
 			mt.IfFileNotExists = content
-			logger.GetLogger().Debugf("If file not exists tag found with path: %s", content)
+			logger.GetLogger().Debug("If file not exists tag found", "path", content)
 		case TagIfNotInstalled:
 			if content == "" {
 				return MetaTag{}, fmt.Errorf("docci-if-not-installed requires a command name")
@@ -371,7 +371,7 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 				return MetaTag{}, fmt.Errorf("docci-if-not-installed does not support commands with spaces: %s", content)
 			}
 			mt.IfNotInstalled = content
-			logger.GetLogger().Debugf("If not installed tag found with command: %s", content)
+			logger.GetLogger().Debug("If not installed tag found", "command", content)
 		case TagReplaceText:
 			if content == "" {
 				return MetaTag{}, fmt.Errorf("docci-replace-text requires a value in format 'old;new'")
@@ -385,16 +385,16 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 				return MetaTag{}, fmt.Errorf("docci-replace-text both old and new text must be non-empty, got: %s", content)
 			}
 			mt.ReplaceText = content
-			logger.GetLogger().Debugf("Replace text tag found: %s", content)
+			logger.GetLogger().Debug("Replace text tag found", "content", content)
 		case TagFile:
 			if content == "" {
 				return MetaTag{}, fmt.Errorf("docci-file requires a file name")
 			}
 			mt.File = content
-			logger.GetLogger().Debugf("File tag found with name: %s", content)
+			logger.GetLogger().Debug("File tag found", "name", content)
 		case TagResetFile:
 			mt.ResetFile = true
-			logger.GetLogger().Debugf("Reset file tag found")
+			logger.GetLogger().Debug("Reset file tag found")
 		case TagLineInsert:
 			if content == "" {
 				return MetaTag{}, fmt.Errorf("docci-line-insert requires a line number")
@@ -407,7 +407,7 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 				return MetaTag{}, fmt.Errorf("line number must be positive (1-based) in docci-line-insert, got: %d", lineNum)
 			}
 			mt.LineInsert = lineNum
-			logger.GetLogger().Debugf("Line insert tag found at line: %d", lineNum)
+			logger.GetLogger().Debug("Line insert tag found", "line", lineNum)
 		case TagLineReplace:
 			if content == "" {
 				return MetaTag{}, fmt.Errorf("docci-line-replace requires a line number or range (e.g., '3' or '7-9')")
@@ -440,7 +440,7 @@ func parseTagsFromPotential(potential []string) (MetaTag, error) {
 				}
 			}
 			mt.LineReplace = content
-			logger.GetLogger().Debugf("Line replace tag found: %s", content)
+			logger.GetLogger().Debug("Line replace tag found", "range", content)
 		default:
 			return MetaTag{}, fmt.Errorf("unknown tag: %s", normalizedTag)
 		}
@@ -500,9 +500,9 @@ func ShouldRunBasedOnCommandInstallation(ifNotInstalledCommand string) bool {
 	// Only run the block if the command is NOT installed
 	isInstalled := IsCommandInstalled(ifNotInstalledCommand)
 	if isInstalled {
-		logger.GetLogger().Debugf("Skipping code block: command '%s' is already installed", ifNotInstalledCommand)
+		logger.GetLogger().Debug("Skipping code block: command already installed", "command", ifNotInstalledCommand)
 	} else {
-		logger.GetLogger().Debugf("Including code block: command '%s' is not installed", ifNotInstalledCommand)
+		logger.GetLogger().Debug("Including code block: command not installed", "command", ifNotInstalledCommand)
 	}
 	return !isInstalled
 }

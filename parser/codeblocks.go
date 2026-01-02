@@ -11,7 +11,6 @@ import (
 
 	"github.com/reecepbcups/docci/logger"
 	"github.com/reecepbcups/docci/types"
-	"github.com/sirupsen/logrus"
 )
 
 // CodeBlock represents a parsed code block with its metadata
@@ -121,7 +120,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 						currentBlock.finalize()
 						codeBlocks = append(codeBlocks, *currentBlock)
 					} else {
-						logger.GetLogger().Debugf("Skipping code block due to OS restriction: block requires '%s', current OS is '%s'", currentBlock.OS, GetCurrentOS())
+						logger.GetLogger().Debug("Skipping code block due to OS restriction", "required_os", currentBlock.OS, "current_os", GetCurrentOS())
 					}
 					currentBlock = nil
 				}
@@ -133,7 +132,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 			if currentBlock != nil {
 				currentBlock.content.WriteString(line)
 				currentBlock.content.WriteString("\n")
-				logger.GetLogger().Debugf("Adding line %d to code block: %s", lineNumber, line)
+				logger.GetLogger().Debug("Adding line to code block", "line_number", lineNumber, "content", line)
 			}
 		}
 
@@ -143,7 +142,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 			// Parse tags first to check for ignore
 			tags, err := ParseTags(line)
 			if err != nil {
-				logger.GetLogger().Errorf("Error parsing tags on line %d: %v", lineNumber, err)
+				logger.GetLogger().Error("Error parsing tags", "line_number", lineNumber, "error", err)
 				panic(err) // bad parses should STOP the program so the user can fix. (i.e. bad tags)
 			}
 
@@ -213,7 +212,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 // WaitForEndpoint polls an HTTP endpoint until it's ready or timeout is reached
 func WaitForEndpoint(url string, timeoutSecs int) error {
 	log := logger.GetLogger()
-	log.Infof("Waiting for endpoint %s to be ready (timeout: %d seconds)", url, timeoutSecs)
+	log.Info("Waiting for endpoint to be ready", "url", url, "timeout_secs", timeoutSecs)
 
 	timeout := time.Duration(timeoutSecs) * time.Second
 	client := &http.Client{
@@ -229,7 +228,7 @@ func WaitForEndpoint(url string, timeoutSecs int) error {
 		resp, err := client.Get(url)
 		if err == nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
 			resp.Body.Close()
-			log.Infof("Endpoint %s is ready (status: %d)", url, resp.StatusCode)
+			log.Info("Endpoint is ready", "url", url, "status", resp.StatusCode)
 			return nil
 		}
 
@@ -237,7 +236,7 @@ func WaitForEndpoint(url string, timeoutSecs int) error {
 			resp.Body.Close()
 		}
 
-		log.Debugf("Endpoint %s not ready yet (attempt failed), retrying in 1 second...", url)
+		log.Debug("Endpoint not ready yet, retrying in 1 second", "url", url)
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -257,7 +256,7 @@ func BuildExecutableScriptWithOptions(blocks []CodeBlock, opts types.DocciOpts) 
 	validationMap := make(map[int]string)  // maps block index to expected output
 	assertFailureMap := make(map[int]bool) // maps block index to assert-failure flag
 	var backgroundPIDs []string
-	debugEnabled := log.Level >= logrus.DebugLevel
+	debugEnabled := logger.IsDebugEnabled()
 
 	// Always generate markers for parsing, visibility controlled in executor
 
@@ -336,7 +335,7 @@ func BuildExecutableScriptWithOptions(blocks []CodeBlock, opts types.DocciOpts) 
 					oldText := parts[0]
 					newText := parts[1]
 					blockContent = strings.ReplaceAll(blockContent, oldText, newText)
-					log.Debugf("Applied text replacement in block %d: '%s' -> '%s'", block.Index, oldText, newText)
+					log.Debug("Applied text replacement", "block", block.Index, "old", oldText, "new", newText)
 				}
 			}
 

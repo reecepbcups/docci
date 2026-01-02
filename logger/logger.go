@@ -1,47 +1,47 @@
 package logger
 
 import (
+	"context"
 	"io"
+	"log/slog"
 	"os"
-
-	"github.com/sirupsen/logrus"
 )
 
-var Logger *logrus.Logger
+var Logger *slog.Logger
 
 func init() {
-	Logger = logrus.New()
-	Logger.SetOutput(os.Stderr)
-	Logger.SetFormatter(&logrus.TextFormatter{
-		DisableTimestamp: true,
-		DisableColors:    false,
-	})
-	Logger.SetLevel(logrus.InfoLevel)
+	Logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
 }
 
 // SetLogLevel sets the logging level based on a string
 func SetLogLevel(level string) {
+	var lvl slog.Level
 	switch level {
 	case "debug":
-		Logger.SetLevel(logrus.DebugLevel)
+		lvl = slog.LevelDebug
 	case "info":
-		Logger.SetLevel(logrus.InfoLevel)
+		lvl = slog.LevelInfo
 	case "warn", "warning":
-		Logger.SetLevel(logrus.WarnLevel)
-	case "error":
-		Logger.SetLevel(logrus.ErrorLevel)
-	case "fatal":
-		Logger.SetLevel(logrus.FatalLevel)
-	case "panic":
-		Logger.SetLevel(logrus.PanicLevel)
+		lvl = slog.LevelWarn
+	case "error", "fatal", "panic":
+		lvl = slog.LevelError
 	case "off", "none":
-		Logger.SetOutput(io.Discard)
+		Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
+		return
 	default:
-		Logger.SetLevel(logrus.InfoLevel)
+		lvl = slog.LevelInfo
 	}
+	Logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: lvl}))
 }
 
 // GetLogger returns the configured logger instance
-func GetLogger() *logrus.Logger {
+func GetLogger() *slog.Logger {
 	return Logger
+}
+
+// IsDebugEnabled returns true if debug level logging is enabled
+func IsDebugEnabled() bool {
+	return Logger.Enabled(context.Background(), slog.LevelDebug)
 }
