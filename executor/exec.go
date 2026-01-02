@@ -31,7 +31,7 @@ func NewExecResponse(exitCode uint, stdout, stderr string, err error) ExecRespon
 // Exec runs a specific codeblock in a bash shell.
 // returns exit (status code, error message)
 
-func Exec(commands string) ExecResponse {
+func Exec(commands string) (ExecResponse, error) {
 	log := logger.GetLogger()
 	log.Debug("Executing commands in bash shell")
 
@@ -40,16 +40,16 @@ func Exec(commands string) ExecResponse {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		panic(err)
+		return ExecResponse{}, fmt.Errorf("create stdout pipe: %w", err)
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		panic(err)
+		return ExecResponse{}, fmt.Errorf("create stderr pipe: %w", err)
 	}
 
 	if err := cmd.Start(); err != nil {
-		panic(err)
+		return ExecResponse{}, fmt.Errorf("start command: %w", err)
 	}
 
 	var stdoutBuf, stderrBuf strings.Builder // captures output for further validation
@@ -120,14 +120,14 @@ func Exec(commands string) ExecResponse {
 			exitCode := exitError.ExitCode()
 			exitErr := exitError.Error()
 			log.Debug("Command exited with code", "exitCode", exitCode, "error", exitErr)
-			return NewExecResponse(uint(exitCode), stdoutBuf.String(), stderrBuf.String(), fmt.Errorf(exitError.Error()))
+			return NewExecResponse(uint(exitCode), stdoutBuf.String(), stderrBuf.String(), fmt.Errorf(exitError.Error())), nil
 		} else {
-			panic(err)
+			return ExecResponse{}, fmt.Errorf("wait command: %w", err)
 		}
 	}
 
 	log.Debug("Command executed successfully")
-	return NewExecResponse(0, stdoutBuf.String(), stderrBuf.String(), nil)
+	return NewExecResponse(0, stdoutBuf.String(), stderrBuf.String(), nil), nil
 }
 
 // ParseBlockOutputs extracts output for each code block based on markers

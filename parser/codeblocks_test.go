@@ -58,7 +58,10 @@ func TestCodeBlockExecute(t *testing.T) {
 
 	require.Equal(t, 0, len(assertFailureMap), "Expected no assert-failure blocks")
 
-	resp := executor.Exec(script)
+	resp, err := executor.Exec(script)
+	if err != nil {
+		t.Fatalf("Error starting execution: %v", err)
+	}
 	if resp.Error != nil {
 		t.Errorf("Error executing code block: %v, Status Code: %d", resp.Error, resp.ExitCode)
 	}
@@ -230,7 +233,8 @@ func TestDelayPerCmdExecutionTiming(t *testing.T) {
 	script, _, _ := BuildExecutableScript(blocks)
 
 	start := time.Now()
-	resp := executor.Exec(script)
+	resp, err := executor.Exec(script)
+	require.NoError(t, err, "Exec should start")
 	duration := time.Since(start)
 
 	require.NoError(t, resp.Error, "Script execution should succeed")
@@ -277,10 +281,11 @@ func TestCommandSubstitutionNoDebugContamination(t *testing.T) {
 
 	// Build and execute the script
 	script, _, _ := BuildExecutableScript(blocks)
-	resp := executor.Exec(script)
+	resp, err := executor.Exec(script)
+	require.NoError(t, err, "Exec should start")
 
 	require.NoError(t, resp.Error, "Script execution should succeed")
-	
+
 	// The output should contain a date in the format YYYY-MM-DD
 	// and NOT contain "Executing CMD:" or "date +"
 	require.Contains(t, resp.Stdout, "Date is: ")

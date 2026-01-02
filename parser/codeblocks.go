@@ -142,8 +142,7 @@ func ParseCodeBlocksWithFileName(markdown string, fileName string) ([]CodeBlock,
 			// Parse tags first to check for ignore
 			tags, err := ParseTags(line)
 			if err != nil {
-				logger.GetLogger().Error("Error parsing tags", "line_number", lineNumber, "error", err)
-				panic(err) // bad parses should STOP the program so the user can fix. (i.e. bad tags)
+				return nil, fmt.Errorf("line %d: parse tags: %w", lineNumber, err)
 			}
 
 			if tags.Ignore {

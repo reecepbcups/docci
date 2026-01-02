@@ -6,17 +6,18 @@ import (
 	"strings"
 )
 
-// replaceTemplateVars replaces template variables with their values
+// replaceTemplateVars replaces template variables with their values.
+// Panics if unreplaced variables remain - this indicates a programming bug.
 func replaceTemplateVars(template string, vars map[string]string) string {
 	result := template
 	for key, value := range vars {
 		result = strings.ReplaceAll(result, "{{"+key+"}}", value)
 	}
 
-	// Check for any remaining unreplaced variables
+	// Check for any remaining unreplaced variables - programming bug if found
 	remaining := findUnreplacedVars(result)
 	if len(remaining) > 0 {
-		panic(fmt.Sprintf("Unreplaced template variables found: %v.\nTemplate:\n%v\n", remaining, result))
+		panic(fmt.Sprintf("unreplaced template vars (bug): %v", remaining))
 	}
 
 	return result

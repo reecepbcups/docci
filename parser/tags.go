@@ -37,8 +37,6 @@ type MetaTag struct {
 	LineReplace string // docci-line-replace: Replace content at line N or N-M (e.g., "3" or "7-9")
 }
 
-var tags string
-
 const (
 	TagIgnore          = "docci-ignore"
 	TagOutputContains  = "docci-output-contains"

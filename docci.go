@@ -76,7 +76,14 @@ func RunDocciFileWithOptions(filePath string, opts types.DocciOpts) DocciResult 
 
 	// Execute the script
 	log.Debug("Executing script")
-	resp := executor.Exec(script)
+	resp, err := executor.Exec(script)
+	if err != nil {
+		return DocciResult{
+			Success:  false,
+			ExitCode: 1,
+			Stderr:   fmt.Sprintf("execute script: %v", err),
+		}
+	}
 
 	// Check assert-failure blocks
 	if len(assertFailureMap) > 0 {
@@ -243,7 +250,14 @@ func RunDocciFilesWithOptions(filePaths []string, opts types.DocciOpts) DocciRes
 
 	// Execute the script
 	log.Debug("Executing merged script")
-	resp := executor.Exec(script)
+	resp, err := executor.Exec(script)
+	if err != nil {
+		return DocciResult{
+			Success:  false,
+			ExitCode: 1,
+			Stderr:   fmt.Sprintf("execute script: %v", err),
+		}
+	}
 
 	// Check assert-failure blocks
 	if len(assertFailureMap) > 0 {

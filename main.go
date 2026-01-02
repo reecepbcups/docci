@@ -179,7 +179,8 @@ File paths in the JSON config are resolved relative to the config file's locatio
 		}
 
 		// Print clear success message regardless of log level
-		log.Info("\n🎉 All tests completed successfully!")
+		fmt.Println()
+		log.Info("🎉 All tests completed successfully!")
 		log.Debug("Command completed successfully")
 
 		return nil
