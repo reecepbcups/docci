@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"golang.org/x/mod/semver"
 )
 
@@ -115,9 +114,8 @@ func GetRealLatestReleases(r []Release) (string, string) {
 	return latestPre, latestOfficial
 }
 
-// OutOfDateCheckLog logs & returns true if it is out of date.
-func OutOfDateCheckLog(logger *logrus.Logger, binName, current, latest string) bool {
-
+// OutOfDateCheckLog returns true if current version is out of date.
+func OutOfDateCheckLog(binName, current, latest string) bool {
 	currentVer := current
 	if currentVer == "dev" {
 		currentVer = "v0.0.0"

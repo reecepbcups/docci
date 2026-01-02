@@ -35,10 +35,10 @@ func RunDocciFileWithOptions(filePath string, opts types.DocciOpts) DocciResult 
 	log := logger.GetLogger()
 
 	// Read the file into a string
-	log.Debugf("Reading file: %s", filePath)
+	log.Debug("Reading file", "path", filePath)
 	markdown, err := os.ReadFile(filePath)
 	if err != nil {
-		log.Errorf("Failed to read file: %s", err.Error())
+		log.Error("Failed to read file", "error", err.Error())
 		return DocciResult{
 			Success:  false,
 			ExitCode: 1,
@@ -50,7 +50,7 @@ func RunDocciFileWithOptions(filePath string, opts types.DocciOpts) DocciResult 
 	log.Debug("Parsing code blocks from markdown")
 	blocks, err := parser.ParseCodeBlocks(string(markdown))
 	if err != nil {
-		log.Errorf("Failed to parse code blocks: %s", err.Error())
+		log.Error("Failed to parse code blocks", "error", err.Error())
 		return DocciResult{
 			Success:  false,
 			ExitCode: 1,
@@ -58,7 +58,7 @@ func RunDocciFileWithOptions(filePath string, opts types.DocciOpts) DocciResult 
 		}
 	}
 
-	log.Debugf("Found %d code blocks", len(blocks))
+	log.Debug("Found code blocks", "count", len(blocks))
 
 	// Build executable script with validation markers
 	log.Debug("Building executable script")
@@ -76,7 +76,14 @@ func RunDocciFileWithOptions(filePath string, opts types.DocciOpts) DocciResult 
 
 	// Execute the script
 	log.Debug("Executing script")
-	resp := executor.Exec(script)
+	resp, err := executor.Exec(script)
+	if err != nil {
+		return DocciResult{
+			Success:  false,
+			ExitCode: 1,
+			Stderr:   fmt.Sprintf("execute script: %v", err),
+		}
+	}
 
 	// Check assert-failure blocks
 	if len(assertFailureMap) > 0 {
@@ -95,7 +102,7 @@ func RunDocciFileWithOptions(filePath string, opts types.DocciOpts) DocciResult 
 		// Script failed as expected, continue processing
 	} else if resp.Error != nil {
 		// No assert-failure blocks, so error is unexpected
-		log.Errorf("✗ Unexpected script execution failure: %s", resp.Error.Error())
+		log.Error("Unexpected script execution failure", "error", resp.Error.Error())
 		return DocciResult{
 			Success:  false,
 			ExitCode: 1,
@@ -111,10 +118,10 @@ func RunDocciFileWithOptions(filePath string, opts types.DocciOpts) DocciResult 
 	// Validate outputs if there are any validation requirements
 	var validationErrors []error
 	if len(validationMap) > 0 {
-		log.Debugf("Validating %d output expectations", len(validationMap))
+		log.Debug("Validating output expectations", "count", len(validationMap))
 		validationErrors = executor.ValidateOutputs(blockOutputs, validationMap)
 		if len(validationErrors) > 0 {
-			log.Errorf("Found %d validation errors", len(validationErrors))
+			log.Error("Found validation errors", "count", len(validationErrors))
 			errorMsg := "\n=== Validation Errors ===\n"
 			for _, err := range validationErrors {
 				errorMsg += fmt.Sprintf("❌ %s\n", err.Error())
@@ -184,17 +191,17 @@ func RunDocciFiles(filePaths []string) DocciResult {
 func RunDocciFilesWithOptions(filePaths []string, opts types.DocciOpts) DocciResult {
 	log := logger.GetLogger()
 
-	log.Debugf("Merging %d markdown files", len(filePaths))
+	log.Debug("Merging markdown files", "count", len(filePaths))
 
 	var allBlocks []parser.CodeBlock
 	globalIndex := 1
 
 	// Parse all files and collect blocks with filename metadata
 	for _, filePath := range filePaths {
-		log.Debugf("Reading file: %s", filePath)
+		log.Debug("Reading file", "path", filePath)
 		markdown, err := os.ReadFile(filePath)
 		if err != nil {
-			log.Errorf("Failed to read file %s: %s", filePath, err.Error())
+			log.Error("Failed to read file", "path", filePath, "error", err.Error())
 			return DocciResult{
 				Success:  false,
 				ExitCode: 1,
@@ -203,11 +210,11 @@ func RunDocciFilesWithOptions(filePaths []string, opts types.DocciOpts) DocciRes
 		}
 
 		// Parse code blocks with filename metadata
-		log.Debugf("Parsing code blocks from %s", filePath)
+		log.Debug("Parsing code blocks", "path", filePath)
 		fileName := filepath.Base(filePath)
 		blocks, err := parser.ParseCodeBlocksWithFileName(string(markdown), fileName)
 		if err != nil {
-			log.Errorf("Failed to parse code blocks from %s: %s", filePath, err.Error())
+			log.Error("Failed to parse code blocks", "path", filePath, "error", err.Error())
 			return DocciResult{
 				Success:  false,
 				ExitCode: 1,
@@ -222,10 +229,10 @@ func RunDocciFilesWithOptions(filePaths []string, opts types.DocciOpts) DocciRes
 		}
 
 		allBlocks = append(allBlocks, blocks...)
-		log.Debugf("Found %d code blocks in %s", len(blocks), filePath)
+		log.Debug("Found code blocks in file", "count", len(blocks), "path", filePath)
 	}
 
-	log.Debugf("Total merged blocks: %d", len(allBlocks))
+	log.Debug("Total merged blocks", "count", len(allBlocks))
 
 	// Build executable script with validation markers
 	log.Debug("Building executable script from merged blocks")
@@ -243,7 +250,14 @@ func RunDocciFilesWithOptions(filePaths []string, opts types.DocciOpts) DocciRes
 
 	// Execute the script
 	log.Debug("Executing merged script")
-	resp := executor.Exec(script)
+	resp, err := executor.Exec(script)
+	if err != nil {
+		return DocciResult{
+			Success:  false,
+			ExitCode: 1,
+			Stderr:   fmt.Sprintf("execute script: %v", err),
+		}
+	}
 
 	// Check assert-failure blocks
 	if len(assertFailureMap) > 0 {
@@ -262,7 +276,7 @@ func RunDocciFilesWithOptions(filePaths []string, opts types.DocciOpts) DocciRes
 		// Script failed as expected, continue processing
 	} else if resp.Error != nil {
 		// No assert-failure blocks, so error is unexpected
-		log.Errorf("✗ Unexpected script execution failure: %s", resp.Error.Error())
+		log.Error("Unexpected script execution failure", "error", resp.Error.Error())
 		return DocciResult{
 			Success:  false,
 			ExitCode: 1,
@@ -278,10 +292,10 @@ func RunDocciFilesWithOptions(filePaths []string, opts types.DocciOpts) DocciRes
 	// Validate outputs if there are any validation requirements
 	var validationErrors []error
 	if len(validationMap) > 0 {
-		log.Debugf("Validating %d output expectations", len(validationMap))
+		log.Debug("Validating output expectations", "count", len(validationMap))
 		validationErrors = executor.ValidateOutputs(blockOutputs, validationMap)
 		if len(validationErrors) > 0 {
-			log.Errorf("Found %d validation errors", len(validationErrors))
+			log.Error("Found validation errors", "count", len(validationErrors))
 			errorMsg := "\n=== Validation Errors ===\n"
 			for _, err := range validationErrors {
 				errorMsg += fmt.Sprintf("❌ %s\n", err.Error())
@@ -299,7 +313,7 @@ func RunDocciFilesWithOptions(filePaths []string, opts types.DocciOpts) DocciRes
 
 	log.Debug("Merged script execution completed successfully")
 	fileList := strings.Join(filePaths, ", ")
-	log.Infof("Successfully executed merged files: %s", fileList)
+	log.Info("Successfully executed merged files", "files", fileList)
 
 	return DocciResult{
 		Success:          true,

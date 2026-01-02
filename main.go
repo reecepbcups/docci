@@ -97,18 +97,18 @@ File paths in the JSON config are resolved relative to the config file's locatio
 			if err := os.Chdir(workingDir); err != nil {
 				return fmt.Errorf("failed to change to run directory %s: %w", workingDir, err)
 			}
-			log.Infof("Changed working directory to: %s", workingDir)
+			log.Info("changed working directory", "dir", workingDir)
 		}
 
 		if len(filePaths) == 1 {
-			log.Infof("Running docci on file: %s", filePaths[0])
+			log.Info("running docci", "file", filePaths[0])
 		} else {
-			log.Infof("Running docci on %d files: %s", len(filePaths), strings.Join(filePaths, ", "))
+			log.Info("running docci", "count", len(filePaths), "files", strings.Join(filePaths, ", "))
 		}
 
 		// Run pre-commands if provided
 		if len(preCommands) > 0 {
-			log.Debug("Running pre-commands")
+			log.Debug("running pre-commands")
 			runPreCommands(preCommands)
 		}
 
@@ -168,18 +168,19 @@ File paths in the JSON config are resolved relative to the config file's locatio
 
 		// Run cleanup commands if provided
 		if len(cleanupCommands) > 0 {
-			log.Debug("Running cleanup commands")
+			log.Debug("running cleanup commands")
 			runCleanupCommands(cleanupCommands)
 		}
 
 		// Exit with error if command failed
 		if !result.Success {
-			log.Errorf("Command failed with exit code: %d", result.ExitCode)
+			log.Error("Command failed", "exitCode", result.ExitCode)
 			os.Exit(result.ExitCode)
 		}
 
 		// Print clear success message regardless of log level
-		log.Info("\n🎉 All tests completed successfully!")
+		fmt.Println()
+		log.Info("🎉 All tests completed successfully!")
 		log.Debug("Command completed successfully")
 
 		return nil
@@ -210,7 +211,7 @@ var latestCmd = &cobra.Command{
 		pre, latest := GetRealLatestReleases(releases)
 
 		text := "Docci is up to date!"
-		if OutOfDateCheckLog(logger, "docci", version, latest) {
+		if OutOfDateCheckLog("docci", version, latest) {
 			var t strings.Builder
 			t.WriteString(fmt.Sprintf("\nNew version available @ %s\n", BinaryToGHApi))
 			t.WriteString(fmt.Sprintf("current: %s\n", version))
@@ -243,7 +244,7 @@ var validateCmd = &cobra.Command{
 			return fmt.Errorf("file not found: %s", filePath)
 		}
 
-		log.Infof("Validating file: %s", filePath)
+		log.Info("Validating file", "file", filePath)
 
 		// Read the file
 		markdown, err := os.ReadFile(filePath)
@@ -257,15 +258,13 @@ var validateCmd = &cobra.Command{
 			return fmt.Errorf("error parsing code blocks: %w", err)
 		}
 
-		log.Infof("Successfully parsed %d code blocks", len(blocks))
+		log.Info("Successfully parsed code blocks", "count", len(blocks))
 
 		// Show block details at debug level
 		for i, block := range blocks {
-			log.Debugf("Block %d:", i+1)
-			log.Debugf("  Language: %s", block.Language)
-			log.Debugf("  Background: %v", block.Background)
+			log.Debug("Block details", "block", i+1, "language", block.Language, "background", block.Background)
 			if block.OutputContains != "" {
-				log.Debugf("  Expected output: %s", block.OutputContains)
+				log.Debug("Expected output", "block", i+1, "output", block.OutputContains)
 			}
 		}
 
@@ -327,7 +326,7 @@ func runPreCommands(commands []string) error {
 	log := logger.GetLogger()
 	log.Info("Running pre-commands")
 	for _, command := range commands {
-		log.Infof("Running: %s", command)
+		log.Info("Running", "command", command)
 
 		// Create command
 		cmd := exec.Command("bash", "-c", command)
@@ -336,7 +335,7 @@ func runPreCommands(commands []string) error {
 
 		// Run the command
 		if err := cmd.Run(); err != nil {
-			log.Warnf("Pre-command '%s' failed (ignoring): %v", command, err)
+			log.Warn("Pre-command failed (ignoring)", "command", command, "err", err)
 			// Continue with other pre-commands even if one fails
 		}
 	}
@@ -348,7 +347,7 @@ func runCleanupCommands(commands []string) {
 	log := logger.GetLogger()
 	log.Debug("Running cleanup commands")
 	for _, command := range commands {
-		log.Infof("Running: %s", command)
+		log.Info("Running", "command", command)
 
 		// Create command
 		cmd := exec.Command("bash", "-c", command)
@@ -357,7 +356,7 @@ func runCleanupCommands(commands []string) {
 
 		// Run the command
 		if err := cmd.Run(); err != nil {
-			log.Errorf("Error running cleanup command '%s': %v", command, err)
+			log.Error("Error running cleanup command", "command", command, "err", err)
 			// Continue with other cleanup commands even if one fails
 		}
 	}
